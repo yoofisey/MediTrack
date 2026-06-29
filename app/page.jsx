@@ -32,6 +32,77 @@ import { useState, useEffect, useCallback } from "react";
 const SUPABASE_URL = "https://luxtopkzdyflbejwgniq.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1eHRvcGt6ZHlmbGJlandnbmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzY5NzAsImV4cCI6MjA5NzkxMjk3MH0.zcvzd5vOBxw6xE00EIrt7NBcEnFa95FxODsD2h1M-OU";
 
+// ─── COUNTRY & PRICING DATA ──────────────────────────────────────────────────
+const COUNTRIES = [
+  // West Africa (GHS, NGN, XOF)
+  { code:"GH", name:"Ghana",           flag:"🇬🇭", currency:"GHS", symbol:"₵",  region:"wa" },
+  { code:"NG", name:"Nigeria",          flag:"🇳🇬", currency:"NGN", symbol:"₦",  region:"wa" },
+  { code:"SN", name:"Senegal",          flag:"🇸🇳", currency:"XOF", symbol:"CFA",region:"wa" },
+  { code:"CI", name:"Côte d'Ivoire",    flag:"🇨🇮", currency:"XOF", symbol:"CFA",region:"wa" },
+  { code:"GN", name:"Guinea",           flag:"🇬🇳", currency:"GNF", symbol:"FG", region:"wa" },
+  { code:"SL", name:"Sierra Leone",     flag:"🇸🇱", currency:"SLL", symbol:"Le", region:"wa" },
+  { code:"GW", name:"Guinea-Bissau",    flag:"🇬🇼", currency:"XOF", symbol:"CFA",region:"wa" },
+  { code:"LR", name:"Liberia",          flag:"🇱🇷", currency:"LRD", symbol:"L$", region:"wa" },
+  { code:"TG", name:"Togo",             flag:"🇹🇬", currency:"XOF", symbol:"CFA",region:"wa" },
+  { code:"BJ", name:"Benin",            flag:"🇧🇯", currency:"XOF", symbol:"CFA",region:"wa" },
+  // East Africa
+  { code:"KE", name:"Kenya",            flag:"🇰🇪", currency:"KES", symbol:"KSh",region:"ea" },
+  { code:"TZ", name:"Tanzania",         flag:"🇹🇿", currency:"TZS", symbol:"TSh",region:"ea" },
+  { code:"UG", name:"Uganda",           flag:"🇺🇬", currency:"UGX", symbol:"USh",region:"ea" },
+  { code:"ET", name:"Ethiopia",         flag:"🇪🇹", currency:"ETB", symbol:"Br", region:"ea" },
+  { code:"RW", name:"Rwanda",           flag:"🇷🇼", currency:"RWF", symbol:"RF", region:"ea" },
+  // Southern Africa
+  { code:"ZA", name:"South Africa",     flag:"🇿🇦", currency:"ZAR", symbol:"R",  region:"sa" },
+  { code:"ZW", name:"Zimbabwe",         flag:"🇿🇼", currency:"USD", symbol:"$",  region:"sa" },
+  { code:"ZM", name:"Zambia",           flag:"🇿🇲", currency:"ZMW", symbol:"ZK", region:"sa" },
+  { code:"BW", name:"Botswana",         flag:"🇧🇼", currency:"BWP", symbol:"P",  region:"sa" },
+  // North Africa
+  { code:"EG", name:"Egypt",            flag:"🇪🇬", currency:"EGP", symbol:"E£", region:"na" },
+  { code:"MA", name:"Morocco",          flag:"🇲🇦", currency:"MAD", symbol:"MAD",region:"na" },
+  // Europe
+  { code:"GB", name:"United Kingdom",   flag:"🇬🇧", currency:"GBP", symbol:"£",  region:"eu" },
+  { code:"DE", name:"Germany",          flag:"🇩🇪", currency:"EUR", symbol:"€",  region:"eu" },
+  { code:"FR", name:"France",           flag:"🇫🇷", currency:"EUR", symbol:"€",  region:"eu" },
+  { code:"NL", name:"Netherlands",      flag:"🇳🇱", currency:"EUR", symbol:"€",  region:"eu" },
+  { code:"IT", name:"Italy",            flag:"🇮🇹", currency:"EUR", symbol:"€",  region:"eu" },
+  // North America
+  { code:"US", name:"United States",    flag:"🇺🇸", currency:"USD", symbol:"$",  region:"na2" },
+  { code:"CA", name:"Canada",           flag:"🇨🇦", currency:"CAD", symbol:"CA$",region:"na2" },
+  // Asia / Pacific
+  { code:"IN", name:"India",            flag:"🇮🇳", currency:"INR", symbol:"₹",  region:"as" },
+  { code:"AU", name:"Australia",        flag:"🇦🇺", currency:"AUD", symbol:"A$", region:"au" },
+  { code:"OTHER", name:"Other country", flag:"🌍", currency:"USD", symbol:"$",   region:"na2" },
+];
+
+// Pricing by region (monthly)
+const REGION_PRICING = {
+  wa:  { pro: { amount: 15,    label: "₵15" },  family: { amount: 28,    label: "₵28" },  note: "West African pricing" },
+  ea:  { pro: { amount: 300,   label: "KSh300"},family: { amount: 550,   label: "KSh550"},note: "East African pricing" },
+  sa:  { pro: { amount: 59,    label: "R59" },  family: { amount: 109,   label: "R109" }, note: "Southern African pricing" },
+  na:  { pro: { amount: 39,    label: "39 MAD"},family: { amount: 69,    label: "69 MAD"},note: "North African pricing" },
+  eu:  { pro: { amount: 3.99,  label: "€3.99"}, family: { amount: 6.99,  label: "€6.99"}, note: "European pricing" },
+  na2: { pro: { amount: 3.99,  label: "$3.99"}, family: { amount: 7.99,  label: "$7.99"}, note: "International pricing" },
+  as:  { pro: { amount: 199,   label: "₹199" }, family: { amount: 349,   label: "₹349" }, note: "South Asian pricing" },
+  au:  { pro: { amount: 5.99,  label: "A$5.99"},family: { amount: 10.99, label: "A$10.99"},note: "Pacific pricing" },
+};
+
+function getPricing(countryCode) {
+  const country = COUNTRIES.find(c => c.code === countryCode) || COUNTRIES.find(c => c.code === "OTHER");
+  const pricing = REGION_PRICING[country.region] || REGION_PRICING.na2;
+  return { country, pricing };
+}
+
+// Tier feature gates
+const TIER_LIMITS = {
+  free:   { maxMeds: 3,  history: 7,  caregiving: false, reports: false, refillReminder: false, interactionCheck: false },
+  pro:    { maxMeds: 999,history: 999,caregiving: true,  reports: true,  refillReminder: true,  interactionCheck: true  },
+  family: { maxMeds: 999,history: 999,caregiving: true,  reports: true,  refillReminder: true,  interactionCheck: true,  profiles: 5 },
+};
+
+function canAddMed(plan, currentMedCount) {
+  return currentMedCount < (TIER_LIMITS[plan]?.maxMeds ?? 3);
+}
+
 // ─── SUPABASE SETUP CHECKLIST ────────────────────────────────────────────────
 // 1. Authentication → URL Configuration → add these Redirect URLs:
 //      http://localhost:3000
@@ -284,8 +355,12 @@ function mkClient(url, key) {
       },
       then(res, rej) {
         api(`/rest/v1/${table}?${q._qs()}`, { headers: { Prefer: "return=representation" } })
-          .then(d => res({ data: d, error: null }))
-          .catch(e => rej({ data: null, error: e instanceof Error ? e : new Error(e?.message || String(e)) }));
+          .then(d => res({ data: d ?? [], error: null }))
+          .catch(e => {
+            // rej() must receive an Error — plain objects become [object Object] in React error boundaries
+            const err = e instanceof Error ? e : new Error(e?.message || String(e));
+            res({ data: null, error: err }); // resolve with error shape instead of rejecting
+          });
       },
       async insert(rows) {
         try {
@@ -343,10 +418,25 @@ function mkClient(url, key) {
 const sb = mkClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Safe profile fetch — returns null on any failure (table may not exist yet)
-async function fetchProfile(userId) {
+async function fetchProfile(userId, userMeta) {
   try {
     const { data } = await sb.from("profiles").select("*").eq("id", userId);
-    return Array.isArray(data) ? (data[0] || null) : null;
+    const existing = Array.isArray(data) ? (data[0] || null) : null;
+    // If profile exists, return it; if not, seed with country from OAuth/signup metadata
+    if (existing) return existing;
+    if (userMeta?.country) {
+      // Create a minimal profile with country from sign-up so pricing is correct immediately
+      await sb.from("profiles").upsert([{
+        id: userId,
+        full_name: userMeta.full_name || "",
+        country: userMeta.country,
+        plan: "free",
+        onboarded: false,
+      }]);
+      const { data: d2 } = await sb.from("profiles").select("*").eq("id", userId);
+      return Array.isArray(d2) ? (d2[0] || null) : null;
+    }
+    return null;
   } catch { return null; }
 }
 
@@ -680,65 +770,217 @@ function fmtDateLong(iso) { return new Date(iso).toLocaleDateString([],{weekday:
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login");
-  const [email, setEmail] = useState(""); const [pw, setPw] = useState(""); const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false); const [obl, setObl] = useState(""); const [err, setErr] = useState(""); const [sent, setSent] = useState(false);
+  const [view, setView]     = useState("welcome"); // welcome | signin | signup
+  const [email, setEmail]   = useState("");
+  const [pw, setPw]         = useState("");
+  const [name, setName]     = useState("");
+  const [country, setCountry] = useState("GH");
+  const [busy, setBusy]     = useState(false);
+  const [obl, setObl]       = useState("");
+  const [err, setErr]       = useState("");
+  const [sent, setSent]     = useState(false);
 
-  async function oauth(p) { setErr(""); setObl(p); await new Promise(r => setTimeout(r, 80)); sb.auth.signInWithOAuth({ provider: p }); }
-  async function submit(e) {
-    e.preventDefault(); setBusy(true); setErr("");
-    try {
-      if (mode === "login") {
-        const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-        if (error) throw new Error(error?.message || error?.error_description || "Login failed — please check your credentials.");
-        if (!data?.user) throw new Error("Login failed — please check your credentials.");
-        onAuth(data.user, false);
-      } else {
-        const { data, error } = await sb.auth.signUp({ email, password: pw, options: { data: { full_name: name } } });
-        if (error) throw new Error(error?.message || error?.error_description || "Sign up failed — please try again.");
-        if (data?.user?.identities?.length === 0) throw new Error("Email already registered — sign in instead.");
-        if (data?.session?.access_token) onAuth(data.user, true);
-        else setSent(true);
-      }
-    } catch (e) {
-      if (typeof e === "string") setErr(e);
-      else setErr(e?.message || e?.error_description || "Something went wrong. Please try again.");
-    }
-    finally { setBusy(false); }
+  function Logo() {
+    return (
+      <div className="auth-logo">
+        <div className="auth-mark">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+        </div>
+        <span className="auth-app-name">MediTrack</span>
+      </div>
+    );
   }
 
+  async function oauth(provider) {
+    setErr(""); setObl(provider);
+    await new Promise(r => setTimeout(r, 80));
+    sb.auth.signInWithOAuth({ provider });
+  }
+
+  async function handleSignIn(e) {
+    e.preventDefault(); setBusy(true); setErr("");
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) throw new Error(error?.message || "Login failed — please check your credentials.");
+      if (!data?.user) throw new Error("Login failed — please check your credentials.");
+      onAuth(data.user, false);
+    } catch (e) {
+      setErr(e?.message || "Something went wrong. Please try again.");
+    } finally { setBusy(false); }
+  }
+
+  async function handleSignUp(e) {
+    e.preventDefault(); setBusy(true); setErr("");
+    try {
+      const { data, error } = await sb.auth.signUp({
+        email, password: pw,
+        options: { data: { full_name: name, country } },
+      });
+      if (error) throw new Error(error?.message || "Sign up failed — please try again.");
+      if (data?.user?.identities?.length === 0) throw new Error("Email already registered — sign in instead.");
+      if (data?.session?.access_token) onAuth(data.user, true);
+      else setSent(true);
+    } catch (e) {
+      setErr(e?.message || "Something went wrong. Please try again.");
+    } finally { setBusy(false); }
+  }
+
+  // ── Email confirmation sent screen ─────────────────────────────────────────
   if (sent) return (
     <div className="auth-screen"><style>{CSS}</style>
       <div className="auth-card">
-        <div className="auth-logo"><div className="auth-mark"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg></div><span className="auth-app-name">MediTrack</span></div>
-        <div className="ok-msg"><strong>Check your inbox 📬</strong>We sent a confirmation link to <strong>{email}</strong>. Click it then sign in.</div>
-        <button className="btn btn-primary" onClick={() => { setSent(false); setMode("login"); }}>Back to sign in</button>
+        <Logo/>
+        <div className="ok-msg">
+          <strong>Check your inbox 📬</strong>
+          We sent a confirmation link to <strong>{email}</strong>. Click it then come back to sign in.
+        </div>
+        <button className="btn btn-primary" onClick={() => { setSent(false); setView("signin"); }}>Back to sign in</button>
       </div>
     </div>
   );
 
-  return (
-    <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card">
-        <div className="auth-logo"><div className="auth-mark"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg></div><span className="auth-app-name">MediTrack</span></div>
-        <div className="auth-title">{mode === "login" ? "Welcome back" : "Create account"}</div>
-        <div className="auth-sub">{mode === "login" ? "Sign in to manage your medications" : "Start tracking your health"}</div>
-        <div className="oauth-stack">
-          <button className="oauth-btn" onClick={() => oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting…":<><GIcon/> Continue with Google</>}</button>
-          <button className="oauth-btn" onClick={() => oauth("apple")} disabled={!!obl}>{obl==="apple"?"Redirecting…":<><AIcon/> Continue with Apple</>}</button>
-          <button className="oauth-btn" onClick={() => oauth("facebook")} disabled={!!obl}>{obl==="facebook"?"Redirecting…":<><FIcon/> Continue with Facebook</>}</button>
+  // ── Welcome / landing screen ────────────────────────────────────────────────
+  if (view === "welcome") return (
+    <div className="auth-screen" style={{background:"linear-gradient(160deg,#0A2463 0%,#0A84FF 60%,#32ADE6 100%)",justifyContent:"flex-end",paddingBottom:0}}>
+      <style>{CSS}</style>
+      {/* Hero illustration area */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px 24px",color:"white"}}>
+        <div style={{fontSize:72,marginBottom:16,filter:"drop-shadow(0 8px 24px rgba(0,0,0,.3))"}}>💊</div>
+        <div style={{fontSize:32,fontWeight:800,letterSpacing:"-1px",textAlign:"center",lineHeight:1.1,marginBottom:12}}>
+          Never miss a<br/>dose again
+        </div>
+        <div style={{fontSize:16,opacity:.85,textAlign:"center",lineHeight:1.6,maxWidth:300}}>
+          Track medications, get smart reminders, and stay on top of your health — all in one place.
+        </div>
+        {/* Feature pills */}
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",marginTop:24}}>
+          {["💊 Dose tracking","🔔 Smart reminders","🔥 Streak rewards","📊 Adherence reports"].map(f=>(
+            <div key={f} style={{background:"rgba(255,255,255,.15)",backdropFilter:"blur(10px)",borderRadius:99,padding:"6px 14px",fontSize:13,fontWeight:500,color:"white"}}>{f}</div>
+          ))}
+        </div>
+      </div>
+      {/* Bottom sheet */}
+      <div style={{background:"white",borderRadius:"24px 24px 0 0",padding:"28px 24px calc(28px + env(safe-area-inset-bottom,0px))",width:"100%"}}>
+        <div style={{fontSize:22,fontWeight:700,marginBottom:6,color:"var(--t1)"}}>Get started</div>
+        <div style={{fontSize:15,color:"var(--t3)",marginBottom:20}}>Join thousands managing their health with MediTrack</div>
+        <div className="oauth-stack" style={{marginBottom:16}}>
+          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl} style={{background:"#fff"}}>
+            {obl==="google"?"Redirecting…":<><GIcon/> Continue with Google</>}
+          </button>
+          <button className="oauth-btn" onClick={()=>oauth("apple")} disabled={!!obl}>
+            {obl==="apple"?"Redirecting…":<><AIcon/> Continue with Apple</>}
+          </button>
+          <button className="oauth-btn" onClick={()=>oauth("facebook")} disabled={!!obl}>
+            {obl==="facebook"?"Redirecting…":<><FIcon/> Continue with Facebook</>}
+          </button>
         </div>
         <div className="divider">or</div>
+        <button className="btn btn-primary" style={{marginBottom:12}} onClick={()=>setView("signup")}>Create free account</button>
+        <button className="btn btn-ghost" onClick={()=>setView("signin")}>Sign in to existing account</button>
+      </div>
+    </div>
+  );
+
+  // ── Sign In screen ─────────────────────────────────────────────────────────
+  if (view === "signin") return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card">
+        <Logo/>
+        <div className="auth-title">Welcome back</div>
+        <div className="auth-sub">Sign in to manage your medications</div>
+        <div className="oauth-stack">
+          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting…":<><GIcon/> Continue with Google</>}</button>
+          <button className="oauth-btn" onClick={()=>oauth("apple")} disabled={!!obl}>{obl==="apple"?"Redirecting…":<><AIcon/> Continue with Apple</>}</button>
+          <button className="oauth-btn" onClick={()=>oauth("facebook")} disabled={!!obl}>{obl==="facebook"?"Redirecting…":<><FIcon/> Continue with Facebook</>}</button>
+        </div>
+        <div className="divider">or sign in with email</div>
         {err && <div className="err-msg">{err}</div>}
-        <form onSubmit={submit}>
+        <form onSubmit={handleSignIn}>
           <div className="input-group">
-            {mode==="signup" && <input className="input-field" type="text" placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} required/>}
-            <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required/>
-            <input className="input-field" type="password" placeholder={mode==="signup"?"Password (8+ characters)":"Password"} value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required/>
+            <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email"/>
+            <input className="input-field" type="password" placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="current-password"/>
           </div>
-          <button className="btn btn-primary" type="submit" disabled={busy}>{busy?"Please wait…":mode==="login"?"Sign in":"Create account"}</button>
+          <button className="btn btn-primary" type="submit" disabled={busy}>{busy?"Signing in…":"Sign in"}</button>
         </form>
-        <div className="auth-switch">{mode==="login"?<>No account? <button onClick={()=>{setMode("signup");setErr("");}}>Sign up free</button></>:<>Have an account? <button onClick={()=>{setMode("login");setErr("");}}>Sign in</button></>}</div>
+        <div className="auth-switch">
+          New to MediTrack? <button onClick={()=>{setView("signup");setErr("");}}>Create account</button>
+          <span style={{margin:"0 8px",color:"var(--sep)"}}>·</span>
+          <button onClick={()=>setView("welcome")} style={{color:"var(--t3)"}}>Back</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Sign Up screen (with country picker) ──────────────────────────────────
+  const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
+  const { pricing } = getPricing(country);
+
+  return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card" style={{maxWidth:440}}>
+        <Logo/>
+        <div className="auth-title">Create your account</div>
+        <div className="auth-sub">Free forever · Upgrade anytime</div>
+        <div className="oauth-stack">
+          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting…":<><GIcon/> Continue with Google</>}</button>
+          <button className="oauth-btn" onClick={()=>oauth("apple")} disabled={!!obl}>{obl==="apple"?"Redirecting…":<><AIcon/> Continue with Apple</>}</button>
+        </div>
+        <div className="divider">or sign up with email</div>
+        {err && <div className="err-msg">{err}</div>}
+        <form onSubmit={handleSignUp}>
+          <div className="input-group">
+            <input className="input-field" type="text" placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} required autoComplete="name"/>
+            <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email"/>
+            <input className="input-field" type="password" placeholder="Password (8+ characters)" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
+
+            {/* Country picker */}
+            <div style={{position:"relative"}}>
+              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>
+                {selCountry.flag}
+              </div>
+              <select
+                className="input-field"
+                value={country}
+                onChange={e=>setCountry(e.target.value)}
+                style={{paddingLeft:46}}
+              >
+                {COUNTRIES.map(c=>(
+                  <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Pricing preview based on country */}
+          <div style={{background:"linear-gradient(135deg,#EFF6FF,#F0FDF4)",border:"1px solid #BFDBFE",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+            <div style={{fontSize:12,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:".3px",marginBottom:8}}>
+              {selCountry.name} pricing
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div style={{background:"white",borderRadius:8,padding:"8px 10px",border:"1px solid #E0F2FE"}}>
+                <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Free plan</div>
+                <div style={{fontSize:16,fontWeight:700,color:"var(--teal2)"}}>Free</div>
+                <div style={{fontSize:11,color:"var(--t3)"}}>3 medications</div>
+              </div>
+              <div style={{background:"white",borderRadius:8,padding:"8px 10px",border:"1px solid #BFDBFE"}}>
+                <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Pro plan</div>
+                <div style={{fontSize:16,fontWeight:700,color:"var(--teal)"}}>{pricing.pro.label}<span style={{fontSize:11,fontWeight:400}}>/mo</span></div>
+                <div style={{fontSize:11,color:"var(--t3)"}}>Unlimited + more</div>
+              </div>
+            </div>
+          </div>
+
+          <button className="btn btn-primary" type="submit" disabled={busy}>{busy?"Creating account…":"Create free account"}</button>
+        </form>
+
+        <div style={{fontSize:12,color:"var(--t3)",textAlign:"center",marginTop:12,lineHeight:1.5}}>
+          By creating an account you agree to our Terms of Service and Privacy Policy.
+        </div>
+        <div className="auth-switch">
+          Already have an account? <button onClick={()=>{setView("signin");setErr("");}}>Sign in</button>
+          <span style={{margin:"0 8px",color:"var(--sep)"}}>·</span>
+          <button onClick={()=>setView("welcome")} style={{color:"var(--t3)"}}>Back</button>
+        </div>
       </div>
     </div>
   );
@@ -942,7 +1184,7 @@ function Onboarding({ user, profile: initProfile, onDone }) {
 }
 
 // ─── Add Medication Sheet ─────────────────────────────────────────────────────
-function MedSheet({ med, userId, reminderLead, onSave, onClose }) {
+function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose }) {
   const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), notes:"" };
   const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
@@ -957,6 +1199,10 @@ function MedSheet({ med, userId, reminderLead, onSave, onClose }) {
   }
 
   async function save() {
+    if (!med && !canAddMed(plan || "free", medCount || 0)) {
+      setErr("Free plan allows up to 3 medications. Upgrade to Pro for unlimited medications.");
+      return;
+    }
     if (!f.name.trim()||!f.dosage_amount||!f.course_duration_days) { setErr("Please fill in name, dosage, and duration."); return; }
     setBusy(true); setErr("");
     const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), notes:f.notes, active:true };
@@ -1158,7 +1404,7 @@ function TodayTab({ user, profile, meds, logs, onLog, onAdd, notifPerm, onEnable
 }
 
 // ─── MEDICATIONS TAB ──────────────────────────────────────────────────────────
-function MedsTab({ meds, logs, onAdd, onEdit, onDelete, reminderLead }) {
+function MedsTab({ meds, logs, onAdd, onEdit, onDelete, reminderLead, plan }) {
   const today = new Date();
   const active = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e>=today&&m.active;});
   const ended = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e<today||!m.active;});
@@ -1268,9 +1514,126 @@ function HistoryTab({ logs, meds }) {
 }
 
 // ─── PROFILE TAB ─────────────────────────────────────────────────────────────
+function UpgradeModal({ country, currentPlan, onClose, onUpgrade }) {
+  const [selected, setSelected] = useState("pro");
+  const { pricing } = getPricing(country || "GH");
+  const selCountry = COUNTRIES.find(c => c.code === (country || "GH")) || COUNTRIES[0];
+
+  const plans = [
+    {
+      id: "pro",
+      name: "Pro",
+      icon: "⭐",
+      color: "#0A84FF",
+      price: pricing.pro.label,
+      period: "/month",
+      tagline: "Everything you need for full adherence",
+      features: [
+        "✓ Unlimited medications",
+        "✓ Full history & analytics",
+        "✓ Caregiver sharing",
+        "✓ Refill reminders",
+        "✓ Drug interaction checker",
+        "✓ PDF adherence reports",
+        "✓ Priority support",
+      ],
+    },
+    {
+      id: "family",
+      name: "Family",
+      icon: "👨‍👩‍👧",
+      color: "#AF52DE",
+      price: pricing.family.label,
+      period: "/month",
+      tagline: "One account for the whole household",
+      features: [
+        "✓ Everything in Pro",
+        "✓ Up to 5 family profiles",
+        "✓ Shared family dashboard",
+        "✓ Per-member medication tracking",
+        "✓ Doctor-friendly PDF summaries",
+        "✓ Caregiver mode with alerts",
+      ],
+    },
+  ];
+
+  const plan = plans.find(p => p.id === selected);
+
+  return (
+    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" style={{maxHeight:"95vh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px 8px",textAlign:"center"}}>
+          <div style={{fontSize:28,marginBottom:4}}>✨</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Upgrade MediTrack</div>
+          <div style={{fontSize:14,color:"var(--t3)"}}>
+            {selCountry.flag} {selCountry.name} pricing · {pricing.pro.note || "Local rates"}
+          </div>
+        </div>
+
+        {/* Plan selector */}
+        <div style={{display:"flex",gap:10,padding:"12px 16px"}}>
+          {plans.map(p => (
+            <div
+              key={p.id}
+              onClick={() => setSelected(p.id)}
+              style={{
+                flex:1, borderRadius:14, padding:"14px 12px", cursor:"pointer", textAlign:"center",
+                border:`2px solid ${selected===p.id ? p.color : "var(--sep)"}`,
+                background: selected===p.id ? `${p.color}10` : "white",
+                transition:"all .15s",
+              }}
+            >
+              <div style={{fontSize:24,marginBottom:4}}>{p.icon}</div>
+              <div style={{fontWeight:700,fontSize:15,color:selected===p.id?p.color:"var(--t1)"}}>{p.name}</div>
+              <div style={{fontSize:17,fontWeight:800,color:selected===p.id?p.color:"var(--t2)",marginTop:4}}>
+                {p.price}
+              </div>
+              <div style={{fontSize:11,color:"var(--t3)"}}>{p.period}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Features */}
+        <div style={{padding:"8px 20px 16px"}}>
+          <div style={{fontSize:14,color:"var(--t3)",marginBottom:10}}>{plan.tagline}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {plan.features.map(f => (
+              <div key={f} style={{fontSize:15,color:"var(--t1)",display:"flex",alignItems:"center",gap:8}}>
+                <span style={{color:"var(--teal2)",fontWeight:700,flexShrink:0}}>✓</span>
+                <span>{f.replace("✓ ","")}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div style={{padding:"8px 16px",borderTop:"1px solid var(--sep)"}}>
+          <button
+            className="btn"
+            style={{
+              width:"100%", marginBottom:10,
+              background: plan.color, color:"white",
+              fontSize:16, fontWeight:700,
+            }}
+            onClick={() => onUpgrade(selected)}
+          >
+            Get {plan.name} · {plan.price}/month
+          </button>
+          <button className="btn btn-ghost" onClick={onClose}>Maybe later</button>
+          <div style={{fontSize:11,color:"var(--t3)",textAlign:"center",marginTop:10,lineHeight:1.5}}>
+            Cancel anytime. Secure payment. Prices shown in local currency.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileTab({ user, profile, onSignOut, onSaveProfile }) {
   const [notifPerm, setNotifPerm] = useState("default");
-  const [reminderLead, setReminderLead] = useState(profile?.reminder_lead||30);
+  const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => { if ("Notification" in window) setNotifPerm(Notification.permission); }, []);
 
@@ -1279,67 +1642,173 @@ function ProfileTab({ user, profile, onSignOut, onSaveProfile }) {
     setNotifPerm(p);
   }
 
+  function handleUpgrade(plan) {
+    // In production: open payment gateway (Paystack for Africa, Stripe elsewhere)
+    alert(`Upgrade to ${plan} — integrate Paystack/Stripe here with country: ${profile?.country || "GH"}`);
+    onSaveProfile({ plan });
+    setShowUpgrade(false);
+  }
+
+  const plan = profile?.plan || "free";
+  const country = profile?.country || user?.user_metadata?.country || "GH";
+  const { pricing } = getPricing(country);
+  const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
+
+  const planLabel = plan === "pro" ? "⭐ Pro Plan" : plan === "family" ? "👨‍👩‍👧 Family Plan" : "Free Plan";
+  const planColor = plan === "pro" ? "#0A84FF" : plan === "family" ? "#AF52DE" : "var(--t3)";
+
   return (
     <div className="scroll">
+      <style>{CSS}</style>
+
+      {/* Profile header */}
       <div className="profile-header">
-        <div className="profile-avatar">{profile?.avatar_emoji||"😊"}</div>
-        <div className="profile-name">{profile?.full_name||user?.user_metadata?.full_name||user?.email}</div>
-        <div className="profile-plan">{profile?.plan==="pro"?"⭐ Pro Plan":profile?.plan==="family"?"👨‍👩‍👧 Family Plan":"Free Plan"}</div>
+        <div className="profile-avatar">{profile?.avatar_emoji || "😊"}</div>
+        <div className="profile-name">{profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0]}</div>
+        <div style={{fontSize:14,color:planColor,fontWeight:600,marginTop:2}}>{planLabel}</div>
+        <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{selCountry.flag} {selCountry.name}</div>
       </div>
 
-      {profile?.plan==="free" && (
-        <div className="upgrade-card">
-          <div className="upgrade-title">Upgrade to Pro ⭐</div>
-          <div className="upgrade-sub">Unlock the full MediTrack experience</div>
-          <div className="upgrade-features">
-            {["Unlimited medications","Full adherence history","Caregiver sharing","Refill reminders","PDF health reports"].map(f=><div key={f} className="upgrade-feature">✓ {f}</div>)}
+      {/* Upgrade card (free users only) */}
+      {plan === "free" && (
+        <div style={{margin:"0 16px 16px"}}>
+          <div style={{background:"linear-gradient(135deg,#0A84FF,#AF52DE)",borderRadius:20,padding:20,color:"white"}}>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Unlock Pro ⭐</div>
+            <div style={{fontSize:13,opacity:.9,marginBottom:12,lineHeight:1.5}}>
+              Unlimited medications, caregiver sharing, adherence reports and more.
+            </div>
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+              {["Unlimited meds","Full history","Refill reminders","Reports"].map(f=>(
+                <div key={f} style={{background:"rgba(255,255,255,.2)",borderRadius:99,padding:"4px 10px",fontSize:12}}>✓ {f}</div>
+              ))}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:18,fontWeight:800}}>{pricing.pro.label}</div>
+                <div style={{fontSize:11,opacity:.8}}>Pro / month</div>
+              </div>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+                <div style={{fontSize:18,fontWeight:800}}>{pricing.family.label}</div>
+                <div style={{fontSize:11,opacity:.8}}>Family / month</div>
+              </div>
+            </div>
+            <button
+              style={{background:"white",color:"#0A84FF",border:"none",borderRadius:10,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
+              onClick={() => setShowUpgrade(true)}
+            >
+              See upgrade options →
+            </button>
           </div>
-          <button className="upgrade-btn">Upgrade — $3.99/month</button>
         </div>
       )}
 
+      {/* Pro / Family features list */}
+      {plan !== "free" && (
+        <div className="section">
+          <div className="section-header">Your plan includes</div>
+          <div className="list">
+            {[
+              ["💊","Unlimited medications","No cap on medications"],
+              ["📊","Full history & analytics","All-time dose history"],
+              ["🔔","Smart refill reminders","Never run out"],
+              ["⚠️","Drug interaction checker","Stay safe"],
+              ["📄","PDF adherence reports","Share with your doctor"],
+              plan === "family" ? ["👨‍👩‍👧","Family dashboard","5 profiles"] : null,
+            ].filter(Boolean).map(([icon,title,sub]) => (
+              <div key={title} className="row" style={{cursor:"default"}}>
+                <div className="row-icon" style={{background:"#EFF6FF",fontSize:18}}>{icon}</div>
+                <div className="row-body"><div className="row-title">{title}</div><div className="row-sub">{sub}</div></div>
+                <span style={{color:"var(--teal2)",fontSize:14,fontWeight:700}}>✓</span>
+              </div>
+            ))}
+          </div>
+          <div style={{padding:"10px 4px"}}>
+            <button className="btn btn-ghost" style={{border:"1.5px solid var(--sep)"}} onClick={() => setShowUpgrade(true)}>
+              {plan === "pro" ? "Upgrade to Family →" : "Manage subscription →"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications */}
       <div className="section">
         <div className="section-header">Notifications</div>
         <div className="list">
           <div className="row" style={{cursor:"default"}}>
             <div className="row-icon" style={{background:"#FEF3C7",fontSize:18}}>🔔</div>
-            <div className="row-body"><div className="row-title">Push notifications</div><div className="row-sub">{notifPerm==="granted"?"Enabled":"Tap to enable"}</div></div>
-            {notifPerm!=="granted"
+            <div className="row-body">
+              <div className="row-title">Push notifications</div>
+              <div className="row-sub">{notifPerm === "granted" ? "Enabled" : "Tap to enable"}</div>
+            </div>
+            {notifPerm !== "granted"
               ? <button className="btn btn-primary btn-sm" style={{width:"auto"}} onClick={enableNotifs}>Enable</button>
               : <span style={{color:"var(--teal2)",fontSize:14,fontWeight:600}}>On ✓</span>}
           </div>
-          {notifPerm==="granted"&&(
+          {notifPerm === "granted" && (
             <div className="row" style={{cursor:"default"}}>
               <div className="row-icon" style={{background:"#EFF6FF",fontSize:18}}>⏱</div>
               <div className="row-body"><div className="row-title">Default reminder timing</div></div>
-              <select value={reminderLead} onChange={e=>{setReminderLead(Number(e.target.value));onSaveProfile({reminder_lead:Number(e.target.value)});}} style={{border:"none",background:"none",color:"var(--teal)",fontSize:15,fontWeight:500,fontFamily:"inherit",cursor:"pointer"}}>
-                <option value={0}>At time</option><option value={15}>15 min</option><option value={30}>30 min</option><option value={60}>1 hr</option><option value={120}>2 hrs</option>
+              <select
+                value={reminderLead}
+                onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
+                style={{border:"none",background:"none",color:"var(--teal)",fontSize:15,fontWeight:500,fontFamily:"inherit",cursor:"pointer"}}
+              >
+                <option value={0}>At time</option>
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={60}>1 hr</option>
+                <option value={120}>2 hrs</option>
               </select>
             </div>
           )}
         </div>
       </div>
 
+      {/* Account */}
       <div className="section">
         <div className="section-header">Account</div>
         <div className="list">
-          <div className="row"><div className="row-icon" style={{background:"#EFF6FF",fontSize:18}}>📧</div><div className="row-body"><div className="row-title">Email</div><div className="row-sub">{user?.email}</div></div></div>
-          <div className="row"><div className="row-icon" style={{background:"#F3E8FF",fontSize:18}}>📋</div><div className="row-body"><div className="row-title">Condition</div><div className="row-sub">{profile?.condition||"Not set"}</div></div><Chevron/></div>
-          <div className="row" onClick={onSignOut}><div className="row-icon" style={{background:"#FEE2E2",fontSize:18}}>🚪</div><div className="row-body"><div className="row-title" style={{color:"var(--red)"}}>Sign out</div></div></div>
+          <div className="row" style={{cursor:"default"}}>
+            <div className="row-icon" style={{background:"#EFF6FF",fontSize:18}}>📧</div>
+            <div className="row-body"><div className="row-title">Email</div><div className="row-sub">{user?.email}</div></div>
+          </div>
+          <div className="row" style={{cursor:"default"}}>
+            <div className="row-icon" style={{background:"#F3E8FF",fontSize:18}}>🌍</div>
+            <div className="row-body"><div className="row-title">Country</div><div className="row-sub">{selCountry.flag} {selCountry.name}</div></div>
+          </div>
+          <div className="row" style={{cursor:"default"}}>
+            <div className="row-icon" style={{background:"#F0FDF4",fontSize:18}}>📋</div>
+            <div className="row-body"><div className="row-title">Health condition</div><div className="row-sub">{profile?.condition || "Not set"}</div></div>
+          </div>
+          <div className="row" onClick={onSignOut} style={{cursor:"pointer"}}>
+            <div className="row-icon" style={{background:"#FEE2E2",fontSize:18}}>🚪</div>
+            <div className="row-body"><div className="row-title" style={{color:"var(--red)"}}>Sign out</div></div>
+          </div>
         </div>
       </div>
 
+      {/* About */}
       <div className="section">
         <div className="section-header">About</div>
         <div className="list">
-          <div className="row"><div className="row-body"><div className="row-title">MediTrack</div><div className="row-sub">Version 1.0.0</div></div></div>
+          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">MediTrack</div><div className="row-sub">Version 1.0.0</div></div></div>
           <div className="row"><div className="row-body"><div className="row-title">Privacy Policy</div></div><Chevron/></div>
           <div className="row"><div className="row-body"><div className="row-title">Terms of Service</div></div><Chevron/></div>
         </div>
       </div>
+
+      {showUpgrade && (
+        <UpgradeModal
+          country={country}
+          currentPlan={plan}
+          onClose={() => setShowUpgrade(false)}
+          onUpgrade={handleUpgrade}
+        />
+      )}
     </div>
   );
 }
+
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 function MainApp({ user, profile: initProfile, onSignOut }) {
@@ -1357,13 +1826,18 @@ function MainApp({ user, profile: initProfile, onSignOut }) {
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const [mr, lr] = await Promise.all([
-      sb.from("medications").select("*").eq("user_id",user.id).order("created_at",{ascending:false}),
-      sb.from("dose_logs").select("*, medications(name)").eq("user_id",user.id).order("taken_at",{ascending:false}).limit(300),
-    ]);
-    if (mr.data) setMeds(mr.data);
-    if (lr.data) setLogs(lr.data);
-    setLoading(false);
+    try {
+      const [mr, lr] = await Promise.all([
+        sb.from("medications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        sb.from("dose_logs").select("*, medications(name)").eq("user_id", user.id).order("taken_at", { ascending: false }).limit(300),
+      ]);
+      if (Array.isArray(mr.data)) setMeds(mr.data);
+      if (Array.isArray(lr.data)) setLogs(lr.data);
+    } catch (e) {
+      console.error("load() error:", e?.message || e);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
 
   useEffect(() => { load(); }, [load]);
@@ -1371,23 +1845,43 @@ function MainApp({ user, profile: initProfile, onSignOut }) {
 
   async function logDose(med) {
     if (!user?.id) return;
-    await sb.from("dose_logs").insert([{ user_id:user.id, medication_id:med.id, taken_at:new Date().toISOString() }]);
-    load();
+    try {
+      const { error } = await sb.from("dose_logs").insert([{
+        user_id: user.id,
+        medication_id: med.id,
+        taken_at: new Date().toISOString(),
+      }]);
+      if (error) {
+        console.error("Log dose error:", error?.message || error);
+        return;
+      }
+      load();
+    } catch (e) {
+      console.error("Log dose exception:", e?.message || e);
+    }
   }
 
   async function deleteMed(id) {
     if (!user?.id) return;
     if (!confirm("Delete this medication and all its history?")) return;
-    await sb.from("dose_logs").eq("medication_id",id).delete();
-    await sb.from("medications").eq("id",id).delete();
-    load();
+    try {
+      await sb.from("dose_logs").eq("medication_id", id).delete();
+      await sb.from("medications").eq("id", id).delete();
+      load();
+    } catch (e) {
+      console.error("deleteMed error:", e?.message || e);
+    }
   }
 
   async function saveProfile(patch) {
     if (!user?.id) return;
     const updated = { ...profile, ...patch };
     setProfile(updated);
-    await sb.from("profiles").eq("id",user.id).update(patch);
+    try {
+      await sb.from("profiles").eq("id", user.id).update(patch);
+    } catch (e) {
+      console.error("saveProfile error:", e?.message || e);
+    }
   }
 
   async function enableNotif() {
@@ -1411,7 +1905,7 @@ function MainApp({ user, profile: initProfile, onSignOut }) {
 
       <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
         {tab==="today" && <TodayTab user={user} profile={profile} meds={meds} logs={logs} onLog={logDose} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif}/>}
-        {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} reminderLead={profile?.reminder_lead||30}/>}
+        {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} reminderLead={profile?.reminder_lead||30} plan={profile?.plan||"free"}/>}
         {tab==="history" && <HistoryTab logs={logs} meds={meds}/>}
         {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile}/>}
       </div>
@@ -1429,6 +1923,8 @@ function MainApp({ user, profile: initProfile, onSignOut }) {
           med={editMed}
           userId={user.id}
           reminderLead={profile?.reminder_lead||30}
+          plan={profile?.plan||"free"}
+          medCount={meds.length}
           onSave={()=>{setShowAdd(false);setEditMed(null);load();}}
           onClose={()=>{setShowAdd(false);setEditMed(null);}}
         />
@@ -1482,7 +1978,7 @@ export default function App() {
     setUser(u);
     const displayName = u.user_metadata?.full_name?.split(" ")[0] || u.email?.split("@")[0] || "";
     setSplash({ emoji:"👋", message: displayName ? `Hey, ${displayName}!` : "Welcome back!", sub:"Loading your medications…" });
-    const prof = await fetchProfile(u.id);
+    const prof = await fetchProfile(u.id, u.user_metadata);
     setProfile(prof);
     // Brief pause so the splash message is readable
     await new Promise(r => setTimeout(r, 900));
