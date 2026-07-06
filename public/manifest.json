@@ -1,0 +1,15 @@
+{
+  "name": "MediTrack",
+  "short_name": "MediTrack",
+  "description": "Track medications, get smart reminders, and stay on top of your health.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#0A84FF",
+  "categories": ["health", "medical", "lifestyle"],
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon.svg", "sizes": "512x512", "type": "image/svg+xml" }
+  ]
+}
