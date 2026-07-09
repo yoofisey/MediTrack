@@ -1,6 +1,6 @@
 "use client";
 
-export default function Ring({ pct, size = 80, stroke = 7, color = "#0A84FF" }) {
+export default function Ring({ pct, size = 80, stroke = 7, color = "#2563EB" }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
   const p = Math.min(Math.max(pct, 0), 1);
   return (

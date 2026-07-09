@@ -46,7 +46,7 @@ export default function App() {
   const [screen, setScreen]   = useState("splash");
   const [user,   setUser]     = useState(null);
   const [profile,setProfile]  = useState(null);
-  const [splash, setSplash]   = useState({ emoji:"💊", message:"MediTrack", sub:"Loading…" });
+  const [splash, setSplash]   = useState({ emoji:"💊", message:"Adhera", sub:"Your Personal Treatment Companion" });
 
   async function resolveUser() {
     const { data } = await sb.auth.getUser();
@@ -101,7 +101,7 @@ export default function App() {
 
   async function handleOnboardDone(prefs) {
     setProfile(p => ({ ...p, ...prefs, onboarded: true }));
-    setSplash({ emoji:"🌟", message:"You're all set!", sub:"Your MediTrack is ready" });
+    setSplash({ emoji:"🌟", message:"You're all set!", sub:"Your Personal Treatment Companion" });
     setScreen("splash");
     await new Promise(r => setTimeout(r, 1200));
     setScreen("app");
@@ -115,6 +115,6 @@ export default function App() {
   if (screen === "splash")     return <TransitionScreen {...splash} />;
   if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;
   if (screen === "onboarding") return <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />;
-  if (!user)                   return <TransitionScreen emoji="💊" message="MediTrack" sub="Loading…" />;
+  if (!user)                   return <TransitionScreen emoji="💊" message="Adhera" sub="Your Personal Treatment Companion" />;
   return <MainApp user={user} profile={profile} onSignOut={handleSignOut} />;
 }

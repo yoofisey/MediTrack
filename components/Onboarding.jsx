@@ -68,7 +68,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
 
     <div key="1" className="ob-body">
       <div className="ob-emoji">🎯</div>
-      <div className="ob-title">How are you using MediTrack?</div>
+      <div className="ob-title">How are you using Adhera?</div>
       <div className="ob-sub">We&apos;ll personalise your experience based on your needs.</div>
       <div className="ob-options">
         {conditions.map(c => (
@@ -132,7 +132,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
                 <div style={{fontSize:14,fontWeight:700,color:"var(--teal)"}}>{p.price}</div>
               </div>
               <div className="ob-option-sub" style={{marginBottom:8}}>{p.sub}</div>
-              {p.features.map(f=><div key={f} style={{fontSize:12,color:"var(--t3)",marginTop:3}}>✓ {f}</div>)}
+              {p.features.map(f=><div key={f} style={{fontSize:12,color:"var(--t3)",marginTop:3}}>— {f}</div>)}
             </div>
             <div className={`ob-check${data.plan===p.value?" on":""}`} style={{marginTop:2}}>{data.plan===p.value&&<span style={{color:"white",fontSize:13}}>✓</span>}</div>
           </div>
@@ -170,14 +170,14 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
       <div style={{fontSize:13,color:"var(--t3)",fontWeight:500,textTransform:"uppercase",letterSpacing:".3px",marginBottom:12}}>APP THEME</div>
       <div className="theme-grid">
         {[
-          {id:"blue",  colors:["#0A84FF","#32ADE6"],label:"Ocean"},
-          {id:"green", colors:["#34C759","#30D158"],label:"Forest"},
-          {id:"purple",colors:["#AF52DE","#BF5AF2"],label:"Lavender"},
-          {id:"orange",colors:["#FF9500","#FF6000"],label:"Sunset"},
-          {id:"red",   colors:["#FF3B30","#FF453A"],label:"Cherry"},
-          {id:"teal",  colors:["#5AC8FA","#0A84FF"],label:"Sky"},
-          {id:"pink",  colors:["#FF2D55","#FF375F"],label:"Rose"},
-          {id:"dark",  colors:["#1C1C1E","#2C2C2E"],label:"Midnight"},
+          {id:"blue",  colors:["#2563EB","#1D4ED8"],label:"Medical"},
+          {id:"green", colors:["#059669","#047857"],label:"Clinical"},
+          {id:"purple",colors:["#8B5CF6","#A78BFA"],label:"Lavender"},
+          {id:"orange",colors:["#F97316","#FB923C"],label:"Sunset"},
+          {id:"red",   colors:["#EF4444","#F87171"],label:"Cherry"},
+          {id:"teal",  colors:["#14B8A6","#2563EB"],label:"Lagoon"},
+          {id:"pink",  colors:["#EC4899","#F472B6"],label:"Rose"},
+          {id:"dark",  colors:["#3B82F6","#60A5FA"],label:"Midnight"},
         ].map(th=>(
           <div key={th.id} className={`theme-swatch${data.theme===th.id?" sel":""}`}
             style={{background:`linear-gradient(135deg,${th.colors[0]},${th.colors[1]})`}}

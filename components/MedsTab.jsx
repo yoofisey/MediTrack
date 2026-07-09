@@ -1,8 +1,10 @@
 "use client";
 
 import { CSS, fmtDate } from "@/lib/constants";
+import { TIER_LIMITS } from "@/lib/data";
 
-export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete }) {
+export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, plan, medCount }) {
+  const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
   const active = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e>=today&&m.active;});
   const ended = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e<today||!m.active;});
@@ -57,6 +59,17 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete }) {
         <div className="chip green"><div className="chip-val">{active.length}</div><div className="chip-lbl">Active</div></div>
         <div className="chip"><div className="chip-val">{ended.length}</div><div className="chip-lbl">Completed</div></div>
       </div>
+
+      {plan==="free" && (
+        <div style={{margin:"0 16px 12px",background:"var(--card)",borderRadius:"var(--rl)",padding:"12px 16px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>Medication limit</span>
+            <span style={{fontSize:13,fontWeight:600,color:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}>{medCount}/{limits.maxMeds} used</span>
+          </div>
+          <div className="prog"><div className="prog-fill" style={{width:`${Math.min(medCount/limits.maxMeds,1)*100}%`,background:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}/></div>
+          {medCount>=limits.maxMeds && <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>Upgrade to Pro for unlimited medications.</div>}
+        </div>
+      )}
 
       {active.length>0&&<div className="section"><div className="section-header">Active</div>{active.map(m=><MedCard key={m.id} med={m}/>)}</div>}
       {ended.length>0&&<div className="section"><div className="section-header">Completed</div>{ended.map(m=><MedCard key={m.id} med={m}/>)}</div>}

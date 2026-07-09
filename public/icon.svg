@@ -1,14 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0A84FF"/>
-      <stop offset="100%" stop-color="#32ADE6"/>
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#2563EB"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="96" fill="url(#g)"/>
-  <g transform="translate(76,96)" fill="white">
-    <rect x="80" y="60" width="200" height="260" rx="40" fill="white" opacity=".3"/>
-    <rect x="120" y="0" width="120" height="260" rx="40" fill="white"/>
-    <path d="M150 130 L210 190 M170 110 L150 190 M190 150 L170 210" stroke="#0A84FF" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <g fill="white">
+    <circle cx="256" cy="256" r="185" fill="none" stroke="white" stroke-width="10" stroke-opacity=".2"/>
+    <circle cx="256" cy="71" r="22" fill="white"/>
+    <circle cx="256" cy="441" r="22" fill="white"/>
+    <text x="132" y="282" font-family="system-ui,sans-serif" font-size="120" font-weight="700" fill="white">A</text>
+    <rect x="300" y="232" width="16" height="64" rx="8" fill="white"/>
+    <rect x="276" y="256" width="64" height="16" rx="8" fill="white"/>
+    <path d="M345 133 L400 168 L425 135" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".6"/>
+    <path d="M167 379 L112 344 L87 377" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".6"/>
   </g>
 </svg>

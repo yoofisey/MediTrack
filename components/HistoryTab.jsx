@@ -3,14 +3,16 @@
 import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
 import { calcStreak } from "@/lib/data";
 
-export default function HistoryTab({ logs, meds }) {
+export default function HistoryTab({ logs, meds, plan }) {
+  const limits = { free: { history: 7 }, pro: { history: 999 }, family: { history: 999 } };
+  const maxDays = (limits[plan] || limits.free).history;
   const streak = calcStreak(logs, meds);
   const grouped = {};
   logs.forEach(l => {
     const d = l.taken_at?.split("T")[0];
     if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); }
   });
-  const days = Object.keys(grouped).sort().reverse().slice(0,30);
+  const days = Object.keys(grouped).sort().reverse().slice(0, maxDays);
 
   return (
     <div className="scroll">

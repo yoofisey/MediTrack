@@ -4,12 +4,13 @@ import { useState } from "react";
 import { CSS, Chevron } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { askNotifPerm } from "@/lib/notifications";
-import { PrivacyModal, TermsModal, UpgradeModal } from "@/components/Modals";
+import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 
-export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) {
+export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount }) {
   const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({ avatar_emoji: "", full_name: "", wake_time: "", sleep_time: "", goals: [], theme: "", country: "" });
   const [editCondition, setEditCondition] = useState(false);
@@ -19,6 +20,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
   const [showTerms, setShowTerms] = useState(false);
   const [conditionVal, setConditionVal] = useState(profile?.condition || "");
   const [schedVals, setSchedVals] = useState({ wake: profile?.wake_time || "07:00", sleep: profile?.sleep_time || "22:00" });
+  const [familyMembers, setFamilyMembers] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("adhera_family") || "[]"); } catch { return []; }
+  });
 
   async function enableNotifs() {
     const p = await askNotifPerm();
@@ -26,9 +30,24 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
   }
 
   function handleUpgrade(plan) {
-    alert(`Upgrade to ${plan} — integrate Paystack/Stripe here with country: ${profile?.country || "GH"}`);
+    const msg = plan === "enterprise"
+      ? "Enterprise plan activated! Your account manager will reach out within 24 hours."
+      : `Upgraded to ${plan.charAt(0).toUpperCase()+plan.slice(1)}!`;
+    alert(msg);
     onSaveProfile({ plan });
     setShowUpgrade(false);
+  }
+
+  function handleInvite(email) {
+    const updated = [...familyMembers, { email, status: "pending", invitedAt: new Date().toISOString() }];
+    setFamilyMembers(updated);
+    localStorage.setItem("adhera_family", JSON.stringify(updated));
+  }
+
+  function handleRemoveMember(index) {
+    const updated = familyMembers.filter((_, i) => i !== index);
+    setFamilyMembers(updated);
+    localStorage.setItem("adhera_family", JSON.stringify(updated));
   }
 
   const plan = profile?.plan || "free";
@@ -36,8 +55,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
   const { pricing } = getPricing(country);
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
 
-  const planLabel = plan === "pro" ? "⭐ Pro Plan" : plan === "family" ? "👨‍👩‍👧 Family Plan" : "Free Plan";
-  const planColor = plan === "pro" ? "#0A84FF" : plan === "family" ? "#AF52DE" : "var(--t3)";
+  const planLabel = plan === "enterprise" ? "🏥 Enterprise" : plan === "pro" ? "⭐ Pro Plan" : plan === "family" ? "👨‍👩‍👧 Family Plan" : "Free Plan";
+  const planColor = plan === "enterprise" ? "#7C3AED" : plan === "pro" ? "#2563EB" : plan === "family" ? "#AF52DE" : "var(--t3)";
 
   const profileEmojis = ["😊","🧑","👩","👨","🧓","👴","👵","🧒","👦","👧","🙂","😄","💪","🌟","❤️","🌸","🐻","🦁","🐼","🌴"];
 
@@ -126,14 +145,14 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
         <div className="section-header">Theme</div>
         <div className="theme-grid" style={{margin:"0 16px"}}>
           {[
-            {id:"blue",  colors:["#0A84FF","#32ADE6"]},
-            {id:"green", colors:["#34C759","#30D158"]},
-            {id:"purple",colors:["#AF52DE","#BF5AF2"]},
-            {id:"orange",colors:["#FF9500","#FF6000"]},
-            {id:"red",   colors:["#FF3B30","#FF453A"]},
-            {id:"teal",  colors:["#5AC8FA","#0A84FF"]},
-            {id:"pink",  colors:["#FF2D55","#FF375F"]},
-            {id:"dark",  colors:["#1C1C1E","#2C2C2E"]},
+            {id:"blue",  colors:["#2563EB","#1D4ED8"]},
+            {id:"green", colors:["#059669","#047857"]},
+            {id:"purple",colors:["#8B5CF6","#A78BFA"]},
+            {id:"orange",colors:["#F97316","#FB923C"]},
+            {id:"red",   colors:["#EF4444","#F87171"]},
+            {id:"teal",  colors:["#14B8A6","#2563EB"]},
+            {id:"pink",  colors:["#EC4899","#F472B6"]},
+            {id:"dark",  colors:["#3B82F6","#60A5FA"]},
           ].map(th=>(
             <div key={th.id} className={`theme-swatch${editData.theme===th.id?" sel":""}`}
               style={{background:`linear-gradient(135deg,${th.colors[0]},${th.colors[1]})`}}
@@ -177,28 +196,35 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
 
       {plan === "free" && (
         <div style={{margin:"0 16px 16px"}}>
-          <div style={{background:"linear-gradient(135deg,#0A84FF,#AF52DE)",borderRadius:20,padding:20,color:"white"}}>
-            <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Unlock Pro ⭐</div>
+          <div style={{background:"linear-gradient(135deg,#2563EB,#1D4ED8)",borderRadius:20,padding:20,color:"white"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <div style={{fontSize:18,fontWeight:700}}>Unlock Pro ⭐</div>
+              <span style={{fontSize:13,background:"rgba(255,255,255,.2)",borderRadius:99,padding:"3px 10px"}}>{medCount}/3 meds</span>
+            </div>
             <div style={{fontSize:13,opacity:.9,marginBottom:12,lineHeight:1.5}}>
               Unlimited medications, caregiver sharing, adherence reports and more.
             </div>
             <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
               {["Unlimited meds","Full history","Refill reminders","Reports"].map(f=>(
-                <div key={f} style={{background:"rgba(255,255,255,.2)",borderRadius:99,padding:"4px 10px",fontSize:12}}>✓ {f}</div>
+                <div key={f} style={{background:"rgba(255,255,255,.2)",borderRadius:99,padding:"4px 10px",fontSize:12}}>{f}</div>
               ))}
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontSize:18,fontWeight:800}}>{pricing.pro.label}</div>
-                <div style={{fontSize:11,opacity:.8}}>Pro / month</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:14}}>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:800}}>{pricing.pro.label}</div>
+                <div style={{fontSize:10,opacity:.8}}>Pro / mo</div>
               </div>
-              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontSize:18,fontWeight:800}}>{pricing.family.label}</div>
-                <div style={{fontSize:11,opacity:.8}}>Family / month</div>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:800}}>{pricing.family.label}</div>
+                <div style={{fontSize:10,opacity:.8}}>Family / mo</div>
+              </div>
+              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:800}}>{pricing.enterprise.label}</div>
+                <div style={{fontSize:10,opacity:.8}}>Enterprise / mo</div>
               </div>
             </div>
             <button
-              style={{background:"white",color:"#0A84FF",border:"none",borderRadius:10,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
+              style={{background:"white",color:"#2563EB",border:"none",borderRadius:10,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
               onClick={() => setShowUpgrade(true)}
             >
               See upgrade options →
@@ -211,25 +237,65 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
         <div className="section">
           <div className="section-header">Your plan includes</div>
           <div className="list">
-            {[
-              ["💊","Unlimited medications","No cap on medications"],
-              ["📊","Full history & analytics","All-time dose history"],
-              ["🔔","Smart refill reminders","Never run out"],
-              ["⚠️","Drug interaction checker","Stay safe"],
-              ["📄","PDF adherence reports","Share with your doctor"],
-              plan === "family" ? ["👨‍👩‍👧","Family dashboard","5 profiles"] : null,
-            ].filter(Boolean).map(([icon,title,sub]) => (
-              <div key={title} className="row" style={{cursor:"default"}}>
-                <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>{icon}</div>
-                <div className="row-body"><div className="row-title">{title}</div><div className="row-sub">{sub}</div></div>
-                <span style={{color:"var(--teal2)",fontSize:14,fontWeight:700}}>✓</span>
-              </div>
-            ))}
+              {[
+                ["💊","Unlimited medications","No cap on medications"],
+                ["📊","Full history & analytics","All-time dose history"],
+                ["🔔","Smart refill reminders","Never run out"],
+                ["⚠️","Drug interaction checker","Stay safe"],
+                ["📄","PDF adherence reports","Share with your doctor"],
+                plan === "family" || plan === "enterprise" ? ["👨‍👩‍👧","Family dashboard","5 profiles"] : null,
+                plan === "enterprise" ? ["🏥","Bulk patient management","Manage unlimited patients"] : null,
+                plan === "enterprise" ? ["🔌","API & integrations","Connect your EMR/HIS"] : null,
+                plan === "enterprise" ? ["🎨","Custom branding","White-label experience"] : null,
+                plan === "enterprise" ? ["🛡️","HIPAA-compliant","Enterprise-grade security"] : null,
+                plan === "enterprise" ? ["👤","Dedicated account manager","24/7 priority support"] : null,
+              ].filter(Boolean).map(([icon,title,sub]) => (
+                <div key={title} className="row" style={{cursor:"default"}}>
+                  <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>{icon}</div>
+                  <div className="row-body"><div className="row-title">{title}</div><div className="row-sub">{sub}</div></div>
+                </div>
+              ))}
           </div>
           <div style={{padding:"10px 4px"}}>
             <button className="btn btn-ghost" style={{border:"1.5px solid var(--sep)"}} onClick={() => setShowUpgrade(true)}>
-              {plan === "pro" ? "Upgrade to Family →" : "Manage subscription →"}
+              {plan === "pro" ? "Upgrade to Family →" : plan === "enterprise" ? "Manage enterprise account →" : "Manage subscription →"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {(plan === "family" || plan === "enterprise") && (
+        <div className="section">
+          <div className="section-header">👨‍👩‍👧 Family dashboard</div>
+          <div className="list">
+            <div className="row" style={{cursor:"default"}}>
+              <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>👤</div>
+              <div className="row-body">
+                <div className="row-title">Primary member</div>
+                <div className="row-sub">{profile?.full_name || user?.email}</div>
+              </div>
+            </div>
+            <div className="row" style={{cursor:"default"}} onClick={() => setShowAddMember(true)}>
+              <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>➕</div>
+              <div className="row-body">
+                <div className="row-title">Add family member</div>
+                <div className="row-sub">Invite via email to link profiles</div>
+              </div>
+            </div>
+            <div className="row" style={{cursor:"default"}}>
+              <div className="row-icon" style={{background:"var(--ib3)",fontSize:18}}>📊</div>
+              <div className="row-body">
+                <div className="row-title">Shared compliance view</div>
+                <div className="row-sub">See everyone&apos;s adherence at a glance</div>
+              </div>
+            </div>
+            <div className="row" style={{cursor:"default"}}>
+              <div className="row-icon" style={{background:"var(--ib6)",fontSize:18}}>🔔</div>
+              <div className="row-body">
+                <div className="row-title">Caregiver notifications</div>
+                <div className="row-sub">Alerts when loved ones miss doses</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -353,15 +419,24 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile }) 
       <div className="section">
         <div className="section-header">About</div>
         <div className="list">
-          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">MediTrack</div><div className="row-sub">Version 1.0.0</div></div></div>
+          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version 1.0.0</div></div></div>
           <div className="row" onClick={()=>setShowPrivacy(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Privacy Policy</div></div><Chevron/></div>
           <div className="row" onClick={()=>setShowTerms(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Terms of Service</div></div><Chevron/></div>
         </div>
       </div>
 
+      {showAddMember && (
+        <FamilyInviteModal
+          members={familyMembers}
+          onInvite={handleInvite}
+          onRemove={handleRemoveMember}
+          onClose={() => setShowAddMember(false)}
+        />
+      )}
       {showUpgrade && (
         <UpgradeModal
           country={country}
+          userEmail={user?.email}
           onClose={() => setShowUpgrade(false)}
           onUpgrade={handleUpgrade}
         />

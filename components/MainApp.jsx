@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { THEMES } from "@/lib/data";
-import { scheduleNotifs, askNotifPerm } from "@/lib/notifications";
+import { scheduleNotifs, askNotifPerm, stopAlarmSound } from "@/lib/notifications";
 import TodayTab from "@/components/TodayTab";
 import MedsTab from "@/components/MedsTab";
 import HistoryTab from "@/components/HistoryTab";
@@ -46,7 +46,14 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     })();
     return () => { cancelled = true; };
   }, [user?.id, loadKey]);
-  useEffect(() => { if (meds.length) scheduleNotifs(meds, profile?.reminder_lead||30, profile?.wake_time); }, [meds, profile?.reminder_lead, profile?.wake_time]);
+  useEffect(() => { if (meds.length) scheduleNotifs(meds, profile?.reminder_lead||30, profile?.wake_time, logs); }, [meds, profile?.reminder_lead, profile?.wake_time, logs]);
+  useEffect(() => {
+    function onMsg(e) { if (e.data?.type === "alarm-ack") stopAlarmSound(); }
+    if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener("message", onMsg);
+      return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+    }
+  }, []);
   useEffect(() => {
     const t = THEMES[profile?.theme] || THEMES.blue;
     const root = document.documentElement;
@@ -75,6 +82,16 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   async function logDose(med) {
     if (!user?.id) return;
+    const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
+    if (lastLog) {
+      const elapsed = (Date.now() - new Date(lastLog.taken_at).getTime()) / 3600000;
+      if (elapsed < (med.dose_interval_hours || 24/med.times_per_day)) {
+        const waitH = Math.ceil((med.dose_interval_hours || 24/med.times_per_day) - elapsed);
+        const waitM = Math.round(waitH * 60);
+        if (waitM < 60) { alert(`⏳ Wait ${waitM} more minutes before your next dose.`); return; }
+        alert(`⏳ Wait ~${waitH} more hour${waitH>1?"s":""} before your next dose.`); return;
+      }
+    }
     try {
       const { error } = await sb.from("dose_logs").insert([{
         user_id: user.id,
@@ -122,7 +139,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   async function enableNotif() {
     const p = await askNotifPerm();
     setNotifPerm(p);
-    if (p==="granted") scheduleNotifs(meds, profile?.reminder_lead||30, profile?.wake_time);
+    if (p==="granted") scheduleNotifs(meds, profile?.reminder_lead||30, profile?.wake_time, logs);
   }
 
   const tabs = [
@@ -140,11 +157,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       <style>{CSS}</style>
 
       <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
-        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={logDose} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif}/>}
-        {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed}/>}
-        {tab==="history" && <HistoryTab logs={logs} meds={meds}/>}
-        {tab==="reports" && <ReportsTab logs={logs} meds={meds}/>}
-        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile}/>}
+        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={logDose} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length}/>}
+        {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} plan={profile?.plan||"free"} medCount={meds.length}/>}
+        {tab==="history" && <HistoryTab logs={logs} meds={meds} plan={profile?.plan||"free"}/>}
+        {tab==="reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"}/>}
+        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length}/>}
       </div>
 
       <div className="tabbar">

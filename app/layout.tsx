@@ -3,14 +3,14 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "MediTrack",
-    template: "%s | MediTrack",
+    default: "Adhera",
+    template: "%s | Adhera",
   },
-  description: "Track medications, doses, course progress, and medication history in a simple private dashboard.",
-  applicationName: "MediTrack",
-  keywords: ["medication tracker", "dose reminder", "health dashboard", "MediTrack"],
-  authors: [{ name: "MediTrack" }],
-  creator: "MediTrack",
+  description: "Your Personal Treatment Companion — Track medications, get smart alarm reminders, and stay on top of your health.",
+  applicationName: "Adhera",
+  keywords: ["medication tracker", "dose reminder", "health dashboard", "Adhera"],
+  authors: [{ name: "Adhera" }],
+  creator: "Adhera",
   formatDetection: {
     email: false,
     address: false,
@@ -18,13 +18,13 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "MediTrack",
+    title: "Adhera",
     statusBarStyle: "default",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0A84FF",
+  themeColor: "#2563EB",
   colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
@@ -39,12 +39,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link rel="apple-touch-icon" href="/icon.svg" />
-        <meta name="apple-mobile-web-app-title" content="MediTrack" />
+        <meta name="apple-mobile-web-app-title" content="Adhera" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
