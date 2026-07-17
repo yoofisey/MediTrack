@@ -120,7 +120,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {[
-          { value:"free", icon:"🆓", title:"Free", sub:"Up to 3 medications, basic reminders", price:"Free forever", features:["3 medications","Daily reminders","7-day history"] },
+          { value:"free", icon:"🆓", title:"Free", sub:"Up to 2 medications, basic reminders", price:"Free forever", features:["2 medications","Daily reminders","7-day history"] },
           { value:"pro", icon:"⭐", title:"Pro", sub:"Everything you need for full adherence", price:`${obPricing.pro.label}/mo`, features:["Unlimited medications","Full history & analytics","Caregiver sharing","Refill reminders","Adherence PDF reports"] },
           { value:"family", icon:"👨‍👩‍👧", title:"Family", sub:"One account for the whole household", price:`${obPricing.family.label}/mo`, features:["5 family profiles","All Pro features","Shared family dashboard","Doctor-friendly summaries"] },
         ].map(p=>(
@@ -169,16 +169,16 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
       </div>
       <div style={{fontSize:13,color:"var(--t3)",fontWeight:500,textTransform:"uppercase",letterSpacing:".3px",marginBottom:12}}>APP THEME</div>
       <div className="theme-grid">
-        {[
-          {id:"blue",  colors:["#2563EB","#1D4ED8"],label:"Medical"},
-          {id:"green", colors:["#059669","#047857"],label:"Clinical"},
-          {id:"purple",colors:["#8B5CF6","#A78BFA"],label:"Lavender"},
-          {id:"orange",colors:["#F97316","#FB923C"],label:"Sunset"},
-          {id:"red",   colors:["#EF4444","#F87171"],label:"Cherry"},
-          {id:"teal",  colors:["#14B8A6","#2563EB"],label:"Lagoon"},
-          {id:"pink",  colors:["#EC4899","#F472B6"],label:"Rose"},
-          {id:"dark",  colors:["#3B82F6","#60A5FA"],label:"Midnight"},
-        ].map(th=>(
+          {[
+            {id:"blue",  colors:["#007AFF","#0055CC"],label:"Medical"},
+            {id:"green", colors:["#34C759","#2DB84E"],label:"Clinical"},
+            {id:"purple",colors:["#AF52DE","#983CC9"],label:"Lavender"},
+            {id:"orange",colors:["#FF9500","#E68A00"],label:"Sunset"},
+            {id:"red",   colors:["#FF3B30","#D6342A"],label:"Cherry"},
+            {id:"teal",  colors:["#5AC8FA","#42B0E0"],label:"Lagoon"},
+            {id:"pink",  colors:["#FF2D55","#D92548"],label:"Rose"},
+            {id:"dark",  colors:["#0A84FF","#409CFF"],label:"Midnight"},
+          ].map(th=>(
           <div key={th.id} className={`theme-swatch${data.theme===th.id?" sel":""}`}
             style={{background:`linear-gradient(135deg,${th.colors[0]},${th.colors[1]})`}}
             onClick={()=>set("theme",th.id)}>

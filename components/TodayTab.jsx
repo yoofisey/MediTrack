@@ -14,6 +14,7 @@ function milestone(streak) {
 
 export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif }) {
   const today = new Date();
+
   const todayStr = today.toISOString().split("T")[0];
   const todayLogs = logs.filter(l => l.taken_at?.startsWith(todayStr));
   const activeMeds = meds.filter(m => { if (!m.active) return false; const e=new Date(m.start_date); e.setDate(e.getDate()+m.course_duration_days); return e>=today; });
@@ -81,7 +82,7 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
               let locked = false;
               let lockMsg = "";
               if (lastLog && !done) {
-                const elapsed = (Date.now() - new Date(lastLog.taken_at).getTime()) / 3600000;
+                const elapsed = (today - new Date(lastLog.taken_at)) / 3600000;
                 if (elapsed < interval) {
                   locked = true;
                   const remaining = interval - elapsed;

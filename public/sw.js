@@ -1,7 +1,11 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil(clients.claim()));
+
+const doseDB = {};
+
 self.addEventListener("notificationclick", e => {
   e.notification.close();
+  const tag = e.notification.tag || "";
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(cls => {
       cls.forEach(c => c.postMessage?.({ type: "alarm-ack" }));
@@ -10,6 +14,55 @@ self.addEventListener("notificationclick", e => {
     })
   );
 });
+
+self.addEventListener("message", e => {
+  const { type, payload } = e.data || {};
+  if (type === "schedule-doses" && Array.isArray(payload)) {
+    Object.keys(doseDB).forEach(k => { if (doseDB[k]?.timer) clearTimeout(doseDB[k].timer); });
+    payload.forEach(item => {
+      const timerId = `mt-${item.medId}-${item.doseAt}`;
+      const delay = item.doseAt - Date.now();
+      if (delay <= 0) return;
+      doseDB[timerId] = {
+        timer: setTimeout(() => {
+          const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
+          self.registration.showNotification(`💊 ${item.name}`, {
+            body: `Take ${item.dosageAmount} ${item.dosageUnit}${item.notes ? `\n\n${item.notes}` : ""}\nDay ${daysSince}/${item.courseDays}${item.streak > 0 ? `\n🔥 ${item.streak} day streak` : ""}`,
+            icon: "/icon.svg",
+            tag: `mt-dose-${item.medId}-${item.doseAt}`,
+            vibrate: [500, 200, 500, 200, 500],
+            requireInteraction: true,
+          });
+          delete doseDB[timerId];
+        }, delay),
+        item,
+      };
+      const leadTimerId = `${timerId}-lead`;
+      const leadDelay = delay - item.lead * 60000;
+      if (item.lead > 0 && leadDelay > 0) {
+        doseDB[leadTimerId] = {
+          timer: setTimeout(() => {
+            const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
+            self.registration.showNotification(`⏰ Reminder: ${item.name}`, {
+              body: `${item.dosageAmount} ${item.dosageUnit} · Day ${daysSince}/${item.courseDays}`,
+              icon: "/icon.svg",
+              tag: `mt-rem-${item.medId}-${item.doseAt}`,
+              vibrate: [300, 150, 300],
+              requireInteraction: true,
+            });
+            delete doseDB[leadTimerId];
+          }, leadDelay),
+          item,
+        };
+      }
+    });
+  }
+  if (type === "clear-alarms") {
+    Object.keys(doseDB).forEach(k => { if (doseDB[k]?.timer) clearTimeout(doseDB[k].timer); });
+    Object.keys(doseDB).forEach(k => delete doseDB[k]);
+  }
+});
+
 self.addEventListener("push", e => {
   const d = e.data?.json() || {};
   self.registration.showNotification(d.title || "Adhera", {

@@ -92,12 +92,25 @@ export default function AuthScreen({ onAuth }) {
       setSent(true);
     } catch (e) {
       const m = e?.message || "";
-      if (m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable")) {
-        setErr("📧 Email service not configured.\n\nYour Supabase project needs SMTP settings to send emails. Go to your Supabase dashboard → Authentication → Settings → SMTP and add a provider (SendGrid, Resend, or Mailgun — all offer free tiers).\n\nAlternatively, sign up with Google above.");
+      if (m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") || m.includes("sending magic link")) {
+        setErr("📧 Email service not configured.\n\nYour Supabase project needs SMTP settings to send emails. Go to your Supabase dashboard → Authentication → Settings → SMTP and add a provider (SendGrid, Resend, or Mailgun — all offer free tiers).\n\nIf using Resend, make sure you've verified a domain on resend.com/domains (the free onboarding@resend.dev sender only works with authorized emails). Also check your API key is valid.");
       } else {
         setErr(m || "Something went wrong. Please try again.");
       }
     } finally { setBusy(false); }
+  }
+
+  async function handleResendOtp() {
+    if (cooldown>0) return;
+    setErr("");
+    const { error } = await sb.auth.signUpOtp({ email });
+    if (error) {
+      const m = error.message || "";
+      setErr(m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") ? "Email service not configured. Set up SMTP in Supabase dashboard." : "Failed to resend - " + m);
+    } else {
+      startCooldown(60);
+      setErr("Code resent - check your inbox.");
+    }
   }
 
   async function handleEnterpriseSignUp(e) {
@@ -153,9 +166,7 @@ export default function AuthScreen({ onAuth }) {
 
   if (sent) return (
     <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card">
-        <AuthLogo/>
-        <div style={{textAlign:"center",marginBottom:20}}>
+      <div className="auth-card" key="sent">
           <div style={{fontSize:48,marginBottom:12}}>📬</div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Check your email</div>
           <div style={{fontSize:15,color:"var(--t3)",lineHeight:1.5}}>
@@ -180,26 +191,15 @@ export default function AuthScreen({ onAuth }) {
             />
           </div>
           <button className="btn btn-primary" type="submit" disabled={busy || otp.length < 6}>
-            {busy ? "Verifying…" : "Verify email"}
+            {busy ? "Verifying\u2026" : "Verify email"}
           </button>
         </form>
         <div style={{textAlign:"center",marginTop:16,fontSize:14,color:"var(--t3)"}}>
           Didn&apos;t get it?{" "}
           <button
-            style={{background:"none",border:"none",color:"var(--teal)",fontWeight:600,cursor:cooldown>0?"not-allowed":"pointer",fontSize:14,fontFamily:"inherit",opacity:cooldown>0?.5:1}}
+            style={{background:"none",border:"none",color:"var(--teal)",fontWeight:600,cursor:cooldown>0?"not-allowed":"pointer",fontSize:14,fontFamily:"inherit",opacity:cooldown>0?0.5:1,transition:"opacity .2s"}}
             disabled={cooldown>0}
-            onClick={async () => {
-              if (cooldown>0) return;
-              setErr("");
-              const { error } = await sb.auth.signUpOtp({ email });
-              if (error) {
-                const m = error.message || "";
-                setErr(m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") ? "Email service not configured. Set up SMTP in Supabase dashboard → Authentication → Settings." : `Failed to resend — ${m}`);
-              } else {
-                startCooldown(60);
-                setErr("Code resent — check your inbox.");
-              }
-            }}
+            onClick={handleResendOtp}
           >
             {cooldown>0 ? `Resend in ${cooldown}s` : "Resend code"}
           </button>
@@ -221,11 +221,13 @@ export default function AuthScreen({ onAuth }) {
   );
 
   if (view === "welcome") return (
-    <div className="auth-screen" style={{background:"linear-gradient(160deg,#0F172A 0%,#2563EB 60%,#1D4ED8 100%)",justifyContent:"flex-end",paddingBottom:0}}>
+    <div className="auth-screen" style={{padding:0,justifyContent:"flex-end",background:"linear-gradient(180deg,#007AFF 0%,#0055CC 100%)",overflow:"hidden"}}>
       <style>{CSS}</style>
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 24px 24px",color:"white"}}>
-        <div style={{fontSize:64,marginBottom:16,filter:"drop-shadow(0 8px 24px rgba(0,0,0,.3))"}}>
-          <svg viewBox="0 0 100 100" width="64" height="64" fill="white">
+      <div style={{position:"absolute",top:"-20%",right:"-30%",width:"90%",height:"90%",background:"radial-gradient(circle,rgba(255,255,255,.2) 0%,transparent 70%)",borderRadius:"50%",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:"30%",left:"-20%",width:"60%",height:"60%",background:"radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%)",borderRadius:"50%",pointerEvents:"none"}}/>
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 32px 20px",color:"white",position:"relative",zIndex:1}}>
+        <div style={{width:88,height:88,background:"rgba(255,255,255,.2)",borderRadius:26,display:"grid",placeItems:"center",marginBottom:20,backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,.15)",boxShadow:"0 12px 40px rgba(0,0,0,.15)"}}>
+          <svg viewBox="0 0 100 100" width={44} height={44} fill="white">
             <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
             <circle cx="50" cy="14" r="6" fill="white"/>
             <circle cx="50" cy="86" r="6" fill="white"/>
@@ -234,36 +236,42 @@ export default function AuthScreen({ onAuth }) {
             <rect x="52" y="43" width="16" height="4" rx="2" fill="white" transform="translate(60,45)"/>
           </svg>
         </div>
-        <div style={{fontSize:34,fontWeight:800,letterSpacing:"-.5px",textAlign:"center",lineHeight:1.2,marginBottom:8}}>
-          Your Personal<br/>Treatment Companion
+        <div style={{fontSize:36,fontWeight:800,letterSpacing:"-.5px",textAlign:"center",lineHeight:1.15,marginBottom:10}}>
+          Adhera
         </div>
-        <div style={{fontSize:16,opacity:.85,textAlign:"center",lineHeight:1.6,maxWidth:300}}>
-          Adhera helps you track medications, stay on schedule with smart alarms, and build healthier habits.
+        <div style={{fontSize:17,fontWeight:400,opacity:.85,textAlign:"center",lineHeight:1.5,maxWidth:300,marginBottom:28}}>
+          Your personal medication tracker with smart reminders and adherence insights.
         </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",marginTop:24}}>
-          {["💊 Dose tracking","🔔 Smart alarms","🔥 Streak rewards","📊 Adherence reports"].map(f=>(
-            <div key={f} style={{background:"rgba(255,255,255,.15)",backdropFilter:"blur(10px)",borderRadius:99,padding:"6px 14px",fontSize:13,fontWeight:500,color:"white"}}>{f}</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center"}}>
+          {[
+            {icon:"💊",label:"Dose tracking"},
+            {icon:"🔔",label:"Smart reminders"},
+            {icon:"🔥",label:"Streak rewards"},
+            {icon:"📊",label:"Adherence reports"},
+          ].map(f=>(
+            <div key={f.label} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.15)",backdropFilter:"blur(10px)",borderRadius:99,padding:"7px 14px",fontSize:13,fontWeight:500,color:"white",border:"1px solid rgba(255,255,255,.1)"}}>
+              <span style={{fontSize:14}}>{f.icon}</span>
+              <span>{f.label}</span>
+            </div>
           ))}
         </div>
       </div>
-      <div style={{background:"var(--card)",borderRadius:"24px 24px 0 0",padding:"28px 24px calc(28px + env(safe-area-inset-bottom,0px))",width:"100%"}}>
-        <div style={{fontSize:22,fontWeight:700,marginBottom:6,color:"var(--t1)"}}>Get started</div>
-        <div style={{fontSize:15,color:"var(--t3)",marginBottom:20}}>Join thousands managing their health with Adhera</div>
-        <div className="oauth-stack" style={{marginBottom:16}}>
-          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl} style={{background:"var(--card)"}}>
-            {obl==="google"?"Redirecting…":<><GIcon/> Continue with Google</>}
-          </button>
-        </div>
+      <div style={{background:"var(--card)",borderRadius:"28px 28px 0 0",padding:"28px 24px calc(28px + env(safe-area-inset-bottom,0px))",width:"100%",boxShadow:"0 -4px 20px rgba(0,0,0,.08)",position:"relative",zIndex:1}}>
+        <div style={{fontSize:22,fontWeight:700,marginBottom:4,color:"var(--t1)",letterSpacing:"-.3px"}}>Get started</div>
+        <div style={{fontSize:15,color:"var(--t3)",marginBottom:20,lineHeight:1.4}}>Join thousands managing their health with Adhera</div>
+        <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl} style={{marginBottom:12}}>
+          {obl==="google"?"Redirecting…":<><GIcon/> Continue with Google</>}
+        </button>
         <div className="divider">or</div>
         <button className="btn btn-primary" style={{marginBottom:12}} onClick={()=>setView("signup")}>Create free account</button>
-        <button className="btn btn-ghost" onClick={()=>setView("signin")}>Sign in to existing account</button>
+        <button className="btn btn-ghost" style={{width:"100%"}} onClick={()=>setView("signin")}>Sign in to existing account</button>
       </div>
     </div>
   );
 
   if (view === "signin") return (
     <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card">
+      <div className="auth-card" key="signin">
         <AuthLogo/>
         <div className="auth-title">Welcome back</div>
         <div className="auth-sub">Sign in to manage your medications</div>
@@ -305,15 +313,13 @@ export default function AuthScreen({ onAuth }) {
 
   if (isEnt && step === "payment") return (
     <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card">
-        <AuthLogo/>
-        <div style={{textAlign:"center",marginBottom:16}}>
+      <div className="auth-card" key="enterprise-payment">
           <div style={{fontSize:36,marginBottom:8}}>🏥</div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Enterprise plan — {orgName}</div>
           <div style={{fontSize:14,color:"var(--t3)"}}>Verify your email to continue. A verification code was sent to <strong>{email}</strong>.</div>
         </div>
 
-        <div style={{background:"linear-gradient(135deg,#7C3AED,#6D28D9)",borderRadius:16,padding:16,color:"white",marginBottom:16}}>
+        <div style={{background:"linear-gradient(135deg,var(--teal2),var(--teal))",borderRadius:16,padding:16,color:"white",marginBottom:16}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <span style={{fontSize:14,fontWeight:600}}>{selectedEntTier.label} — {selectedEntTier.range}</span>
             <span style={{fontSize:18,fontWeight:800}}>{selCountry.code === "GH" ? selectedEntTier.annualLabel : selectedEntTier.annualUsdLabel}<span style={{fontSize:12,fontWeight:400}}>/yr</span></span>
@@ -349,13 +355,13 @@ export default function AuthScreen({ onAuth }) {
               {ENTERPRISE_TIERS.map(t => (
                 <div key={t.id} onClick={() => setEnterpriseTier(t.id)}
                   style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",borderRadius:10,cursor:"pointer",
-                    background:enterpriseTier===t.id?"var(--sel)":"var(--card)",border:enterpriseTier===t.id?"1.5px solid #7C3AED":"1px solid var(--sep)",transition:"all .15s"}}>
+                    background:enterpriseTier===t.id?"var(--sel)":"var(--card)",border:enterpriseTier===t.id?"1.5px solid var(--teal)":"1px solid var(--sep)",transition:"all .15s"}}>
                   <div>
                     <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{t.label}</div>
                     <div style={{fontSize:12,color:"var(--t3)"}}>{t.range}</div>
                   </div>
                   <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:15,fontWeight:700,color:"#7C3AED"}}>{selCountry.code === "GH" ? t.annualLabel : t.annualUsdLabel}</div>
+                    <div style={{fontSize:15,fontWeight:700,color:"var(--teal)"}}>{selCountry.code === "GH" ? t.annualLabel : t.annualUsdLabel}</div>
                     <div style={{fontSize:11,color:"var(--t3)"}}>per year</div>
                   </div>
                 </div>
@@ -363,8 +369,7 @@ export default function AuthScreen({ onAuth }) {
             </div>
           </div>
 
-          <button className="btn btn-primary" type="submit" disabled={busy || otp.length < 6}
-            style={{background:"#7C3AED"}}>
+          <button className="btn btn-primary" type="submit" disabled={busy || otp.length < 6}>
             {busy ? "Verifying…" : "Verify & activate enterprise account"}
           </button>
         </form>
@@ -373,7 +378,7 @@ export default function AuthScreen({ onAuth }) {
           <button className="btn btn-ghost" style={{flex:1}} onClick={() => { setStep("form"); setErr(""); }}>
             Back to form
           </button>
-          <button className="btn btn-ghost" style={{flex:1,opacity:cooldown>0?.5:1}} disabled={cooldown>0} onClick={async () => { if (cooldown>0) return; setOtp(""); setErr(""); setBusy(true); try { const { error } = await sb.auth.signUpOtp({ email }); if (error) throw error; startCooldown(60); setErr("Code resent — check your inbox."); } catch (e) { const m = e?.message||""; setErr(m.includes("SMTP")||m.includes("rate")||m.includes("timeout")||m.includes("unavailable") ? "Email not configured. Set up SMTP in Supabase dashboard." : "Failed to resend."); } finally { setBusy(false); } }}>
+          <button className="btn btn-ghost" style={{flex:1,opacity:cooldown>0?0.5:1}} disabled={cooldown>0} onClick={async () => { if (cooldown>0) return; setOtp(""); setErr(""); setBusy(true); try { const { error } = await sb.auth.signUpOtp({ email }); if (error) throw error; startCooldown(60); setErr("Code resent — check your inbox."); } catch (e) { const m = e?.message||""; setErr(m.includes("SMTP")||m.includes("rate")||m.includes("timeout")||m.includes("unavailable") ? "Email not configured. Set up SMTP in Supabase dashboard." : "Failed to resend."); } finally { setBusy(false); } }}>
             {cooldown>0 ? `Resend in ${cooldown}s` : "Resend code"}
           </button>
         </div>
@@ -386,7 +391,7 @@ export default function AuthScreen({ onAuth }) {
 
   return (
     <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card" style={{maxWidth:isEnt?480:440}}>
+      <div className="auth-card" style={{maxWidth:isEnt?480:440}} key="signup">
         <AuthLogo/>
         <div className="auth-title">{isEnt ? "Register your organization" : "Create your account"}</div>
         <div className="auth-sub">{isEnt ? "Enterprise-grade medication management" : "Free forever · Upgrade anytime"}</div>
@@ -445,10 +450,10 @@ export default function AuthScreen({ onAuth }) {
                 <input className="input-field" type="email" placeholder="Work email *" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
                 <input className="input-field" type="tel" placeholder="Phone number *" value={phone} onChange={e=>setPhone(e.target.value)} required autoComplete="tel"/>
                 <div style={{position:"relative"}}>
-                  <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
-                  <select className="input-field" value={country} onChange={e=>setCountry(e.target.value)}>
-                    {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.flag} {c.name}</option>))}
-                  </select>
+                    <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
+                    <select className="input-field" style={{paddingLeft:40}} value={country} onChange={e=>setCountry(e.target.value)}>
+                      {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
+                    </select>
                 </div>
                 <div style={{position:"relative"}}>
                   <select className="input-field" value={deployment} onChange={e=>setDeployment(e.target.value)}>
@@ -479,7 +484,7 @@ export default function AuthScreen({ onAuth }) {
                     }
                   </button>
                 </div>
-                <div style={{background:"linear-gradient(135deg,#7C3AED,#6D28D9)",borderRadius:12,padding:"12px 14px",color:"white",marginTop:4}}>
+                <div style={{background:"linear-gradient(135deg,var(--teal2),var(--teal))",borderRadius:12,padding:"12px 14px",color:"white",marginTop:4}}>
                   <div style={{fontSize:13,fontWeight:600,marginBottom:6}}>🏥 Enterprise pricing — annual plans</div>
                   <div style={{display:"flex",flexDirection:"column",gap:4}}>
                     {ENTERPRISE_TIERS.map(t => (
@@ -523,9 +528,9 @@ export default function AuthScreen({ onAuth }) {
                     <div style={{display:"flex",flexDirection:"column",gap:3}}>
                       {[
                         { label:"At least 8 characters", ok:pw.length>=8 },
-                        { label:"Uppercase & lowercase letters", ok:/[a-z]/.test(pw)&&/[A-Z]/.test(pw) },
-                        { label:"At least one number", ok:/\d/.test(pw) },
-                        { label:"At least one symbol", ok:/[^a-zA-Z0-9]/.test(pw) },
+                        { label:"Uppercase & lowercase letters", ok:Boolean(pw.match(/[a-z]/) && pw.match(/[A-Z]/)) },
+                        { label:"At least one number", ok:Boolean(pw.match(/\d/)) },
+                        { label:"At least one symbol", ok:Boolean(pw.match(/[^a-zA-Z0-9]/)) },
                       ].map(r=>(
                         <div key={r.label} style={{display:"flex",alignItems:"center",gap:6,color:r.ok?"var(--teal2)":"var(--t4)",transition:"color .2s"}}>
                           <span style={{fontSize:12,fontWeight:700}}>{r.ok?"✓":"○"}</span>
@@ -552,11 +557,12 @@ export default function AuthScreen({ onAuth }) {
                   </div>
                   <select
                     className="input-field"
+                    style={{paddingLeft:40}}
                     value={country}
                     onChange={e=>setCountry(e.target.value)}
                   >
                     {COUNTRIES.map(c=>(
-                      <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                      <option key={c.code} value={c.code}>{c.name}</option>
                     ))}
                   </select>
                 </div>
@@ -580,8 +586,7 @@ export default function AuthScreen({ onAuth }) {
               </>
             )}
           </div>
-          <button className="btn btn-primary" type="submit" disabled={busy}
-            style={isEnt?{background:"#7C3AED"}:{}}>
+          <button className="btn btn-primary" type="submit" disabled={busy}>
             {busy ? "Processing…" : isEnt ? "Register organization →" : "Create free account"}
           </button>
         </form>

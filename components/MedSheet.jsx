@@ -6,8 +6,9 @@ import { CSS } from "@/lib/constants";
 import { canAddMed } from "@/lib/data";
 
 export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose }) {
-  const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), notes:"" };
-  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), notes:med.notes||"" } : blank);
+  const isPro = plan === "pro" || plan === "family" || plan === "enterprise";
+  const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", notes:"" };
+  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
 
   function set(k, v) {
@@ -21,12 +22,22 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
 
   async function save() {
     if (!med && !canAddMed(plan || "free", medCount || 0)) {
-      setErr("Free plan allows up to 3 medications. Upgrade to Pro for unlimited medications.");
+      setErr("Free plan allows up to 2 medications. Upgrade to Pro for unlimited medications.");
       return;
     }
     if (!f.name.trim()||!f.dosage_amount||!f.course_duration_days) { setErr("Please fill in name, dosage, and duration."); return; }
+    if (parseFloat(f.dosage_amount) <= 0) { setErr("Dosage amount must be greater than 0."); return; }
+    if (parseInt(f.course_duration_days) < 1) { setErr("Duration must be at least 1 day."); return; }
+    if (parseInt(f.times_per_day) < 1) { setErr("Times per day must be at least 1."); return; }
+    if (!f.start_date) { setErr("Please select a start date."); return; }
+    const maxName = 200;
+    if (f.name.trim().length > maxName) { setErr(`Medication name must be under ${maxName} characters.`); return; }
+    const maxDosage = 999999;
+    if (parseFloat(f.dosage_amount) > maxDosage) { setErr(`Dosage amount seems too high (max ${maxDosage}).`); return; }
+    const maxDuration = 3650;
+    if (parseInt(f.course_duration_days) > maxDuration) { setErr(`Duration seems too long (max ${maxDuration} days).`); return; }
     setBusy(true); setErr("");
-    const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), notes:f.notes, active:true };
+    const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, notes:f.notes, active:true };
     const result = med?.id ? await sb.from("medications").eq("id",med.id).update(payload) : await sb.from("medications").insert([payload]);
     if (result.error) {
       const msg = result.error?.message || result.error?.error_description || JSON.stringify(result.error);
@@ -93,6 +104,22 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
             <option value="120">2 hours before</option>
           </select>
         </div>
+
+        {isPro && (
+          <div className="sheet-section">
+            <div className="sheet-label">Refill tracking {plan==="free"?"(Pro feature)":""}</div>
+            <div className="sheet-row">
+              <div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Pills per package</div>
+                <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 30" value={f.pills_per_package} onChange={e=>set("pills_per_package",e.target.value)}/>
+              </div>
+              <div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Alert when ≤</div>
+                <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 5" value={f.refill_reminder_at} onChange={e=>set("refill_reminder_at",e.target.value)}/>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="sheet-section">
           <div className="sheet-label">Notes (optional)</div>

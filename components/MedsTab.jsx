@@ -3,7 +3,14 @@
 import { CSS, fmtDate } from "@/lib/constants";
 import { TIER_LIMITS } from "@/lib/data";
 
-export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, plan, medCount }) {
+function rem(med, logs) {
+  if (!med.pills_per_package) return null;
+  const lastRefill = med.last_refill_date ? new Date(med.last_refill_date) : new Date(med.start_date);
+  const sinceRefill = logs.filter(l => l.medication_id === med.id && new Date(l.taken_at) >= lastRefill).length;
+  return Math.max(0, (med.pills_per_package || 0) - sinceRefill);
+}
+
+export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill, plan, medCount }) {
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
   const active = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e>=today&&m.active;});
@@ -19,6 +26,8 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, plan, med
     const todayStr = today.toISOString().split("T")[0];
     const takenToday = logs.filter(l=>l.medication_id===med.id&&l.taken_at?.startsWith(todayStr)).length;
     const exp = med.times_per_day||1;
+    const remaining = rem(med, logs);
+    const lowStock = remaining !== null && remaining <= (med.refill_reminder_at || 5);
     return (
       <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"16px",marginBottom:10}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
@@ -39,6 +48,13 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, plan, med
         <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>Day {prog} of {med.course_duration_days}</div>
         <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
         {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>📝 {med.notes}</div>}
+        {remaining !== null && (
+          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:13}}>
+            <span style={{color:lowStock?"var(--red)":"var(--teal2)",fontWeight:600}}>📦 {remaining} remaining</span>
+            {lowStock && <span style={{color:"var(--red)",fontWeight:500}}>· Refill soon!</span>}
+            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11}} onClick={()=>onRefill(med.id)}>➕ Refill</button>
+          </div>
+        )}
         <div style={{display:"flex",gap:8,marginTop:12}}>
           <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>onEdit(med)}>Edit</button>
           <button className="btn btn-sm" style={{flex:1,background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={()=>onDelete(med.id)}>Delete</button>
@@ -49,12 +65,12 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, plan, med
 
   return (
     <div className="scroll">
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px 0"}}>
-        <div className="nav-large" style={{padding:0,paddingTop:8}}>Medications</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:4}}>
+        <div className="nav-large" style={{paddingBottom:4}}>Medications</div>
         <button className="nav-action" onClick={onAdd} style={{fontSize:28,lineHeight:1}}>＋</button>
       </div>
 
-      <div className="chips" style={{marginTop:12}}>
+      <div className="chips">
         <div className="chip blue"><div className="chip-val">{meds.length}</div><div className="chip-lbl">Total</div></div>
         <div className="chip green"><div className="chip-val">{active.length}</div><div className="chip-lbl">Active</div></div>
         <div className="chip"><div className="chip-val">{ended.length}</div><div className="chip-lbl">Completed</div></div>

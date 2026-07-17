@@ -3,9 +3,10 @@
 import { CSS } from "@/lib/constants";
 import { calcStreak, TIER_LIMITS } from "@/lib/data";
 
-export default function ReportsTab({ logs, meds, plan }) {
+export default function ReportsTab({ logs, meds, plan, onNavigate }) {
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
+
   const streak = calcStreak(logs, meds);
   const grouped = {};
   logs.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); } });
@@ -115,7 +116,7 @@ export default function ReportsTab({ logs, meds, plan }) {
 
     const activeMeds = meds.filter(m => m.active);
     const completedPct = activeMeds.length
-      ? Math.round(activeMeds.reduce((s,m) => s + Math.min(Math.ceil((Date.now()-new Date(m.start_date).getTime())/86400000), m.course_duration_days) / m.course_duration_days, 0) / activeMeds.length * 100)
+      ? Math.round(activeMeds.reduce((s,m) => s + Math.min(Math.ceil((today-new Date(m.start_date).getTime())/86400000), m.course_duration_days) / m.course_duration_days, 0) / activeMeds.length * 100)
       : 0;
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Adhera Medical Report</title>
@@ -226,6 +227,24 @@ ${limits.reports ? `
     setTimeout(() => { win.print(); }, 800);
   }
 
+  const pm = perMedAdherence();
+
+  function AdherenceCard({ m, index }) {
+    const colors = ["var(--ib1)","var(--ib4)","var(--ib5)","var(--ib3)","var(--ib2)","var(--ib6)"];
+    const bg = colors[index % colors.length];
+    return (
+      <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:30,height:30,borderRadius:8,background:bg,display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}>💊</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{m.name}</div>
+          <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{m.taken}/{m.expected} doses</div>
+          <div className="prog"><div className="prog-fill" style={{width:`${m.pct}%`,background:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)"}}/></div>
+        </div>
+        <div style={{fontSize:17,fontWeight:700,color:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)",flexShrink:0}}>{m.pct}%</div>
+      </div>
+    );
+  }
+
   return (
     <div className="scroll">
       <div className="nav-large">Reports</div>
@@ -233,39 +252,30 @@ ${limits.reports ? `
       <div className="chips">
         <div className="chip blue"><div className="chip-val">{daysTracked}</div><div className="chip-lbl">Days tracked</div></div>
         <div className="chip green"><div className="chip-val">{adherence}%</div><div className="chip-lbl">Adherence</div></div>
-        <div className="chip purple"><div className="chip-val">🔥{streak}</div><div className="chip-lbl">Best streak</div></div>
+        <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">Best streak</div></div>
       </div>
 
       <div className="section">
-        <div className="section-header">Per-medication adherence</div>
+        <div className="section-header">Adherence by medication</div>
         {meds.length === 0 ? (
           <div className="empty-state"><div className="empty-state-icon">📊</div><div className="empty-state-title">No data yet</div><div className="empty-state-sub">Add medications and log doses to see reports</div></div>
         ) : (
-          <div className="list">
-            {perMedAdherence().map(m => (
-              <div key={m.id} className="row" style={{cursor:"default"}}>
-                <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>💊</div>
-                <div className="row-body">
-                  <div className="row-title">{m.name}</div>
-                  <div className="row-sub">{m.taken}/{m.expected} doses ({m.pct}%)</div>
-                  <div className="prog"><div className="prog-fill" style={{width:`${m.pct}%`,background:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)"}}/></div>
-                </div>
-                <div className="row-value" style={{fontWeight:700,color:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)"}}>{m.pct}%</div>
-              </div>
-            ))}
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {pm.map((m,i)=> <AdherenceCard key={m.id} m={m} index={i}/>)}
           </div>
         )}
       </div>
 
       {limits.reports && (
         <div className="section">
-          <div className="section-header">Detailed treatment analytics</div>
-          <div className="list">
+          <div className="section-header" style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:14}}>📈</span> Detailed treatment analytics
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {meds.map(med => {
               const medLogs = logs.filter(l => l.medication_id === med.id);
               const firstLog = medLogs[medLogs.length-1];
-              const lastLog = medLogs[0];
-              const daysSinceStart = firstLog ? Math.ceil((Date.now()-new Date(firstLog.taken_at).getTime())/86400000) : 0;
+              const daysSinceStart = firstLog ? Math.ceil((today-new Date(firstLog.taken_at).getTime())/86400000) : 0;
               const expectedDaily = med.times_per_day || 1;
               const expectedTotal = daysSinceStart * expectedDaily;
               const pct = expectedTotal > 0 ? Math.round((medLogs.length/expectedTotal)*100) : 0;
@@ -273,17 +283,31 @@ ${limits.reports ? `
               const trend = medLogs.length >= 14
                 ? medLogs.slice(0,7).length >= medLogs.slice(-7).length ? "improving" : "declining"
                 : "insufficient data";
+              const trendColor = trend==="improving"?"var(--teal2)":trend==="declining"?"var(--red)":"var(--t3)";
+              const trendIcon = trend==="improving"?"📈":trend==="declining"?"📉":"📊";
               return (
-                <div key={med.id} className="row" style={{cursor:"default",flexWrap:"wrap"}}>
-                  <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>📈</div>
-                  <div className="row-body" style={{flex:"1 1 auto"}}>
-                    <div className="row-title">{med.name}</div>
-                    <div className="row-sub">{medLogs.length} total doses · {pct}% adherence</div>
-                    <div style={{display:"flex",gap:12,marginTop:6,fontSize:12}}>
-                      <span style={{color:"var(--t3)"}}>Trend: <span style={{fontWeight:600,color:trend==="improving"?"var(--teal)":trend==="declining"?"var(--red)":"var(--t3)"}}>{trend}</span></span>
-                      <span style={{color:"var(--t3)"}}>Skip rate: <span style={{fontWeight:600}}>{skipRate}%</span></span>
+                <div key={med.id} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div style={{width:30,height:30,borderRadius:8,background:"var(--ib4)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}>📈</div>
+                    <div>
+                      <div style={{fontSize:15,fontWeight:600,color:"var(--t1)"}}>{med.name}</div>
+                      <div style={{fontSize:12,color:"var(--t3)"}}>{medLogs.length} total doses · {pct}% adherence</div>
                     </div>
-                    <div className="prog" style={{marginTop:6}}><div className="prog-fill" style={{width:`${pct}%`,background:pct>=80?"var(--teal2)":pct>=50?"var(--orange)":"var(--red)"}}/></div>
+                  </div>
+                  <div className="prog" style={{marginBottom:8}}><div className="prog-fill" style={{width:`${pct}%`,background:pct>=80?"var(--teal2)":pct>=50?"var(--orange)":"var(--red)"}}/></div>
+                  <div style={{display:"flex",gap:16,fontSize:12}}>
+                    <div style={{background:"var(--bg)",borderRadius:8,padding:"6px 10px",flex:1,textAlign:"center"}}>
+                      <div style={{fontSize:11,color:"var(--t3)",marginBottom:1}}>Trend</div>
+                      <div style={{fontWeight:600,color:trendColor}}><span style={{fontSize:13}}>{trendIcon}</span> {trend}</div>
+                    </div>
+                    <div style={{background:"var(--bg)",borderRadius:8,padding:"6px 10px",flex:1,textAlign:"center"}}>
+                      <div style={{fontSize:11,color:"var(--t3)",marginBottom:1}}>Skip rate</div>
+                      <div style={{fontWeight:600,color:"var(--t2)"}}>{skipRate}%</div>
+                    </div>
+                    <div style={{background:"var(--bg)",borderRadius:8,padding:"6px 10px",flex:1,textAlign:"center"}}>
+                      <div style={{fontSize:11,color:"var(--t3)",marginBottom:1}}>Adherence</div>
+                      <div style={{fontWeight:600,color:pct>=80?"var(--teal2)":pct>=50?"var(--orange)":"var(--red)"}}>{pct}%</div>
+                    </div>
                   </div>
                 </div>
               );
@@ -294,13 +318,15 @@ ${limits.reports ? `
 
       {limits.reports && (
         <div className="section">
-          <div className="section-header">Treatment insights</div>
-          <div className="list">
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib2)",fontSize:18}}>⏱</div>
-              <div className="row-body">
-                <div className="row-title">Best time adherence</div>
-                <div className="row-sub">
+          <div className="section-header" style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:14}}>💡</span> Treatment insights
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:30,height:30,borderRadius:8,background:"var(--ib2)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}>⏱</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>Best time adherence</div>
+                <div style={{fontSize:13,color:"var(--t3)"}}>
                   {logs.length > 0
                     ? (() => {
                         const hours = {};
@@ -310,22 +336,22 @@ ${limits.reports ? `
                           hours[slot] = (hours[slot]||0)+1;
                         });
                         const bestSlot = Object.entries(hours).sort((a,b)=>b[1]-a[1])[0];
-                        return `You take doses most consistently in the ${bestSlot?.[0]||"day"} (${bestSlot?.[1]||0} doses)`;
+                        return `Most consistent in the ${bestSlot?.[0]||"day"} (${bestSlot?.[1]||0} doses)`;
                       })()
                     : "Log doses to see insights"}
                 </div>
               </div>
             </div>
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib3)",fontSize:18}}>📋</div>
-              <div className="row-body">
-                <div className="row-title">Course completion forecast</div>
-                <div className="row-sub">
+            <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:30,height:30,borderRadius:8,background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}>📋</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>Course completion forecast</div>
+                <div style={{fontSize:13,color:"var(--t3)"}}>
                   {(() => {
                     const active = meds.filter(m=>m.active);
                     if (!active.length) return "No active courses";
                     const avg = active.reduce((s,m)=>{
-                      const spent = Math.min(Math.ceil((Date.now()-new Date(m.start_date).getTime())/86400000), m.course_duration_days);
+                      const spent = Math.min(Math.ceil((today-new Date(m.start_date).getTime())/86400000), m.course_duration_days);
                       return s + (spent/m.course_duration_days);
                     },0)/active.length;
                     const pct = Math.round(avg*100);
@@ -340,10 +366,12 @@ ${limits.reports ? `
 
       {(plan==="family"||plan==="enterprise") && (
         <div className="section">
-          <div className="section-header">Caregiver dashboard</div>
+          <div className="section-header" style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:14}}>👨‍👩‍👧</span> Caregiver dashboard
+          </div>
           <div className="list">
             <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>👨‍👩‍👧</div>
+              <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>👤</div>
               <div className="row-body">
                 <div className="row-title">Family members</div>
                 <div className="row-sub">Manage up to {limits.profiles} profiles</div>
@@ -369,7 +397,9 @@ ${limits.reports ? `
 
       {plan==="enterprise" && (
         <div className="section">
-          <div className="section-header">Enterprise dashboard</div>
+          <div className="section-header" style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:14}}>🏥</span> Enterprise dashboard
+          </div>
           <div className="list">
             <div className="row" style={{cursor:"default"}}>
               <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>🏥</div>
@@ -404,13 +434,12 @@ ${limits.reports ? `
       )}
 
       {!limits.reports && (
-        <div style={{margin:"0 16px 16px",background:"linear-gradient(135deg,#2563EB,#1D4ED8)",borderRadius:"var(--rxl)",padding:20,color:"white"}}>
-          <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>Upgrade for advanced reports</div>
-          <div style={{fontSize:13,opacity:.9,lineHeight:1.5,marginBottom:12}}>
+        <div className="upgrade-card" style={{margin:"0 16px 16px"}}>
+          <div className="upgrade-title">Upgrade for advanced reports</div>
+          <div className="upgrade-sub">
             Get detailed per-medication analytics, treatment insights, skip-rate tracking and trend analysis with Pro.
           </div>
-          <button style={{background:"white",color:"#2563EB",border:"none",borderRadius:10,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
-            onClick={() => window.location.hash="#profile"}>
+          <button className="upgrade-btn" onClick={() => onNavigate?.("profile")}>
             Go to Profile →
           </button>
         </div>

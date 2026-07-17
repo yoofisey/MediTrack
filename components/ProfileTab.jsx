@@ -1,10 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { CSS, Chevron } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
-import { askNotifPerm } from "@/lib/notifications";
+import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/notifications";
+import { sb } from "@/lib/supabase";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
+
+function Row({ icon, bg, title, sub, onClick, children }) {
+  return (
+    <div className="row" onClick={onClick} style={{cursor:onClick?"pointer":"default"}}>
+      <div className="row-icon" style={{background:bg||"var(--ib1)",fontSize:18}}>{icon}</div>
+      <div className="row-body"><div className="row-title">{title}</div>{sub && <div className="row-sub">{sub}</div>}</div>
+      {children}
+      {onClick && !children && <Chevron/>}
+    </div>
+  );
+}
+
+function Toggle({ on, onChange, disabled }) {
+  return (
+    <div onClick={disabled ? undefined : onChange}
+      style={{width:48,height:28,borderRadius:99,background:on?"var(--teal)":"var(--sep)",position:"relative",cursor:disabled?"not-allowed":"pointer",transition:"background .2s",opacity:disabled?0.5:1,flexShrink:0}}>
+      <div style={{width:22,height:22,borderRadius:"50%",background:"white",position:"absolute",top:3,left:on?23:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+    </div>
+  );
+}
 
 export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount }) {
   const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
@@ -23,10 +44,50 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [familyMembers, setFamilyMembers] = useState(() => {
     try { return JSON.parse(localStorage.getItem("adhera_family") || "[]"); } catch { return []; }
   });
+  const [uploading, setUploading] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const fileInputRef = useRef(null);
+
+  function ls() { try { return localStorage; } catch { return null; } }
+  function notifOn() { const s = ls(); try { return s?.getItem("mt_notif_on") === "1"; } catch { return false; } }
 
   async function enableNotifs() {
+    const s = ls();
+    if (notifOn()) {
+      s?.setItem("mt_notif_on", "0");
+      clearAllTimers();
+      try { navigator.serviceWorker?.controller?.postMessage({ type:"clear-alarms" }); } catch {}
+      setNotifPerm(Notification.permission);
+      return;
+    }
     const p = await askNotifPerm();
     setNotifPerm(p);
+    if (p === "granted") {
+      s?.setItem("mt_notif_on", "1");
+    } else if (p === "denied") {
+      s?.setItem("mt_notif_on", "0");
+    }
+  }
+
+  async function handleAvatarUpload(e) {
+    const file = e.target?.files?.[0];
+    if (!file || !user?.id) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = sb.storage.from("avatars").getPublicUrl(path);
+      onSaveProfile({ avatar_url: publicUrl });
+      setEditData(p => ({ ...p, avatar_url: publicUrl }));
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(`Upload failed: ${err?.message || err}. Make sure the 'avatars' storage bucket exists and has INSERT policies for authenticated users.`);
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = "";
+    }
   }
 
   function handleUpgrade(plan) {
@@ -55,14 +116,19 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const { pricing } = getPricing(country);
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
 
-  const planLabel = plan === "enterprise" ? "🏥 Enterprise" : plan === "pro" ? "⭐ Pro Plan" : plan === "family" ? "👨‍👩‍👧 Family Plan" : "Free Plan";
-  const planColor = plan === "enterprise" ? "#7C3AED" : plan === "pro" ? "#2563EB" : plan === "family" ? "#AF52DE" : "var(--t3)";
-
+  const planMeta = {
+    free:      { label:"Free Plan",            color:"var(--t3)",        badge:"" },
+    pro:       { label:"⭐ Pro Plan",          color:"var(--teal)",     badge:"Pro" },
+    family:    { label:"👨‍👩‍👧 Family Plan",   color:"var(--teal2)",   badge:"Family" },
+    enterprise:{ label:"🏥 Enterprise",        color:"var(--teal)",    badge:"Enterprise" },
+  };
+  const pm = planMeta[plan] || planMeta.free;
   const profileEmojis = ["😊","🧑","👩","👨","🧓","👴","👵","🧒","👦","👧","🙂","😄","💪","🌟","❤️","🌸","🐻","🦁","🐼","🌴"];
 
   function startEdit() {
     setEditData({
       avatar_emoji: profile?.avatar_emoji || "😊",
+      avatar_url: profile?.avatar_url || "",
       full_name: profile?.full_name || "",
       wake_time: profile?.wake_time || "07:00",
       sleep_time: profile?.sleep_time || "22:00",
@@ -74,7 +140,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   }
 
   function saveEdit() {
-    onSaveProfile(editData);
+    const data = { ...editData };
+    if (!data.avatar_url) data.avatar_url = null;
+    onSaveProfile(data);
     setEditing(false);
   }
 
@@ -85,31 +153,46 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         <span>Edit Profile</span>
         <button className="nav-action" onClick={saveEdit}>Done</button>
       </div>
+
       <div className="section">
         <div className="section-header">Avatar</div>
+        <div style={{display:"flex",gap:14,padding:"0 16px",alignItems:"center",marginBottom:14}}>
+          <div style={{width:64,height:64,borderRadius:"50%",background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:30,flexShrink:0,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+            {editData.avatar_url ? <img src={editData.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : editData.avatar_emoji}
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{width:"auto"}} onClick={() => fileInputRef.current?.click()}>
+            {uploading ? "Uploading..." : "📷 Upload photo"}
+          </button>
+          {editData.avatar_url && (
+            <button className="btn btn-ghost btn-sm" style={{width:"auto",color:"var(--red)"}} onClick={() => setEditData(p=>({...p,avatar_url:""}))}>Remove</button>
+          )}
+        </div>
         <div className="emoji-grid" style={{margin:"0 16px"}}>
           {profileEmojis.map(em => (
             <div key={em} className={`emoji-opt${editData.avatar_emoji===em?" sel":""}`} onClick={()=>setEditData(p=>({...p,avatar_emoji:em}))}>{em}</div>
           ))}
         </div>
       </div>
+
       <div className="section">
         <div className="section-header">Name</div>
         <div style={{padding:"0 16px"}}>
           <input className="sheet-input" value={editData.full_name} onChange={e=>setEditData(p=>({...p,full_name:e.target.value}))}/>
         </div>
       </div>
+
       <div className="section">
         <div className="section-header">Schedule</div>
         <div style={{padding:"0 16px",display:"flex",flexDirection:"column",gap:12}}>
           {[{label:"Wake up time",key:"wake_time"},{label:"Bedtime",key:"sleep_time"}].map(({label,key})=>(
-            <div key={key} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 16px"}}>
+            <div key={key} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 16px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
               <div style={{fontSize:13,color:"var(--t3)",marginBottom:8,fontWeight:500}}>{label}</div>
               <input type="time" value={editData[key]} onChange={e=>setEditData(p=>({...p,[key]:e.target.value}))} style={{fontSize:18,fontWeight:600,border:"none",background:"none",color:"var(--t1)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
             </div>
           ))}
         </div>
       </div>
+
       <div className="section">
         <div className="section-header">Country</div>
         <div style={{padding:"0 16px"}}>
@@ -118,6 +201,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           </select>
         </div>
       </div>
+
       <div className="section">
         <div className="section-header">Goals</div>
         <div style={{padding:"0 16px",display:"flex",flexDirection:"column",gap:8}}>
@@ -141,18 +225,19 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           })}
         </div>
       </div>
+
       <div className="section">
         <div className="section-header">Theme</div>
         <div className="theme-grid" style={{margin:"0 16px"}}>
           {[
-            {id:"blue",  colors:["#2563EB","#1D4ED8"]},
-            {id:"green", colors:["#059669","#047857"]},
-            {id:"purple",colors:["#8B5CF6","#A78BFA"]},
-            {id:"orange",colors:["#F97316","#FB923C"]},
-            {id:"red",   colors:["#EF4444","#F87171"]},
-            {id:"teal",  colors:["#14B8A6","#2563EB"]},
-            {id:"pink",  colors:["#EC4899","#F472B6"]},
-            {id:"dark",  colors:["#3B82F6","#60A5FA"]},
+            {id:"blue",  colors:["#007AFF","#0055CC"]},
+            {id:"green", colors:["#34C759","#2DB84E"]},
+            {id:"purple",colors:["#AF52DE","#983CC9"]},
+            {id:"orange",colors:["#FF9500","#E68A00"]},
+            {id:"red",   colors:["#FF3B30","#D6342A"]},
+            {id:"teal",  colors:["#5AC8FA","#42B0E0"]},
+            {id:"pink",  colors:["#FF2D55","#D92548"]},
+            {id:"dark",  colors:["#0A84FF","#409CFF"]},
           ].map(th=>(
             <div key={th.id} className={`theme-swatch${editData.theme===th.id?" sel":""}`}
               style={{background:`linear-gradient(135deg,${th.colors[0]},${th.colors[1]})`}}
@@ -162,8 +247,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           ))}
         </div>
       </div>
+
+      <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarUpload}/>
+
       <div style={{padding:"16px"}}>
-        <button className="btn btn-ghost" onClick={()=>setEditing(false)}>Cancel</button>
+        <button className="btn btn-ghost" onClick={()=>setEditing(false)} style={{color:"var(--t3)"}}>Cancel</button>
       </div>
     </div>
   );
@@ -172,12 +260,29 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     <div className="scroll">
       <style>{CSS}</style>
 
-      <div className="profile-header">
-        <div className="profile-avatar" style={{cursor:"pointer"}} onClick={startEdit}>{profile?.avatar_emoji || "😊"}</div>
+      <div className="profile-header" style={{background:"var(--card)",margin:"0 16px 20px",borderRadius:"var(--rxl)",padding:"28px 16px 22px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
+        <div style={{position:"relative",width:88,height:88}}>
+          <div className="profile-avatar" style={{cursor:profile?.avatar_url?"pointer":"default",overflow:"hidden",margin:0,boxShadow:"0 4px 16px rgba(0,0,0,.12)"}} onClick={() => profile?.avatar_url && setShowLightbox(true)}>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>
+            ) : (
+              profile?.avatar_emoji || "😊"
+            )}
+            {uploading && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"grid",placeItems:"center",color:"white",fontSize:13,borderRadius:"50%"}}>Uploading...</div>}
+          </div>
+          <div onClick={() => fileInputRef.current?.click()}
+            style={{position:"absolute",bottom:-2,right:-2,width:30,height:30,borderRadius:"50%",background:"var(--teal)",border:"3px solid var(--card)",display:"grid",placeItems:"center",fontSize:18,color:"white",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.2)",transition:"transform .15s",userSelect:"none",lineHeight:1}}
+            onMouseDown={e => { const t=e.currentTarget; t.style.transform="scale(.85)"; }}
+            onMouseUp={e => { const t=e.currentTarget; t.style.transform="scale(1)"; }}>
+            +
+          </div>
+        </div>
         <div className="profile-name">{profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0]}</div>
-        <div style={{fontSize:14,color:planColor,fontWeight:600,marginTop:2}}>{planLabel}</div>
-        <div style={{fontSize:13,color:"var(--t3)",marginTop:2}}>{selCountry.flag} {selCountry.name}</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",marginTop:-4}}>
+          <span style={{fontSize:13,fontWeight:600,color:pm.color,background:`${pm.color}14`,padding:"3px 12px",borderRadius:99}}>{pm.label}</span>
+          <span style={{fontSize:13,color:"var(--t3)"}}>{selCountry.flag} {selCountry.name}</span>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:6}}>
           <button className="btn btn-ghost btn-sm" style={{width:"auto"}} onClick={startEdit}>✏️ Edit profile</button>
           <button className="btn btn-ghost btn-sm" style={{width:"auto"}} onClick={() => onSaveProfile({ theme: (profile?.theme || "blue") === "dark" ? "blue" : "dark" })}>
             {(profile?.theme || "blue") === "dark" ? "☀️ Light" : "🌙 Dark"}
@@ -185,8 +290,19 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
       </div>
 
+      <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarUpload}/>
+
+      {showLightbox && profile?.avatar_url && (
+        <div onClick={() => setShowLightbox(false)}
+          style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.85)",display:"grid",placeItems:"center",cursor:"pointer",animation:"fadeIn .2s"}}>
+          <div style={{position:"relative",maxWidth:"90vw",maxHeight:"90vh"}}>
+            <img src={profile.avatar_url} alt="" style={{width:"auto",height:"auto",maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,boxShadow:"0 8px 40px rgba(0,0,0,.5)"}}/>
+          </div>
+        </div>
+      )}
+
       {profile?.goals?.length > 0 && (
-        <div className="section">
+        <div className="section" style={{marginBottom:12}}>
           <div className="section-header">Health goals</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"0 16px"}}>
             {profile.goals.map(g => <span key={g} className="tag">{g}</span>)}
@@ -194,67 +310,44 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
       )}
 
-      {plan === "free" && (
-        <div style={{margin:"0 16px 16px"}}>
-          <div style={{background:"linear-gradient(135deg,#2563EB,#1D4ED8)",borderRadius:20,padding:20,color:"white"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-              <div style={{fontSize:18,fontWeight:700}}>Unlock Pro ⭐</div>
-              <span style={{fontSize:13,background:"rgba(255,255,255,.2)",borderRadius:99,padding:"3px 10px"}}>{medCount}/3 meds</span>
-            </div>
-            <div style={{fontSize:13,opacity:.9,marginBottom:12,lineHeight:1.5}}>
-              Unlimited medications, caregiver sharing, adherence reports and more.
-            </div>
-            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-              {["Unlimited meds","Full history","Refill reminders","Reports"].map(f=>(
-                <div key={f} style={{background:"rgba(255,255,255,.2)",borderRadius:99,padding:"4px 10px",fontSize:12}}>{f}</div>
-              ))}
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:14}}>
-              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800}}>{pricing.pro.label}</div>
-                <div style={{fontSize:10,opacity:.8}}>Pro / mo</div>
-              </div>
-              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800}}>{pricing.family.label}</div>
-                <div style={{fontSize:10,opacity:.8}}>Family / mo</div>
-              </div>
-              <div style={{background:"rgba(255,255,255,.15)",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800}}>{pricing.enterprise.label}</div>
-                <div style={{fontSize:10,opacity:.8}}>Enterprise / mo</div>
-              </div>
-            </div>
-            <button
-              style={{background:"white",color:"#2563EB",border:"none",borderRadius:10,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
-              onClick={() => setShowUpgrade(true)}
-            >
-              See upgrade options →
-            </button>
+      {plan === "free" ? (
+        <div className="upgrade-card" style={{margin:"0 16px 20px"}}>
+          <div className="upgrade-title">Unlock Pro ⭐</div>
+          <div className="upgrade-sub">Unlimited medications, caregiver sharing, adherence reports and more.</div>
+          <div className="upgrade-features">
+            {["Unlimited medications","Full history","Refill reminders","Adherence reports","Drug interaction check"].map(f => (
+              <div key={f} className="upgrade-feature"><span>✓</span> {f}</div>
+            ))}
           </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+            {[{p:"pro",l:"Pro"},{p:"family",l:"Family"},{p:"enterprise",l:"Enterprise"}].map(({p,l}) => (
+              <div key={p} style={{background:"rgba(255,255,255,.12)",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                <div style={{fontSize:16,fontWeight:800}}>{pricing[p].label}</div>
+                <div style={{fontSize:10,opacity:.8}}>{l} / mo</div>
+              </div>
+            ))}
+          </div>
+          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>See upgrade options →</button>
         </div>
-      )}
-
-      {plan !== "free" && (
-        <div className="section">
+      ) : (
+        <div className="section" style={{marginBottom:12}}>
           <div className="section-header">Your plan includes</div>
           <div className="list">
-              {[
-                ["💊","Unlimited medications","No cap on medications"],
-                ["📊","Full history & analytics","All-time dose history"],
-                ["🔔","Smart refill reminders","Never run out"],
-                ["⚠️","Drug interaction checker","Stay safe"],
-                ["📄","PDF adherence reports","Share with your doctor"],
-                plan === "family" || plan === "enterprise" ? ["👨‍👩‍👧","Family dashboard","5 profiles"] : null,
-                plan === "enterprise" ? ["🏥","Bulk patient management","Manage unlimited patients"] : null,
-                plan === "enterprise" ? ["🔌","API & integrations","Connect your EMR/HIS"] : null,
-                plan === "enterprise" ? ["🎨","Custom branding","White-label experience"] : null,
-                plan === "enterprise" ? ["🛡️","HIPAA-compliant","Enterprise-grade security"] : null,
-                plan === "enterprise" ? ["👤","Dedicated account manager","24/7 priority support"] : null,
-              ].filter(Boolean).map(([icon,title,sub]) => (
-                <div key={title} className="row" style={{cursor:"default"}}>
-                  <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>{icon}</div>
-                  <div className="row-body"><div className="row-title">{title}</div><div className="row-sub">{sub}</div></div>
-                </div>
-              ))}
+            {[
+              ["💊","Unlimited medications","No cap on medications"],
+              ["📊","Full history & analytics","All-time dose history"],
+              ["🔔","Smart refill reminders","Never run out"],
+              ["⚠️","Drug interaction checker","Stay safe"],
+              ["📄","PDF adherence reports","Share with your doctor"],
+              plan === "family" || plan === "enterprise" ? ["👨‍👩‍👧","Family dashboard","5 profiles"] : null,
+              plan === "enterprise" ? ["🏥","Bulk patient management","Manage unlimited patients"] : null,
+              plan === "enterprise" ? ["🔌","API & integrations","Connect your EMR/HIS"] : null,
+              plan === "enterprise" ? ["🎨","Custom branding","White-label experience"] : null,
+              plan === "enterprise" ? ["🛡️","HIPAA-compliant","Enterprise-grade security"] : null,
+              plan === "enterprise" ? ["👤","Dedicated account manager","24/7 priority support"] : null,
+            ].filter(Boolean).map(([icon,title,sub]) => (
+              <Row key={title} icon={icon} title={title} sub={sub}/>
+            ))}
           </div>
           <div style={{padding:"10px 4px"}}>
             <button className="btn btn-ghost" style={{border:"1.5px solid var(--sep)"}} onClick={() => setShowUpgrade(true)}>
@@ -265,81 +358,70 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       )}
 
       {(plan === "family" || plan === "enterprise") && (
-        <div className="section">
+        <div className="section" style={{marginBottom:12}}>
           <div className="section-header">👨‍👩‍👧 Family dashboard</div>
           <div className="list">
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>👤</div>
-              <div className="row-body">
-                <div className="row-title">Primary member</div>
-                <div className="row-sub">{profile?.full_name || user?.email}</div>
-              </div>
-            </div>
-            <div className="row" style={{cursor:"default"}} onClick={() => setShowAddMember(true)}>
-              <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>➕</div>
-              <div className="row-body">
-                <div className="row-title">Add family member</div>
-                <div className="row-sub">Invite via email to link profiles</div>
-              </div>
-            </div>
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib3)",fontSize:18}}>📊</div>
-              <div className="row-body">
-                <div className="row-title">Shared compliance view</div>
-                <div className="row-sub">See everyone&apos;s adherence at a glance</div>
-              </div>
-            </div>
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib6)",fontSize:18}}>🔔</div>
-              <div className="row-body">
-                <div className="row-title">Caregiver notifications</div>
-                <div className="row-sub">Alerts when loved ones miss doses</div>
-              </div>
-            </div>
+            <Row icon="👤" bg="var(--ib1)" title="Primary member" sub={profile?.full_name || user?.email}/>
+            <Row icon="➕" bg="var(--ib4)" title="Add family member" sub="Invite via email to link profiles" onClick={() => setShowAddMember(true)}/>
+            <Row icon="📊" bg="var(--ib3)" title="Shared compliance view" sub="See everyone's adherence at a glance"/>
+            <Row icon="🔔" bg="var(--ib6)" title="Caregiver notifications" sub="Alerts when loved ones miss doses"/>
           </div>
         </div>
       )}
 
-      <div className="section">
-        <div className="section-header">Notifications</div>
+      <div className="section" style={{marginBottom:12}}>
+        <div className="section-header">Notifications & Schedule</div>
         <div className="list">
-          <div className="row" style={{cursor:"default"}}>
-            <div className="row-icon" style={{background:"var(--ib3)",fontSize:18}}>🔔</div>
-            <div className="row-body">
-              <div className="row-title">Push notifications</div>
-              <div className="row-sub">{notifPerm === "granted" ? "Enabled" : "Tap to enable"}</div>
-            </div>
-            {notifPerm !== "granted"
-              ? <button className="btn btn-primary btn-sm" style={{width:"auto"}} onClick={enableNotifs}>Enable</button>
-              : <span style={{color:"var(--teal2)",fontSize:14,fontWeight:600}}>On ✓</span>}
-          </div>
-          {notifPerm === "granted" && (
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>⏱</div>
-              <div className="row-body"><div className="row-title">Default reminder timing</div></div>
-              <select
-                value={reminderLead}
-                onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
-                style={{border:"none",background:"none",color:"var(--teal)",fontSize:15,fontWeight:500,fontFamily:"inherit",cursor:"pointer"}}
-              >
-                <option value={0}>At time</option>
-                <option value={15}>15 min</option>
-                <option value={30}>30 min</option>
-                <option value={60}>1 hr</option>
-                <option value={120}>2 hrs</option>
-              </select>
-            </div>
+          <Row
+            icon="🔔" bg="var(--ib3)"
+            title="Push notifications"
+            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in browser settings" : "Tap to enable" : "Alarms & reminders on"}
+          >
+            <Toggle on={notifOn && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
+          </Row>
+          <Row
+            icon="⏰" bg="var(--ib5)"
+            title="Daily schedule"
+            sub={`${profile?.wake_time || "07:00"} – ${profile?.sleep_time || "22:00"}`}
+            onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(true);}}
+          />
+          <Row
+            icon="📋" bg="var(--ib5)"
+            title="Health condition"
+            sub={profile?.condition || "Not set"}
+            onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(true);}}
+          />
+          {notifPerm === "granted" && notifOn && (
+            <>
+              <div className="row" style={{cursor:"default"}}>
+                <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>⏱</div>
+                <div className="row-body"><div className="row-title">Reminder before dose</div></div>
+                <select
+                  value={reminderLead}
+                  onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
+                  style={{border:"none",background:"var(--hover)",color:"var(--t1)",fontSize:14,fontWeight:500,fontFamily:"inherit",cursor:"pointer",borderRadius:8,padding:"5px 10px",outline:"none"}}
+                >
+                  <option value={0}>At time</option>
+                  <option value={15}>15 min before</option>
+                  <option value={30}>30 min before</option>
+                  <option value={60}>1 hr before</option>
+                  <option value={120}>2 hrs before</option>
+                </select>
+              </div>
+              <div className="row" style={{cursor:"pointer"}} onClick={() => { stopAlarmSound(); testAlarm(); }}>
+                <div className="row-icon" style={{background:"var(--ib3)",fontSize:18}}>🔊</div>
+                <div className="row-body"><div className="row-title">Test alarm</div><div className="row-sub">Play test notification & sound</div></div>
+                <span style={{fontSize:16,color:"var(--t3)"}}>▶</span>
+              </div>
+            </>
           )}
         </div>
       </div>
 
-      <div className="section">
+      <div className="section" style={{marginBottom:12}}>
         <div className="section-header">Account</div>
         <div className="list">
-          <div className="row" style={{cursor:"default"}}>
-            <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>📧</div>
-            <div className="row-body"><div className="row-title">Email</div><div className="row-sub">{user?.email}</div></div>
-          </div>
+          <Row icon="📧" bg="var(--ib1)" title="Email" sub={user?.email}/>
 
           {editCountryPick ? (
             <div className="row" style={{cursor:"default",flexWrap:"wrap",gap:8}}>
@@ -351,14 +433,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                   {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                 </select>
               </div>
-              <button className="btn btn-sm btn-ghost" style={{width:"auto"}} onClick={()=>setEditCountryPick(false)}>Cancel</button>
+              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditCountryPick(false)}>Cancel</button>
             </div>
           ) : (
-            <div className="row" onClick={()=>setEditCountryPick(true)} style={{cursor:"pointer"}}>
-              <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>🌍</div>
-              <div className="row-body"><div className="row-title">Country</div><div className="row-sub">{selCountry.flag} {selCountry.name}</div></div>
-              <Chevron/>
-            </div>
+            <Row icon="🌍" bg="var(--ib4)" title="Country" sub={`${selCountry.flag} ${selCountry.name}`} onClick={()=>setEditCountryPick(true)}/>
           )}
 
           {editCondition ? (
@@ -370,15 +448,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                   placeholder="e.g. Hypertension, Diabetes" style={{marginTop:6,fontSize:14}} autoFocus/>
               </div>
               <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
-              <button className="btn btn-sm btn-ghost" style={{width:"auto"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
+              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
             </div>
-          ) : (
-            <div className="row" onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(true);}} style={{cursor:"pointer"}}>
-              <div className="row-icon" style={{background:"var(--ib5)",fontSize:18}}>📋</div>
-              <div className="row-body"><div className="row-title">Health condition</div><div className="row-sub">{profile?.condition || "Not set"}</div></div>
-              <Chevron/>
-            </div>
-          )}
+          ) : null}
 
           {editSchedule ? (
             <div className="row" style={{cursor:"default",flexWrap:"wrap",gap:8}}>
@@ -389,34 +461,25 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                   <div style={{flex:1}}>
                     <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Wake up</div>
                     <input type="time" value={schedVals.wake} onChange={e=>setSchedVals(p=>({...p,wake:e.target.value}))}
-                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+                      style={{fontSize:15,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
                   </div>
                   <div style={{flex:1}}>
                     <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Bedtime</div>
                     <input type="time" value={schedVals.sleep} onChange={e=>setSchedVals(p=>({...p,sleep:e.target.value}))}
-                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+                      style={{fontSize:15,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
                   </div>
                 </div>
               </div>
               <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
-              <button className="btn btn-sm btn-ghost" style={{width:"auto"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
+              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
             </div>
-          ) : (
-            <div className="row" onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(true);}} style={{cursor:"pointer"}}>
-              <div className="row-icon" style={{background:"var(--ib5)",fontSize:18}}>⏰</div>
-              <div className="row-body"><div className="row-title">Schedule</div><div className="row-sub">{profile?.wake_time||"07:00"} – {profile?.sleep_time||"22:00"}</div></div>
-              <Chevron/>
-            </div>
-          )}
+          ) : null}
 
-          <div className="row" onClick={onSignOut} style={{cursor:"pointer"}}>
-            <div className="row-icon" style={{background:"var(--ib6)",fontSize:18}}>🚪</div>
-            <div className="row-body"><div className="row-title" style={{color:"var(--red)"}}>Sign out</div></div>
-          </div>
+          <Row icon="🚪" bg="var(--ib6)" title={<span style={{color:"var(--red)"}}>Sign out</span>} onClick={onSignOut}/>
         </div>
       </div>
 
-      <div className="section">
+      <div className="section" style={{marginBottom:12}}>
         <div className="section-header">About</div>
         <div className="list">
           <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version 1.0.0</div></div></div>

@@ -6,11 +6,11 @@ export default function TransitionScreen({ emoji, message, sub }) {
   return (
     <div className="trans-screen">
       <style>{CSS}</style>
-      <div style={{position:"absolute",top:-80,right:-80,width:280,height:280,background:"rgba(255,255,255,.07)",borderRadius:"50%"}}/>
-      <div style={{position:"absolute",bottom:-60,left:-60,width:200,height:200,background:"rgba(255,255,255,.05)",borderRadius:"50%"}}/>
-      <div style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <div className="trans-bg-orb" style={{top:"-30%",right:"-20%",width:"80%",height:"80%",background:"radial-gradient(circle,rgba(0,122,255,.3) 0%,transparent 70%)"}}/>
+      <div className="trans-bg-orb" style={{bottom:"-30%",left:"-20%",width:"70%",height:"70%",background:"radial-gradient(circle,rgba(0,122,255,.15) 0%,transparent 70%)"}}/>
+      <div style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",padding:"0 32px"}}>
         <div className="trans-logo">
-          <svg viewBox="0 0 100 100" width={48} height={48} fill="white">
+          <svg viewBox="0 0 100 100" width={44} height={44} fill="white">
             <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
             <circle cx="50" cy="14" r="6" fill="white"/>
             <circle cx="50" cy="86" r="6" fill="white"/>
@@ -20,12 +20,11 @@ export default function TransitionScreen({ emoji, message, sub }) {
           </svg>
         </div>
         <div className="trans-title">Adhera</div>
-        <div style={{marginTop:32,marginBottom:8,fontSize:44}}>{emoji || "💊"}</div>
-        <div className="trans-msg" style={{fontSize:22,fontWeight:700,marginBottom:6}}>{message || "Loading…"}</div>
-        {sub && <div style={{fontSize:15,color:"rgba(255,255,255,.75)",textAlign:"center",padding:"0 40px",lineHeight:1.5}}>{sub}</div>}
-        <div className="trans-dots" style={{marginTop:40}}>
-          <div className="trans-dot"/><div className="trans-dot"/><div className="trans-dot"/>
-        </div>
+        {emoji && emoji !== "💊" && (
+          <div style={{marginTop:24,marginBottom:4,fontSize:52,lineHeight:1,animation:"fadeUp .5s .2s ease both"}}>{emoji}</div>
+        )}
+        <div style={{marginTop:emoji && emoji !== "💊" ? 4 : 32,marginBottom:4,fontSize:20,fontWeight:600,color:"rgba(255,255,255,.95)",textAlign:"center",animation:"fadeUp .5s .1s ease both",letterSpacing:"-.3px"}}>{message || "Loading…"}</div>
+        {sub && <div style={{fontSize:15,color:"rgba(255,255,255,.65)",textAlign:"center",padding:"0 20px",lineHeight:1.5,marginTop:6,animation:"fadeUp .5s .2s ease both",fontWeight:400}}>{sub}</div>}
       </div>
     </div>
   );

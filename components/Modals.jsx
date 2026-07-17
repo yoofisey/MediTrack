@@ -89,7 +89,7 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
       id: "pro",
       name: "Pro",
       icon: "⭐",
-      color: "#2563EB",
+      color: "var(--teal)",
       price: pricing.pro.label,
       period: "/month",
       tagline: "Everything you need for full adherence",
@@ -107,7 +107,7 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
       id: "family",
       name: "Family",
       icon: "👨‍👩‍👧",
-      color: "#AF52DE",
+      color: "var(--teal2)",
       price: pricing.family.label,
       period: "/month",
       tagline: "One account for the whole household",
@@ -124,7 +124,7 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
       id: "enterprise",
       name: "Enterprise",
       icon: "🏥",
-      color: "#7C3AED",
+      color: "var(--teal)",
       price: pricing.enterprise.label,
       period: "/month",
       tagline: "For hospitals, clinics & insurers",
@@ -358,6 +358,36 @@ export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
           </div>
           <div className="sheet-actions">
             <button className="btn btn-red" onClick={onConfirm}>Delete permanently</button>
+            <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LogDoseModal({ med, onConfirm, onCancel }) {
+  const [journal, setJournal] = useState("");
+  return (
+    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))"}}>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>💊 Log dose</div>
+          <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>
+            {med.name} · {med.dosage_amount} {med.dosage_unit}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Journal (optional)</div>
+            <textarea className="sheet-input" rows={3}
+              placeholder="How are you feeling? Any side effects?"
+              value={journal} onChange={e => setJournal(e.target.value)}
+              style={{resize:"vertical",fontSize:14,background:"var(--bg)"}}/>
+          </div>
+
+          <div className="sheet-actions" style={{gap:8}}>
+            <button className="btn btn-primary" style={{flex:1}} onClick={() => onConfirm(journal)}>Log dose</button>
             <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
           </div>
         </div>
