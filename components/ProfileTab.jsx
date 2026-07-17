@@ -375,9 +375,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <Row
             icon="🔔" bg="var(--ib3)"
             title="Push notifications"
-            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in browser settings" : "Tap to enable" : "Alarms & reminders on"}
+            sub={!notifOn() || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in browser settings" : "Tap to enable" : "Alarms & reminders on"}
           >
-            <Toggle on={notifOn && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
+            <Toggle on={notifOn() && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
           </Row>
           <Row
             icon="⏰" bg="var(--ib5)"
@@ -385,12 +385,46 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             sub={`${profile?.wake_time || "07:00"} – ${profile?.sleep_time || "22:00"}`}
             onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(true);}}
           />
+          {editSchedule ? (
+            <div className="row" style={{cursor:"default",flexWrap:"wrap",gap:8}}>
+              <div className="row-icon" style={{background:"var(--ib5)",fontSize:18}}>⏰</div>
+              <div className="row-body" style={{flex:"1 1 auto"}}>
+                <div className="row-title">Schedule</div>
+                <div style={{display:"flex",gap:8,marginTop:6}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Wake up</div>
+                    <input type="time" value={schedVals.wake} onChange={e=>setSchedVals(p=>({...p,wake:e.target.value}))}
+                      style={{fontSize:15,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Bedtime</div>
+                    <input type="time" value={schedVals.sleep} onChange={e=>setSchedVals(p=>({...p,sleep:e.target.value}))}
+                      style={{fontSize:15,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+                  </div>
+                </div>
+              </div>
+              <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
+              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
+            </div>
+          ) : null}
           <Row
             icon="📋" bg="var(--ib5)"
             title="Health condition"
             sub={profile?.condition || "Not set"}
             onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(true);}}
           />
+          {editCondition ? (
+            <div className="row" style={{cursor:"default",flexWrap:"wrap",gap:8}}>
+              <div className="row-icon" style={{background:"var(--ib5)",fontSize:18}}>📋</div>
+              <div className="row-body" style={{flex:"1 1 auto"}}>
+                <div className="row-title">Health condition</div>
+                <input className="sheet-input" value={conditionVal} onChange={e=>setConditionVal(e.target.value)}
+                  placeholder="e.g. Hypertension, Diabetes" style={{marginTop:6,fontSize:14}} autoFocus/>
+              </div>
+              <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
+              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
+            </div>
+          ) : null}
           {notifPerm === "granted" && notifOn && (
             <>
               <div className="row" style={{cursor:"default"}}>
@@ -438,42 +472,6 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           ) : (
             <Row icon="🌍" bg="var(--ib4)" title="Country" sub={`${selCountry.flag} ${selCountry.name}`} onClick={()=>setEditCountryPick(true)}/>
           )}
-
-          {editCondition ? (
-            <div className="row" style={{cursor:"default",flexWrap:"wrap",gap:8}}>
-              <div className="row-icon" style={{background:"var(--ib5)",fontSize:18}}>📋</div>
-              <div className="row-body" style={{flex:"1 1 auto"}}>
-                <div className="row-title">Health condition</div>
-                <input className="sheet-input" value={conditionVal} onChange={e=>setConditionVal(e.target.value)}
-                  placeholder="e.g. Hypertension, Diabetes" style={{marginTop:6,fontSize:14}} autoFocus/>
-              </div>
-              <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
-              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
-            </div>
-          ) : null}
-
-          {editSchedule ? (
-            <div className="row" style={{cursor:"default",flexWrap:"wrap",gap:8}}>
-              <div className="row-icon" style={{background:"var(--ib5)",fontSize:18}}>⏰</div>
-              <div className="row-body" style={{flex:"1 1 auto"}}>
-                <div className="row-title">Schedule</div>
-                <div style={{display:"flex",gap:8,marginTop:6}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Wake up</div>
-                    <input type="time" value={schedVals.wake} onChange={e=>setSchedVals(p=>({...p,wake:e.target.value}))}
-                      style={{fontSize:15,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Bedtime</div>
-                    <input type="time" value={schedVals.sleep} onChange={e=>setSchedVals(p=>({...p,sleep:e.target.value}))}
-                      style={{fontSize:15,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
-                  </div>
-                </div>
-              </div>
-              <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
-              <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
-            </div>
-          ) : null}
 
           <Row icon="🚪" bg="var(--ib6)" title={<span style={{color:"var(--red)"}}>Sign out</span>} onClick={onSignOut}/>
         </div>
