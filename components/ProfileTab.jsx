@@ -29,6 +29,7 @@ function Toggle({ on, onChange, disabled }) {
 
 export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount }) {
   const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
+  const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -49,23 +50,23 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const fileInputRef = useRef(null);
 
   function ls() { try { return localStorage; } catch { return null; } }
-  function notifOn() { const s = ls(); try { return s?.getItem("mt_notif_on") === "1"; } catch { return false; } }
 
   async function enableNotifs() {
     const s = ls();
-    if (notifOn()) {
+    if (notifOn) {
       s?.setItem("mt_notif_on", "0");
+      setNotifOn(false);
       clearAllTimers();
       try { navigator.serviceWorker?.controller?.postMessage({ type:"clear-alarms" }); } catch {}
-      setNotifPerm(Notification.permission);
       return;
     }
     const p = await askNotifPerm();
-    setNotifPerm(p);
     if (p === "granted") {
       s?.setItem("mt_notif_on", "1");
+      setNotifOn(true);
     } else if (p === "denied") {
       s?.setItem("mt_notif_on", "0");
+      setNotifOn(false);
     }
   }
 
@@ -375,9 +376,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <Row
             icon="🔔" bg="var(--ib3)"
             title="Push notifications"
-            sub={!notifOn() || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in browser settings" : "Tap to enable" : "Alarms & reminders on"}
+            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in browser settings" : "Tap to enable" : "Alarms & reminders on"}
           >
-            <Toggle on={notifOn() && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
+            <Toggle on={notifOn && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
           </Row>
           <Row
             icon="⏰" bg="var(--ib5)"
@@ -429,18 +430,21 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             <>
               <div className="row" style={{cursor:"default"}}>
                 <div className="row-icon" style={{background:"var(--ib1)",fontSize:18}}>⏱</div>
-                <div className="row-body"><div className="row-title">Reminder before dose</div></div>
-                <select
-                  value={reminderLead}
-                  onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
-                  style={{border:"none",background:"var(--hover)",color:"var(--t1)",fontSize:14,fontWeight:500,fontFamily:"inherit",cursor:"pointer",borderRadius:8,padding:"5px 10px",outline:"none"}}
-                >
-                  <option value={0}>At time</option>
-                  <option value={15}>15 min before</option>
-                  <option value={30}>30 min before</option>
-                  <option value={60}>1 hr before</option>
-                  <option value={120}>2 hrs before</option>
-                </select>
+                <div className="row-body"><div className="row-title">Reminder before dose</div><div className="row-sub">Get notified before each scheduled dose</div></div>
+                <div style={{position:"relative",flexShrink:0}}>
+                  <select
+                    value={reminderLead}
+                    onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
+                    style={{border:"1.5px solid var(--sep)",background:"var(--card)",color:"var(--t1)",fontSize:14,fontWeight:600,fontFamily:"inherit",cursor:"pointer",borderRadius:10,padding:"8px 30px 8px 12px",outline:"none",appearance:"none",WebkitAppearance:"none",minWidth:120}}
+                  >
+                    <option value={0}>At time</option>
+                    <option value={15}>15 min</option>
+                    <option value={30}>30 min</option>
+                    <option value={60}>1 hour</option>
+                    <option value={120}>2 hours</option>
+                  </select>
+                  <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:10,color:"var(--t4)",pointerEvents:"none"}}>▼</span>
+                </div>
               </div>
               <div className="row" style={{cursor:"pointer"}} onClick={() => { stopAlarmSound(); testAlarm(); }}>
                 <div className="row-icon" style={{background:"var(--ib3)",fontSize:18}}>🔊</div>
