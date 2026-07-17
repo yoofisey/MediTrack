@@ -392,16 +392,16 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div className="row-icon" style={{background:"var(--ib5)",fontSize:18,marginTop:2}}>⏰</div>
               <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">Schedule</div>
-                <div style={{display:"flex",gap:10,marginTop:8}}>
-                  <div style={{flex:1}}>
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
+                  <div>
                     <div style={{fontSize:11,color:"var(--t3)",marginBottom:4,fontWeight:500}}>Wake up</div>
                     <input type="time" value={schedVals.wake} onChange={e=>setSchedVals(p=>({...p,wake:e.target.value}))}
-                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"10px 12px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none",boxSizing:"border-box"}}/>
                   </div>
-                  <div style={{flex:1}}>
+                  <div>
                     <div style={{fontSize:11,color:"var(--t3)",marginBottom:4,fontWeight:500}}>Bedtime</div>
                     <input type="time" value={schedVals.sleep} onChange={e=>setSchedVals(p=>({...p,sleep:e.target.value}))}
-                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"10px 12px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none",boxSizing:"border-box"}}/>
                   </div>
                 </div>
               </div>
