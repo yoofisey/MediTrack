@@ -60,12 +60,12 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       try { navigator.serviceWorker?.controller?.postMessage({ type:"clear-alarms" }); } catch {}
       return;
     }
+    // Optimistic: show toggle ON immediately
+    setNotifOn(true);
+    s?.setItem("mt_notif_on", "1");
     const p = await askNotifPerm();
     setNotifPerm(p);
-    if (p === "granted") {
-      s?.setItem("mt_notif_on", "1");
-      setNotifOn(true);
-    } else if (p === "denied") {
+    if (p !== "granted") {
       s?.setItem("mt_notif_on", "0");
       setNotifOn(false);
     }
@@ -388,9 +388,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(true);}}
           />
           {editSchedule ? (
-            <div className="row" style={{cursor:"default",alignItems:"flex-start"}}>
+            <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div className="row-icon" style={{background:"var(--ib5)",fontSize:18,marginTop:2}}>⏰</div>
-              <div className="row-body" style={{flex:"1"}}>
+              <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">Schedule</div>
                 <div style={{display:"flex",gap:10,marginTop:8}}>
                   <div style={{flex:1}}>
@@ -404,10 +404,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                       style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"10px 12px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
                   </div>
                 </div>
-                <div style={{display:"flex",gap:8,marginTop:12}}>
-                  <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
-                  <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
-                </div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
+                <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
               </div>
             </div>
           ) : null}
@@ -418,16 +418,16 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(true);}}
           />
           {editCondition ? (
-            <div className="row" style={{cursor:"default",alignItems:"flex-start"}}>
+            <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div className="row-icon" style={{background:"var(--ib5)",fontSize:18,marginTop:2}}>📋</div>
-              <div className="row-body" style={{flex:"1"}}>
+              <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">Health condition</div>
                 <input className="sheet-input" value={conditionVal} onChange={e=>setConditionVal(e.target.value)}
                   placeholder="e.g. Hypertension, Diabetes" style={{marginTop:8,fontSize:15}} autoFocus/>
-                <div style={{display:"flex",gap:8,marginTop:10}}>
-                  <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
-                  <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
-                </div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
+                <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
               </div>
             </div>
           ) : null}
@@ -467,17 +467,17 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <Row icon="📧" bg="var(--ib1)" title="Email" sub={user?.email}/>
 
           {editCountryPick ? (
-            <div className="row" style={{cursor:"default",alignItems:"flex-start"}}>
+            <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div className="row-icon" style={{background:"var(--ib4)",fontSize:18,marginTop:2}}>🌍</div>
-              <div className="row-body" style={{flex:"1"}}>
+              <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">Country</div>
                 <select className="sheet-input" value={country} onChange={e=>{const v=e.target.value; setEditCountryPick(false); onSaveProfile({country:v});}}
                   style={{marginTop:8,fontSize:14}} autoFocus>
                   {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                 </select>
-                <div style={{marginTop:6}}>
-                  <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditCountryPick(false)}>Cancel</button>
-                </div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditCountryPick(false)}>Cancel</button>
               </div>
             </div>
           ) : (
