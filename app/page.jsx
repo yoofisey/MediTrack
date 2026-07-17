@@ -8,20 +8,7 @@ import Onboarding from "@/components/Onboarding";
 import MainApp from "@/components/MainApp";
 
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").then(reg => {
-      reg.addEventListener("updatefound", () => {
-        const sw = reg.installing;
-        if (sw) sw.addEventListener("statechange", () => {
-          if (sw.state === "installed" && navigator.serviceWorker.controller) window.location.reload();
-        });
-      });
-    }).catch(() => {});
-  });
-  const prev = (() => { try { return localStorage.getItem("mt_ver"); } catch { return null; } })();
-  const cur = "2";
-  try { localStorage.setItem("mt_ver", cur); } catch {}
-  if (prev && prev !== cur) window.location.reload();
+  window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
 }
 
 (function detectSystemTheme() {
