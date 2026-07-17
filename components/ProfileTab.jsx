@@ -28,7 +28,7 @@ function Toggle({ on, onChange, disabled }) {
 }
 
 export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount }) {
-  const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
+  const [notifPerm, setNotifPerm] = useState(() => { if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -377,7 +377,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <Row
             icon="🔔" bg="var(--ib3)"
             title="Push notifications"
-            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in browser settings" : "Tap to enable" : "Alarms & reminders on"}
+            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in Settings" : notifPerm==="unsupported" ? "Add to home screen to enable" : "Tap to enable" : "Alarms & reminders on"}
           >
             <Toggle on={notifOn && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
           </Row>
@@ -405,7 +405,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                   </div>
                 </div>
               </div>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
                 <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
                 <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
               </div>
@@ -425,7 +425,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                 <input className="sheet-input" value={conditionVal} onChange={e=>setConditionVal(e.target.value)}
                   placeholder="e.g. Hypertension, Diabetes" style={{marginTop:8,fontSize:15}} autoFocus/>
               </div>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
                 <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
                 <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
               </div>
@@ -476,7 +476,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                   {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
                 </select>
               </div>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
                 <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditCountryPick(false)}>Cancel</button>
               </div>
             </div>
