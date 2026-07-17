@@ -206,11 +206,11 @@ export default function AuthScreen({ onAuth }) {
   if (view === "welcome") return (
     <div className="auth-screen" style={{padding:0,justifyContent:"flex-end",background:"linear-gradient(180deg,#007AFF 0%,#0055CC 100%)",overflow:"hidden"}}>
       <style>{CSS}</style>
-      <div style={{position:"absolute",top:"-20%",right:"-30%",width:"90%",height:"90%",background:"radial-gradient(circle,rgba(255,255,255,.2) 0%,transparent 70%)",borderRadius:"50%",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",bottom:"30%",left:"-20%",width:"60%",height:"60%",background:"radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%)",borderRadius:"50%",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",top:"-18%",right:"-25%",width:"80%",height:"80%",background:"radial-gradient(circle,rgba(255,255,255,.18) 0%,transparent 70%)",borderRadius:"50%",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:"35%",left:"-15%",width:"50%",height:"50%",background:"radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%)",borderRadius:"50%",pointerEvents:"none"}}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 32px 20px",color:"white",position:"relative",zIndex:1}}>
-        <div style={{width:88,height:88,background:"rgba(255,255,255,.2)",borderRadius:26,display:"grid",placeItems:"center",marginBottom:20,backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,.15)",boxShadow:"0 12px 40px rgba(0,0,0,.15)"}}>
-          <svg viewBox="0 0 100 100" width={44} height={44} fill="white">
+        <div style={{width:96,height:96,background:"rgba(255,255,255,.2)",borderRadius:28,display:"grid",placeItems:"center",marginBottom:24,backdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,.15)",boxShadow:"0 16px 48px rgba(0,0,0,.18)"}}>
+          <svg viewBox="0 0 100 100" width={48} height={48} fill="white">
             <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="3" strokeOpacity=".3"/>
             <circle cx="50" cy="14" r="6" fill="white"/>
             <circle cx="50" cy="86" r="6" fill="white"/>
@@ -219,9 +219,9 @@ export default function AuthScreen({ onAuth }) {
             <rect x="52" y="43" width="16" height="4" rx="2" fill="white" transform="translate(60,45)"/>
           </svg>
         </div>
-        <div style={{fontSize:36,fontWeight:800,letterSpacing:"-.5px",textAlign:"center",lineHeight:1.15,marginBottom:10}}>Adhera</div>
-        <div style={{fontSize:17,fontWeight:400,opacity:.85,textAlign:"center",lineHeight:1.5,maxWidth:300,marginBottom:28}}>
-          Your personal medication tracker with smart reminders and adherence insights.
+        <div style={{fontSize:38,fontWeight:800,letterSpacing:"-.5px",textAlign:"center",lineHeight:1.1,marginBottom:10}}>Adhera</div>
+        <div style={{fontSize:17,fontWeight:500,opacity:.85,textAlign:"center",lineHeight:1.5,maxWidth:300,marginBottom:32}}>
+          Your personal medication tracker
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center"}}>
           {[
@@ -230,16 +230,16 @@ export default function AuthScreen({ onAuth }) {
             {icon:"🔥",label:"Streak rewards"},
             {icon:"📊",label:"Adherence reports"},
           ].map(f=>(
-            <div key={f.label} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.15)",backdropFilter:"blur(10px)",borderRadius:99,padding:"7px 14px",fontSize:13,fontWeight:500,color:"white",border:"1px solid rgba(255,255,255,.1)"}}>
+            <div key={f.label} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.15)",backdropFilter:"blur(12px)",borderRadius:99,padding:"8px 16px",fontSize:13,fontWeight:500,color:"white",border:"1px solid rgba(255,255,255,.1)"}}>
               <span style={{fontSize:14}}>{f.icon}</span>
               <span>{f.label}</span>
             </div>
           ))}
         </div>
       </div>
-      <div style={{background:"var(--card)",borderRadius:"28px 28px 0 0",padding:"28px 24px calc(28px + env(safe-area-inset-bottom,0px))",width:"100%",boxShadow:"0 -4px 20px rgba(0,0,0,.08)",position:"relative",zIndex:1}}>
-        <div style={{fontSize:22,fontWeight:700,marginBottom:4,color:"var(--t1)",letterSpacing:"-.3px"}}>Get started</div>
-        <div style={{fontSize:15,color:"var(--t3)",marginBottom:20,lineHeight:1.4}}>Join thousands managing their health with Adhera</div>
+      <div style={{background:"var(--card)",borderRadius:"32px 32px 0 0",padding:"32px 24px calc(32px + env(safe-area-inset-bottom,0px))",width:"100%",boxShadow:"0 -4px 24px rgba(0,0,0,.08)",position:"relative",zIndex:1}}>
+        <div style={{fontSize:24,fontWeight:700,marginBottom:4,color:"var(--t1)",letterSpacing:"-.3px"}}>Get started</div>
+        <div style={{fontSize:15,color:"var(--t3)",marginBottom:22,lineHeight:1.4}}>Join thousands managing their health with Adhera</div>
         <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl} style={{marginBottom:12}}>
           {obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}
         </button>
@@ -275,12 +275,12 @@ export default function AuthScreen({ onAuth }) {
         <div className="divider">or sign in with email</div>
         {err && <div className="err-msg">{err}</div>}
         <form onSubmit={handleSignIn}>
-          <div className="input-group">
+          <div className="input-group" style={{gap:14}}>
             <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email"/>
-            <div className="pw-wrap" style={{display:"flex",border:"1.5px solid var(--sep)",borderRadius:12,overflow:"hidden"}}>
+            <div className="pw-wrap" style={{display:"flex",border:"1.5px solid var(--sep)",borderRadius:14,overflow:"hidden"}}>
               <input className="input-field" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"var(--input)"}} type={pwShow?"text":"password"} placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="current-password"/>
-              <button type="button" onClick={()=>setPwShow(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"var(--input)",cursor:"pointer",color:"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center",opacity:.7}}
-                onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=.7}>
+              <button type="button" onClick={()=>setPwShow(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"var(--input)",cursor:"pointer",color:"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center",opacity:.6}}
+                onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=.6}>
                 {pwShow ?
                   <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                   :
@@ -427,7 +427,7 @@ export default function AuthScreen({ onAuth }) {
             {busy ? "Processing..." : isEnt ? "Register organization" : "Create free account"}
           </button>
         </form>
-        <div style={{fontSize:11,color:"var(--t3)",textAlign:"center",marginTop:12,lineHeight:1.5}}>
+        <div style={{fontSize:12,color:"var(--t3)",textAlign:"center",marginTop:14,lineHeight:1.5}}>
           By creating an account you agree to our Terms of Service and Privacy Policy.
         </div>
         <div className="auth-switch">
@@ -445,7 +445,7 @@ function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, RE_HAS_LOWER, R
   const [cfVis, setCfVis] = useState(false);
   return (
     <>
-      <div className="pw-wrap" style={{display:"flex",border:"1.5px solid var(--sep)",borderRadius:12,overflow:"hidden"}}>
+      <div className="pw-wrap" style={{display:"flex",border:"1.5px solid var(--sep)",borderRadius:14,overflow:"hidden"}}>
         <input className="input-field" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"var(--input)"}} type={pwVis?"text":"password"} placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
         <button type="button" onClick={()=>setPwVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"var(--input)",cursor:"pointer",color:"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center",opacity:.7}}
           onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=.7}>
@@ -485,7 +485,7 @@ function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, RE_HAS_LOWER, R
           </div>
         </div>
       )}
-      <div className="pw-wrap" style={{display:"flex",border:"1.5px solid var(--sep)",borderRadius:12,overflow:"hidden"}}>
+      <div className="pw-wrap" style={{display:"flex",border:"1.5px solid var(--sep)",borderRadius:14,overflow:"hidden"}}>
         <input className="input-field" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"var(--input)"}} type={cfVis?"text":"password"} placeholder="Confirm password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
         <button type="button" onClick={()=>setCfVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"var(--input)",cursor:"pointer",color:confirmPw.length>0&&pw===confirmPw?"var(--teal2)":"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center",opacity:.7}}
           onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=.7}>
