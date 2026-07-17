@@ -491,7 +491,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <div className="section" style={{marginBottom:12}}>
         <div className="section-header">About</div>
         <div className="list">
-          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version 1.0.0</div></div></div>
+          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version 1.0.1</div></div></div>
           <div className="row" onClick={()=>setShowPrivacy(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Privacy Policy</div></div><Chevron/></div>
           <div className="row" onClick={()=>setShowTerms(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Terms of Service</div></div><Chevron/></div>
         </div>
