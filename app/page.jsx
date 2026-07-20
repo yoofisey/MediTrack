@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { sb, fetchProfile } from "@/lib/supabase";
-import { THEMES } from "@/lib/data";
 import TransitionScreen from "@/components/TransitionScreen";
 import AuthScreen from "@/components/AuthScreen";
 import Onboarding from "@/components/Onboarding";
@@ -41,67 +40,23 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
 })();
 
 export default function App() {
-  const [screen, setScreen]   = useState("splash");
+  const [screen, setScreen]   = useState("loading");
   const [user,   setUser]     = useState(null);
   const [profile,setProfile]  = useState(null);
-  const [splash, setSplash]   = useState({ emoji:"💊", message:"Adhera", sub:"Your Personal Treatment Companion" });
-
-  async function resolveUser() {
-    const { data } = await sb.auth.getUser();
-    return data?.user ?? null;
-  }
-
-  async function go(u, escapeTimer) {
-    if (!u) { if (escapeTimer) clearTimeout(escapeTimer); setScreen("auth"); return; }
-    setUser(u);
-    const displayName = u.user_metadata?.full_name?.split(" ")[0] || u.email?.split("@")[0] || "";
-    setSplash({ emoji:"👋", message: displayName ? `Hey, ${displayName}!` : "Welcome back!", sub:"Loading your medications…" });
-    try {
-      const prof = await fetchProfile(u.id, u.user_metadata);
-      setProfile(prof);
-      await new Promise(r => setTimeout(r, 800));
-      const dest = prof?.onboarded === true ? "app" : "onboarding";
-      if (escapeTimer) clearTimeout(escapeTimer);
-      setScreen(dest);
-    } catch {
-      await new Promise(r => setTimeout(r, 800));
-      if (escapeTimer) clearTimeout(escapeTimer);
-      setScreen("auth");
-    }
-  }
-
-  useEffect(() => {
-    const escape = setTimeout(() => setScreen(s => s === "splash" ? "auth" : s), 6000);
-    resolveUser()
-      .then(u => go(u, escape))
-      .catch(() => { clearTimeout(escape); setScreen("auth"); });
-  }, []);
 
   async function handleAuth(u, isNew = false) {
     setUser(u);
-    setSplash({
-      emoji: isNew ? "🎉" : "👋",
-      message: isNew ? "Account created!" : "Welcome back!",
-      sub: isNew ? "Setting up your experience…" : "Loading your medications…",
-    });
-    setScreen("splash");
     try {
       const prof = await fetchProfile(u.id, u.user_metadata);
       setProfile(prof);
-      await new Promise(r => setTimeout(r, 800));
-      const dest = prof?.onboarded === true ? "app" : "onboarding";
-      setScreen(dest);
+      setScreen(prof?.onboarded === true ? "app" : "onboarding");
     } catch {
-      await new Promise(r => setTimeout(r, 800));
       setScreen(isNew ? "onboarding" : "app");
     }
   }
 
   async function handleOnboardDone(prefs) {
     setProfile(p => ({ ...p, ...prefs, onboarded: true }));
-    setSplash({ emoji:"🌟", message:"You're all set!", sub:"Your Personal Treatment Companion" });
-    setScreen("splash");
-    await new Promise(r => setTimeout(r, 1200));
     setScreen("app");
   }
 
@@ -110,9 +65,41 @@ export default function App() {
     setUser(null); setProfile(null); setScreen("auth");
   }
 
-  if (screen === "splash")     return <TransitionScreen {...splash} />;
+  useEffect(() => {
+    const MIN_LOAD_MS = 4500;
+    const MAX_LOAD_MS = 7000;
+    let cancelled = false;
+    let dest = "auth";
+
+    async function init() {
+      const start = Date.now();
+      try {
+        const { data } = await sb.auth.getUser();
+        const u = data?.user ?? null;
+        if (cancelled) return;
+        if (u) {
+          setUser(u);
+          const prof = await fetchProfile(u.id, u.user_metadata);
+          if (cancelled) return;
+          setProfile(prof);
+          dest = prof?.onboarded === true ? "app" : "onboarding";
+        }
+      } catch {}
+      if (cancelled) return;
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, MIN_LOAD_MS - elapsed);
+      await new Promise(r => setTimeout(r, remaining));
+      if (!cancelled) setScreen(dest);
+    }
+
+    init();
+    const fallback = setTimeout(() => { if (!cancelled) setScreen(dest); }, MAX_LOAD_MS);
+    return () => { cancelled = true; clearTimeout(fallback); };
+  }, []);
+
+  if (screen === "loading")    return <TransitionScreen />;
   if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;
   if (screen === "onboarding") return <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />;
-  if (!user)                   return <TransitionScreen emoji="💊" message="Adhera" sub="Your Personal Treatment Companion" />;
+  if (!user)                   return <TransitionScreen />;
   return <MainApp user={user} profile={profile} onSignOut={handleSignOut} />;
 }

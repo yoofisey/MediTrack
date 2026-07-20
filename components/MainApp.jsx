@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { THEMES } from "@/lib/data";
@@ -12,6 +12,7 @@ import ReportsTab from "@/components/ReportsTab";
 import ProfileTab from "@/components/ProfileTab";
 import MedSheet from "@/components/MedSheet";
 import { DeleteConfirmModal, LogDoseModal } from "@/components/Modals";
+import AlarmOverlay from "@/components/AlarmOverlay";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [tab, setTab] = useState("today");
@@ -26,6 +27,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [loadKey, setLoadKey] = useState(0);
   const [deleteMedId, setDeleteMedId] = useState(null);
   const [logDoseMed, setLogDoseMed] = useState(null);
+  const [alarmData, setAlarmData] = useState(null);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -60,6 +62,12 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       return () => { navigator.serviceWorker.removeEventListener("message", onMsg); };
     }
   }, []);
+  useEffect(() => {
+    function onAlarm(e) { setAlarmData(e.detail); }
+    window.addEventListener("mt-alarm", onAlarm);
+    return () => window.removeEventListener("mt-alarm", onAlarm);
+  }, []);
+  const dismissAlarm = useCallback(() => { setAlarmData(null); stopAlarmSound(); }, []);
   useEffect(() => {
     const t = THEMES[profile?.theme] || THEMES.blue;
     const root = document.documentElement;
@@ -186,7 +194,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     { id:"profile", label:"Profile" },
   ];
 
-  if (loading) return <div className="loading-screen"><style>{CSS}</style><div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}><div style={{fontSize:48,animation:"pulse 1.2s ease-in-out infinite"}}>💊</div><div style={{fontSize:15,color:"var(--t3)",fontWeight:500}}>Loading your medications...</div></div></div>;
+  if (loading) return <div className="loading-screen" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}><style>{CSS}</style><div style={{width:36,height:36,borderRadius:10,background:"var(--teal)",display:"grid",placeItems:"center",animation:"logoPulse 2.4s ease-in-out infinite",boxShadow:"0 4px 20px rgba(0,122,255,.3)"}}><svg viewBox="0 0 100 100" width={20} height={20} fill="white"><text x="22" y="70" fontFamily="system-ui,sans-serif" fontSize="58" fontWeight="700" fill="white">A</text></svg></div><div style={{fontSize:13,fontWeight:500,color:"var(--t3)"}}>Just a moment</div></div>;
 
   return (
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
@@ -238,6 +246,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           onCancel={() => setLogDoseMed(null)}
         />
       )}
+      <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm}/>
     </div>
   );
 }

@@ -158,15 +158,27 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       <div className="section">
         <div className="section-header">Avatar</div>
-        <div style={{display:"flex",gap:14,padding:"0 16px",alignItems:"center",marginBottom:14}}>
-          <div style={{width:64,height:64,borderRadius:"50%",background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:30,flexShrink:0,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
-            {editData.avatar_url ? <img src={editData.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : editData.avatar_emoji}
+        <div style={{padding:"0 16px",marginBottom:14}}>
+          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:editData.avatar_url?10:0}}>
+            <div style={{width:72,height:72,borderRadius:"50%",background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:34,flexShrink:0,overflow:"hidden",boxShadow:"0 4px 16px rgba(0,0,0,.1)",border:"3px solid var(--card)",transition:"transform .2s"}}>
+              {editData.avatar_url ? <img src={editData.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : editData.avatar_emoji}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,justifyContent:"flex-start"}} onClick={() => fileInputRef.current?.click()}>
+                <span style={{fontSize:14,marginRight:4}}>📷</span> {uploading ? "Uploading…" : "Upload photo"}
+              </button>
+              {editData.avatar_url && (
+                <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,color:"var(--red)",borderColor:"rgba(255,59,48,.2)",justifyContent:"flex-start"}} onClick={() => setEditData(p=>({...p,avatar_url:""}))}>
+                  <span style={{fontSize:14,marginRight:4}}>🗑</span> Remove photo
+                </button>
+              )}
+            </div>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{width:"auto"}} onClick={() => fileInputRef.current?.click()}>
-            {uploading ? "Uploading..." : "📷 Upload photo"}
-          </button>
-          {editData.avatar_url && (
-            <button className="btn btn-ghost btn-sm" style={{width:"auto",color:"var(--red)"}} onClick={() => setEditData(p=>({...p,avatar_url:""}))}>Remove</button>
+          {uploading && (
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"var(--ib1)",borderRadius:10,fontSize:13,color:"var(--teal2)",fontWeight:500,marginTop:8}}>
+              <span style={{width:16,height:16,borderRadius:"50%",border:"2px solid var(--teal)",borderTopColor:"transparent",animation:"spin .6s linear infinite",display:"inline-block"}}/>
+              Uploading your photo…
+            </div>
           )}
         </div>
         <div className="emoji-grid" style={{margin:"0 16px"}}>
@@ -189,7 +201,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           {[{label:"Wake up time",key:"wake_time"},{label:"Bedtime",key:"sleep_time"}].map(({label,key})=>(
             <div key={key} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 16px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
               <div style={{fontSize:13,color:"var(--t3)",marginBottom:8,fontWeight:500}}>{label}</div>
-              <input type="time" value={editData[key]} onChange={e=>setEditData(p=>({...p,[key]:e.target.value}))} style={{fontSize:18,fontWeight:600,border:"none",background:"none",color:"var(--t1)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+              <input type="time" value={editData[key]} onChange={e=>setEditData(p=>({...p,[key]:e.target.value}))} style={{fontSize:18,fontWeight:600,border:"none",background:"none",color:"var(--t1)",fontFamily:"inherit",width:"100%",minWidth:0,outline:"none",boxSizing:"border-box",maxWidth:150}}/>
             </div>
           ))}
         </div>
@@ -198,7 +210,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <div className="section">
         <div className="section-header">Country</div>
         <div style={{padding:"0 16px"}}>
-          <select className="sheet-input" value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))}>
+          <select className="sheet-input" value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))} style={{width:"100%"}}>
             {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
           </select>
         </div>
@@ -390,18 +402,18 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           {editSchedule ? (
             <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div className="row-icon" style={{background:"var(--ib5)",fontSize:18,marginTop:2}}>⏰</div>
-              <div className="row-body" style={{flex:"1",minWidth:200}}>
+              <div className="row-body" style={{minWidth:0}}>
                 <div className="row-title">Schedule</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
                   <div>
                     <div style={{fontSize:11,color:"var(--t3)",marginBottom:4,fontWeight:500}}>Wake up</div>
                     <input type="time" value={schedVals.wake} onChange={e=>setSchedVals(p=>({...p,wake:e.target.value}))}
-                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none",boxSizing:"border-box"}}/>
+                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",minWidth:0,maxWidth:150,outline:"none",boxSizing:"border-box"}}/>
                   </div>
                   <div>
                     <div style={{fontSize:11,color:"var(--t3)",marginBottom:4,fontWeight:500}}>Bedtime</div>
                     <input type="time" value={schedVals.sleep} onChange={e=>setSchedVals(p=>({...p,sleep:e.target.value}))}
-                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",outline:"none",boxSizing:"border-box"}}/>
+                      style={{fontSize:16,fontWeight:600,border:"1.5px solid var(--sep)",borderRadius:10,padding:"8px 10px",color:"var(--t1)",background:"var(--input)",fontFamily:"inherit",width:"100%",minWidth:0,maxWidth:150,outline:"none",boxSizing:"border-box"}}/>
                   </div>
                 </div>
               </div>

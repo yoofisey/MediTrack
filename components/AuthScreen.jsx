@@ -225,7 +225,7 @@ export default function AuthScreen({ onAuth }) {
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center"}}>
           {[
-            {icon:"💊",label:"Dose tracking"},
+            {icon:"✅",label:"Dose tracking"},
             {icon:"🔔",label:"Smart reminders"},
             {icon:"🔥",label:"Streak rewards"},
             {icon:"📊",label:"Adherence reports"},
@@ -343,7 +343,7 @@ export default function AuthScreen({ onAuth }) {
               <>
                 <input className="input-field" type="text" placeholder="Organization name *" value={orgName} onChange={e=>setOrgName(e.target.value)} required autoComplete="organization"/>
                 <div style={{position:"relative"}}>
-                  <select className="input-field" value={orgType} onChange={e=>setOrgType(e.target.value)} required style={{color:orgType?"var(--t1)":"var(--t4)"}}>
+                  <select className="input-field" value={orgType} onChange={e=>setOrgType(e.target.value)} required style={{color:orgType?"var(--t1)":"var(--t4)",width:"100%"}}>
                     <option value="" disabled>Organization type *</option>
                     <option value="hospital">🏥 Hospital</option>
                     <option value="clinic">🏪 Clinic</option>
@@ -366,13 +366,13 @@ export default function AuthScreen({ onAuth }) {
                 <input className="input-field" type="text" placeholder="Your full name *" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
                 <input className="input-field" type="email" placeholder="Work email *" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
                 <input className="input-field" type="tel" placeholder="Phone *" value={phone} onChange={e=>setPhone(e.target.value)} required autoComplete="tel"/>
-                <div style={{position:"relative"}}>
+                <div style={{position:"relative",marginBottom:8}}>
                   <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
-                  <select className="input-field" style={{paddingLeft:40}} value={country} onChange={e=>setCountry(e.target.value)}>
+                  <select className="input-field" style={{paddingLeft:40,width:"100%"}} value={country} onChange={e=>setCountry(e.target.value)}>
                     {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
                   </select>
                 </div>
-                <div style={{position:"relative"}}>
+                <div style={{position:"relative",marginBottom:8}}>
                   <select className="input-field" value={deployment} onChange={e=>setDeployment(e.target.value)}>
                     <option value="cloud">☁️ Cloud hosted</option>
                     <option value="onprem">🖥️ On-premise</option>
@@ -397,9 +397,9 @@ export default function AuthScreen({ onAuth }) {
                 <input className="input-field" type="text" placeholder="Full name" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
                 <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
                 <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
-                <div style={{position:"relative"}}>
+                <div style={{position:"relative",marginBottom:8}}>
                   <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
-                  <select className="input-field" style={{paddingLeft:40}} value={country} onChange={e=>setCountry(e.target.value)}>
+                  <select className="input-field" style={{paddingLeft:40,width:"100%"}} value={country} onChange={e=>setCountry(e.target.value)}>
                     {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
                   </select>
                 </div>
