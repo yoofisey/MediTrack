@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
 
 const COMMON_MEDICATIONS = {
@@ -21,59 +21,68 @@ export default function BarcodeScanner({ onScan, onClose }) {
   const [result, setResult] = useState(null);
   const [manualCode, setManualCode] = useState("");
   const videoRef = useRef(null);
-  const streamRef = useRef(null);
   const zxingRef = useRef(null);
-  const abortRef = useRef(false);
+  const stoppedRef = useRef(false);
 
-  useEffect(() => {
-    startCamera();
-    return () => { abortRef.current = true; stopCamera(); };
-  }, []);
-
-  function stopCamera() {
+  const stopCamera = useCallback(() => {
+    stoppedRef.current = true;
     if (zxingRef.current) {
-      zxingRef.current.reset();
+      try { zxingRef.current.reset(); } catch {}
       zxingRef.current = null;
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-  }
+  }, []);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
 
   async function startCamera() {
+    setError("");
+    setResult(null);
+    stoppedRef.current = false;
+
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         setError("Camera not available on this device");
         return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-      streamRef.current = stream;
+
+      const zxing = new BrowserMultiFormatReader();
+      zxingRef.current = zxing;
+
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      };
+
+      setScanning(true);
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (stoppedRef.current) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      setScanning(true);
-      detectWithZXing();
-    } catch (e) {
-      setError("Camera access denied. You can enter the barcode manually below.");
-    }
-  }
 
-  async function detectWithZXing() {
-    const zxing = new BrowserMultiFormatReader();
-    zxingRef.current = zxing;
-
-    try {
-      zxing.decodeFromVideoElement(videoRef.current, (result, err) => {
-        if (abortRef.current) return;
-        if (result) {
-          handleBarcode(result.getText());
+      zxing.decodeFromVideoElement(videoRef.current, (res, err) => {
+        if (stoppedRef.current) return;
+        if (res) {
+          handleBarcode(res.getText());
         }
       }).catch(() => {});
-    } catch {}
+    } catch (e) {
+      if (!stoppedRef.current) {
+        setError("Camera access denied. You can enter the barcode manually below.");
+        setScanning(false);
+      }
+    }
   }
 
   function handleBarcode(code) {
@@ -110,7 +119,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
 
           {scanning && (
             <div style={{borderRadius:14,overflow:"hidden",marginBottom:16,position:"relative",background:"black",aspectRatio:"4/3"}}>
-              <video ref={videoRef} style={{width:"100%",height:"100%",objectFit:"cover"}} playsInline muted/>
+              <video ref={videoRef} style={{width:"100%",height:"100%",objectFit:"cover"}} playsInline muted autoPlay/>
               <div style={{position:"absolute",inset:0,border:"3px solid rgba(255,255,255,.5)",borderRadius:14,pointerEvents:"none"}}/>
               <div style={{position:"absolute",bottom:12,left:0,right:0,textAlign:"center",fontSize:13,color:"white",textShadow:"0 1px 4px rgba(0,0,0,.5)"}}>
                 Point camera at medication barcode
