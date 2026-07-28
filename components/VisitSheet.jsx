@@ -22,6 +22,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [showList, setShowList] = useState(false);
   const [delId, setDelId] = useState(null);
+  const [editingId, setEditingId] = useState(editingVisit?.id || null);
 
   useEffect(() => {}, []);
 
@@ -30,8 +31,8 @@ export default function VisitSheet({ onClose, editingVisit, onSaved }) {
   function handleSave() {
     if (!f.date) return;
     setBusy(true);
-    if (editingVisit?.id) {
-      updateVisit(editingVisit.id, f);
+    if (editingId) {
+      updateVisit(editingId, f);
     } else {
       addVisit(f);
     }
@@ -86,7 +87,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved }) {
                       <div style={{display:"flex",gap:6}}>
                         <button className="btn btn-sm" style={{background:"var(--hover)",border:"none",fontSize:11,padding:"5px 10px"}} onClick={()=>{
                           setF({date:v.date,time:v.time,doctor:v.doctor||"",facility:v.facility||"",reason:v.reason||"",notes:v.notes||"",reminder_minutes:String(v.reminder_minutes||"60")});
-                          editingVisit && Object.assign(editingVisit, v);
+                          setEditingId(v.id);
                           setShowList(false);
                         }}>Edit</button>
                         <button className="btn btn-sm" style={{background:"var(--ib6)",color:"var(--red)",border:"none",fontSize:11,padding:"5px 10px"}} onClick={()=>setDelId(v.id)}>Del</button>
@@ -136,7 +137,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved }) {
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>{editingVisit?.id ? "Edit visit" : "Schedule a visit"}</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>{editingId ? "Edit visit" : "Schedule a visit"}</div>
           <div style={{fontSize:14,color:"var(--t3)",marginBottom:24}}>Track upcoming hospital or clinic appointments.</div>
 
           <div style={{display:"flex",gap:10,marginBottom:18}}>
@@ -178,7 +179,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved }) {
           </div>
 
           <div className="sheet-actions" style={{gap:10}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={handleSave} disabled={busy || !f.date}>{busy ? "Saving..." : editingVisit?.id ? "Save changes" : "Add visit"}</button>
+            <button className="btn btn-primary" style={{flex:1}} onClick={handleSave} disabled={busy || !f.date}>{busy ? "Saving..." : editingId ? "Save changes" : "Add visit"}</button>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           </div>
 

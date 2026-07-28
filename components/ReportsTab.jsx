@@ -6,7 +6,7 @@ import { calcStreak, TIER_LIMITS } from "@/lib/data";
 import AdherenceChart from "@/components/AdherenceChart";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, Users, User, Bell, DollarSign, FileText, Stethoscope } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, Users, User, Bell, DollarSign, FileText, Stethoscope, BookOpen } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -680,10 +680,15 @@ ${limits.reports ? `
         </div>
       </div>
 
-      <div style={{padding:"0 20px 16px"}}>
-        <JournalMiniCalendar entries={journalEntries} selectedDate={journalDate} onSelect={setJournalDate}/>
-        {journalDate && <JournalEntrySheet date={journalDate} entry={getJournalEntry(journalDate)} onSave={() => { try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch {} }} onClose={() => setJournalDate(null)}/>}
-        <JournalTimeline entries={journalEntries}/>
+      <div className="section">
+        <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
+          <Ico><BookOpen size={15} strokeWidth={2.2} color="var(--purple)"/></Ico> Health journal
+        </div>
+        <div style={{padding:"0"}}>
+          <JournalMiniCalendar entries={journalEntries} selectedDate={journalDate} onSelect={setJournalDate}/>
+          {journalDate && <JournalEntrySheet date={journalDate} entry={getJournalEntry(journalDate)} onSave={() => { try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch {} }} onClose={() => setJournalDate(null)}/>}
+          <JournalTimeline entries={journalEntries}/>
+        </div>
       </div>
 
       <div className="section">
