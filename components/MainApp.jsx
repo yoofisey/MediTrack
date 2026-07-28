@@ -307,23 +307,25 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   if (loading) return (
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--bg)",animation:"fadeIn .4s ease both"}}>
       <style>{CSS}</style>
-      <div style={{position:"relative",marginBottom:20,animation:"logoPop .6s cubic-bezier(.175,.885,.32,1.275) both"}}>
-        <div style={{position:"absolute",inset:-3,borderRadius:22,background:"conic-gradient(from 0deg,transparent,rgba(0,122,255,.12) 25%,transparent 50%,rgba(0,122,255,.08) 75%,transparent)",animation:"ringRotate 3s linear infinite",opacity:.5}}/>
-        <div style={{width:72,height:72,borderRadius:20,background:"rgba(0,122,255,.06)",border:"0.5px solid rgba(0,122,255,.1)",display:"grid",placeItems:"center",boxShadow:"0 0 0 1px rgba(0,122,255,.04) inset,0 4px 16px rgba(0,122,255,.08),0 8px 32px rgba(0,0,0,.04)",position:"relative",zIndex:1}}>
-          <svg viewBox="0 0 100 100" width={36} height={36}>
-            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeOpacity=".2"/>
-            <circle cx="50" cy="14" r="5.5" fill="var(--teal)"/>
-            <circle cx="50" cy="86" r="5.5" fill="var(--teal)"/>
-            <text x="24" y="58" fontFamily="system-ui,sans-serif" fontSize="34" fontWeight="700" fill="var(--teal)">A</text>
-            <rect x="56" y="38" width="4" height="18" rx="2" fill="var(--teal)" transform="translate(58,47)"/>
-            <rect x="52" y="43" width="16" height="4" rx="2" fill="var(--teal)" transform="translate(60,45)"/>
+      <div style={{position:"relative",marginBottom:24,animation:"logoPop .7s cubic-bezier(.175,.885,.32,1.275) both"}}>
+        <div style={{position:"absolute",inset:-36,borderRadius:"50%",background:"radial-gradient(circle,rgba(0,122,255,.1) 0%,transparent 60%)",animation:"logoBreathe 3s ease-in-out infinite"}}/>
+        <div style={{position:"absolute",inset:-6,borderRadius:"50%",border:"1.5px solid transparent",borderTopColor:"rgba(0,122,255,.15)",borderRightColor:"rgba(0,122,255,.06)",animation:"ringRotate 4s linear infinite"}}/>
+        <div style={{position:"absolute",inset:-2,borderRadius:"50%",border:"1px solid transparent",borderBottomColor:"rgba(0,122,255,.1)",borderLeftColor:"rgba(0,122,255,.05)",animation:"ringRotate 6s linear infinite reverse"}}/>
+        <div style={{width:80,height:80,borderRadius:24,background:"rgba(0,122,255,.06)",border:"0.5px solid rgba(0,122,255,.1)",display:"grid",placeItems:"center",boxShadow:"0 0 0 1px rgba(0,122,255,.04) inset,0 4px 20px rgba(0,122,255,.08),0 8px 32px rgba(0,0,0,.04),0 0 40px rgba(0,122,255,.06)",position:"relative",zIndex:1}}>
+          <svg viewBox="0 0 48 48" width="40" height="40">
+            <rect x="17" y="4" width="14" height="40" rx="5" fill="var(--teal)"/>
+            <rect x="4" y="17" width="40" height="14" rx="5" fill="var(--teal)"/>
           </svg>
         </div>
       </div>
-      <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",letterSpacing:"-.3px",marginBottom:6,animation:"fadeUp .5s .1s cubic-bezier(.22,1,.36,1) both"}}>Adhera</div>
-      <div style={{fontSize:13,color:"var(--t3)",marginBottom:20,animation:"fadeUp .5s .2s cubic-bezier(.22,1,.36,1) both"}}>Loading your medications…</div>
-      <div style={{width:100,height:"3px",background:"var(--sep)",borderRadius:99,overflow:"hidden",animation:"fadeUp .5s .3s cubic-bezier(.22,1,.36,1) both"}}>
-        <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,rgba(0,122,255,.1),rgba(0,122,255,.4),rgba(0,122,255,.1))",backgroundSize:"200% 100%",animation:"transShimmer 1.6s ease-in-out infinite"}}/>
+      <div style={{display:"flex",gap:2,marginBottom:8}}>
+        {"Adhera".split("").map((l, i) => (
+          <span key={i} style={{fontSize:18,fontWeight:600,color:"var(--t1)",letterSpacing:"-.3px",animation:`letterIn .5s ${.15 + i * .07}s cubic-bezier(.22,1,.36,1) both`,display:"inline-block"}}>{l}</span>
+        ))}
+      </div>
+      <div style={{fontSize:12,color:"var(--t3)",letterSpacing:".3px",textTransform:"uppercase",marginBottom:20,animation:"fadeUp .5s .6s cubic-bezier(.22,1,.36,1) both"}}>Loading your medications…</div>
+      <div style={{width:120,height:"3px",background:"var(--sep)",borderRadius:99,overflow:"hidden",animation:"fadeUp .5s .7s cubic-bezier(.22,1,.36,1) both"}}>
+        <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,rgba(0,122,255,.08),rgba(0,122,255,.35),rgba(0,122,255,.08))",backgroundSize:"300% 100%",animation:"transShimmer 2s ease-in-out infinite"}}/>
       </div>
     </div>
   );

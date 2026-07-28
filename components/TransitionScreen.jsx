@@ -1,16 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CSS } from "@/lib/constants";
 
 export default function TransitionScreen({ emoji, message, sub, showMessages = false, fadeOut = false }) {
   const [step, setStep] = useState(0);
   const [fading, setFading] = useState(false);
-  const prevStep = useRef(0);
   const showDefault = !message && !sub;
   const key = showDefault ? "default" : `${emoji}-${message}-${sub}`;
 
   const msgs = ["Verifying your session", "Syncing your data", "Almost ready"];
+
+  const particles = useMemo(() =>
+    Array.from({ length: 7 }, (_, i) => ({
+      id: i,
+      size: 1.5 + Math.random() * 2.5,
+      left: 8 + Math.random() * 84,
+      bottom: -5 - Math.random() * 15,
+      duration: 8 + Math.random() * 10,
+      delay: Math.random() * 6,
+      opacity: 0.15 + Math.random() * 0.25,
+    })), []);
 
   useEffect(() => {
     if (!showDefault || !showMessages) return;
@@ -18,55 +28,56 @@ export default function TransitionScreen({ emoji, message, sub, showMessages = f
       setTimeout(() => {
         setFading(true);
         setTimeout(() => {
-          prevStep.current = i;
           setStep(i);
           setFading(false);
-        }, 200);
-      }, (i + 1) * 1400)
+        }, 250);
+      }, (i + 1) * 1600)
     );
     return () => timers.forEach(clearTimeout);
   }, [showDefault, showMessages]);
 
+  const titleLetters = "Adhera".split("");
+
   return (
     <div className={`trans-screen${fadeOut ? " fade-out" : ""}`}>
       <style>{CSS}</style>
-      <div
-        className="trans-bg-orb"
-        style={{
-          top: "-25%", right: "-18%", width: "75%", height: "75%",
-          background: "radial-gradient(circle, rgba(80,160,255,.28) 0%, transparent 65%)",
-          animation: "orbFloat 9s ease-in-out infinite alternate",
-        }}
-      />
-      <div
-        className="trans-bg-orb"
-        style={{
-          bottom: "-25%", left: "-18%", width: "65%", height: "65%",
-          background: "radial-gradient(circle, rgba(60,130,255,.18) 0%, transparent 65%)",
-          animation: "orbFloat2 11s ease-in-out infinite alternate",
-        }}
-      />
-      <div
-        className="trans-bg-orb"
-        style={{
-          top: "40%", left: "50%", width: "50%", height: "50%",
-          background: "radial-gradient(circle, rgba(120,180,255,.1) 0%, transparent 60%)",
-          animation: "orbFloat3 13s ease-in-out infinite alternate",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
+
+      <div className="trans-aurora" style={{
+        top: "-30%", right: "-20%", width: "80%", height: "80%",
+        background: "radial-gradient(circle, rgba(0,100,255,.18) 0%, transparent 60%)",
+        animation: "aurora1 12s ease-in-out infinite",
+      }} />
+      <div className="trans-aurora" style={{
+        bottom: "-30%", left: "-20%", width: "70%", height: "70%",
+        background: "radial-gradient(circle, rgba(0,180,255,.1) 0%, transparent 55%)",
+        animation: "aurora2 14s ease-in-out infinite",
+      }} />
+      <div className="trans-aurora" style={{
+        top: "30%", left: "30%", width: "55%", height: "55%",
+        background: "radial-gradient(circle, rgba(80,140,255,.07) 0%, transparent 50%)",
+        animation: "aurora3 16s ease-in-out infinite",
+      }} />
+
+      {particles.map(p => (
+        <div key={p.id} className="trans-particle" style={{
+          width: p.size, height: p.size,
+          left: `${p.left}%`, bottom: `${p.bottom}%`,
+          opacity: p.opacity,
+          animation: `particleRise ${p.duration}s ${p.delay}s linear infinite`,
+        }} />
+      ))}
+
+      <div className="trans-beam" style={{ left: "50%", transform: "translateX(-50%)" }} />
 
       <div key={key} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 32px" }}>
         <div className="trans-logo-wrap">
-          <div className="trans-logo-ring" />
+          <div className="trans-logo-glow" />
+          <div className="trans-ring trans-ring-outer" />
+          <div className="trans-ring trans-ring-inner" />
           <div className="trans-logo">
-            <svg viewBox="0 0 100 100" width={48} height={48} fill="white">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="white" strokeWidth="2.5" strokeOpacity=".2" />
-              <circle cx="50" cy="14" r="5.5" fill="white" />
-              <circle cx="50" cy="86" r="5.5" fill="white" />
-              <text x="24" y="58" fontFamily="system-ui,sans-serif" fontSize="34" fontWeight="700" fill="white">A</text>
-              <rect x="56" y="38" width="4" height="18" rx="2" fill="white" transform="translate(58,47)" />
-              <rect x="52" y="43" width="16" height="4" rx="2" fill="white" transform="translate(60,45)" />
+            <svg viewBox="0 0 48 48" width="52" height="52" fill="white">
+              <rect x="17" y="4" width="14" height="40" rx="5" fill="white" />
+              <rect x="4" y="17" width="40" height="14" rx="5" fill="white" />
             </svg>
           </div>
         </div>
@@ -74,7 +85,11 @@ export default function TransitionScreen({ emoji, message, sub, showMessages = f
         <div className="trans-content" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           {showDefault ? (
             <>
-              <div className="trans-title">Adhera</div>
+              <div className="trans-title">
+                {titleLetters.map((letter, i) => (
+                  <span key={i} className="trans-title-letter">{letter}</span>
+                ))}
+              </div>
               <div className="trans-msg">Your Personal Treatment Companion</div>
               <div className="trans-bar-wrap">
                 <div className="trans-bar-fill" />
