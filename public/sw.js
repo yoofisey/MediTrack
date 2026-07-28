@@ -1,5 +1,7 @@
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", e => e.waitUntil(clients.claim()));
+self.addEventListener("activate", e => e.waitUntil(
+  caches.keys().then(keys => Promise.all(keys.filter(k => k !== "adhera-v1").map(k => caches.delete(k)))).then(() => clients.claim())
+));
 
 const doseDB = {};
 
@@ -71,4 +73,31 @@ self.addEventListener("push", e => {
     tag: d.tag || "mt-push",
     requireInteraction: true,
   });
+});
+
+self.addEventListener("fetch", e => {
+  const { request } = e;
+  if (request.method !== "GET") return;
+  if (request.mode === "navigate") {
+    e.respondWith(
+      fetch(request).catch(() => caches.match(request)).then(r => {
+        const clone = r.clone();
+        caches.open("adhera-v1").then(c => c.put(request, clone));
+        return r;
+      })
+    );
+    return;
+  }
+  e.respondWith(
+    caches.match(request).then(cached => {
+      if (cached) return cached;
+      return fetch(request).then(r => {
+        if (r.ok && request.url.startsWith(self.location.origin)) {
+          const clone = r.clone();
+          caches.open("adhera-v1").then(c => c.put(request, clone));
+        }
+        return r;
+      });
+    })
+  );
 });
