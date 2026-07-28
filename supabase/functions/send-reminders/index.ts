@@ -30,8 +30,20 @@ function calcStreakForMed(medLogs: any[], startDate: string): number {
   return count;
 }
 
-serve(async (_req) => {
+const DAILY_MSGS = [
+  { min: 0,  title: "☀️ Good morning!", body: "Start your day right — take your medication and log how you feel." },
+  { min: 4,  title: "🌟 4-day streak!", body: "You're building a great habit. Keep the momentum going!" },
+  { min: 7,  title: "💪 One week strong!", body: "Seven days of consistency! You're proving your dedication." },
+  { min: 14, title: "🏅 Two-week warrior!", body: "14 days in a row! Your body thanks you for the commitment." },
+  { min: 30, title: "🔥 Month champion!", body: "30 days of adherence! This is the kind of dedication that changes lives." },
+  { min: 60, title: "🏆 Unstoppable!", body: "60 days! You're in the top tier of medication adherence worldwide." },
+  { min: 90, title: "👑 Legendary!", body: "90 days! You've made health a non-negotiable part of your life." },
+];
+
+serve(async (req) => {
   try {
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("mode");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     const { data: meds, error: medErr } = await supabase
@@ -133,6 +145,29 @@ serve(async (_req) => {
             if (e.statusCode === 404 || e.statusCode === 410) {
               await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
             }
+          }
+        }
+      }
+    }
+
+    for (const userId of userIds) {
+      const userLogs = allLogs.filter((l: any) => l.user_id === userId);
+      const userSubs = subMap.get(userId);
+      if (!userSubs?.length) continue;
+      const userMeds = meds.filter((m: any) => m.user_id === userId);
+      if (!userMeds.length) continue;
+      const med = userMeds[0];
+      const streak = calcStreakForMed(userLogs, med.start_date);
+      const msg = [...DAILY_MSGS].reverse().find(m => streak >= m.min) || DAILY_MSGS[0];
+      const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\n🔥 Current streak: ${streak} days`, tag: `mt-daily-${todayStr}` });
+
+      for (const sub of userSubs) {
+        try {
+          await webpush.sendNotification(sub, payload, { TTL: 86400 });
+          sent++;
+        } catch (e: any) {
+          if (e.statusCode === 404 || e.statusCode === 410) {
+            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
           }
         }
       }

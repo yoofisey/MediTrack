@@ -82,6 +82,20 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, [user?.id]);
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then(reg => {
+        window._mt_swReady = true;
+        reg.addEventListener("updatefound", () => {
+          const sw = reg.installing;
+          if (sw) sw.addEventListener("statechange", () => {
+            if (sw.state === "activated") window._mt_swReady = true;
+          });
+        });
+      }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
     function onMsg(e) { if (e.data?.type === "alarm-ack") stopAlarmSound(); }
     if (typeof navigator !== "undefined" && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", onMsg);
