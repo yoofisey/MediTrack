@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CSS } from "@/lib/constants";
 
-export default function TransitionScreen({ emoji, message, sub, showMessages = false }) {
+export default function TransitionScreen({ emoji, message, sub, showMessages = false, fadeOut = false }) {
   const [step, setStep] = useState(0);
   const [fading, setFading] = useState(false);
   const prevStep = useRef(0);
@@ -28,7 +28,7 @@ export default function TransitionScreen({ emoji, message, sub, showMessages = f
   }, [showDefault, showMessages]);
 
   return (
-    <div className="trans-screen">
+    <div className={`trans-screen${fadeOut ? " fade-out" : ""}`}>
       <style>{CSS}</style>
       <div
         className="trans-bg-orb"

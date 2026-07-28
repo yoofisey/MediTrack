@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { BrowserMultiFormatReader } from "@zxing/library";
 
 const COMMON_MEDICATIONS = {
   "5000000000000": { name: "Paracetamol 500mg", dosage_unit: "tablet(s)" },
@@ -21,16 +22,19 @@ export default function BarcodeScanner({ onScan, onClose }) {
   const [manualCode, setManualCode] = useState("");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const detectorRef = useRef(null);
-  const rafRef = useRef(null);
+  const zxingRef = useRef(null);
+  const abortRef = useRef(false);
 
   useEffect(() => {
     startCamera();
-    return () => stopCamera();
+    return () => { abortRef.current = true; stopCamera(); };
   }, []);
 
   function stopCamera() {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (zxingRef.current) {
+      zxingRef.current.reset();
+      zxingRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -52,39 +56,24 @@ export default function BarcodeScanner({ onScan, onClose }) {
         await videoRef.current.play();
       }
       setScanning(true);
-      detectBarcode();
+      detectWithZXing();
     } catch (e) {
       setError("Camera access denied. You can enter the barcode manually below.");
     }
   }
 
-  async function detectBarcode() {
+  async function detectWithZXing() {
+    const zxing = new BrowserMultiFormatReader();
+    zxingRef.current = zxing;
+
     try {
-      if ("BarcodeDetector" in window) {
-        if (!detectorRef.current) {
-          const formats = await BarcodeDetector.getSupportedFormats();
-          detectorRef.current = new BarcodeDetector({ formats: formats.filter(f => f.includes("ean") || f.includes("upc") || f.includes("code")) });
+      zxing.decodeFromVideoElement(videoRef.current, (result, err) => {
+        if (abortRef.current) return;
+        if (result) {
+          handleBarcode(result.getText());
         }
-      }
+      }).catch(() => {});
     } catch {}
-
-    async function scan() {
-      if (!videoRef.current || !detectorRef.current) {
-        rafRef.current = requestAnimationFrame(scan);
-        return;
-      }
-      try {
-        const barcodes = await detectorRef.current.detect(videoRef.current);
-        if (barcodes.length > 0) {
-          const code = barcodes[0].rawValue;
-          handleBarcode(code);
-          return;
-        }
-      } catch {}
-      rafRef.current = requestAnimationFrame(scan);
-    }
-
-    if (detectorRef.current) scan();
   }
 
   function handleBarcode(code) {
@@ -145,7 +134,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
                 </div>
               ) : (
                 <div style={{fontSize:13,color:"var(--t3)"}}>
-                  This barcode isn't in our database yet. You can type the medication name manually.
+                  This barcode isn&apos;t in our database yet. You can type the medication name manually.
                 </div>
               )}
               <div style={{display:"flex",gap:8,marginTop:12}}>

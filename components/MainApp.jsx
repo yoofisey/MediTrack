@@ -304,7 +304,29 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     { id:"profile", label:"", icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg> },
   ];
 
-  if (loading) return <div className="loading-screen" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}><style>{CSS}</style><div style={{width:36,height:36,borderRadius:10,background:"var(--teal)",display:"grid",placeItems:"center",animation:"logoPulse 2.4s ease-in-out infinite",boxShadow:"0 4px 20px rgba(0,122,255,.3)"}}><svg viewBox="0 0 100 100" width={20} height={20} fill="white"><text x="22" y="70" fontFamily="system-ui,sans-serif" fontSize="58" fontWeight="700" fill="white">A</text></svg></div><div style={{fontSize:13,fontWeight:500,color:"var(--t3)"}}>Loading your medications…</div><div className="trans-dots" style={{gap:5}}><div className="trans-dot"/><div className="trans-dot"/><div className="trans-dot"/></div></div>;
+  if (loading) return (
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--bg)",animation:"fadeIn .4s ease both"}}>
+      <style>{CSS}</style>
+      <div style={{position:"relative",marginBottom:20,animation:"logoPop .6s cubic-bezier(.175,.885,.32,1.275) both"}}>
+        <div style={{position:"absolute",inset:-3,borderRadius:22,background:"conic-gradient(from 0deg,transparent,rgba(0,122,255,.12) 25%,transparent 50%,rgba(0,122,255,.08) 75%,transparent)",animation:"ringRotate 3s linear infinite",opacity:.5}}/>
+        <div style={{width:72,height:72,borderRadius:20,background:"rgba(0,122,255,.06)",border:"0.5px solid rgba(0,122,255,.1)",display:"grid",placeItems:"center",boxShadow:"0 0 0 1px rgba(0,122,255,.04) inset,0 4px 16px rgba(0,122,255,.08),0 8px 32px rgba(0,0,0,.04)",position:"relative",zIndex:1}}>
+          <svg viewBox="0 0 100 100" width={36} height={36}>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeOpacity=".2"/>
+            <circle cx="50" cy="14" r="5.5" fill="var(--teal)"/>
+            <circle cx="50" cy="86" r="5.5" fill="var(--teal)"/>
+            <text x="24" y="58" fontFamily="system-ui,sans-serif" fontSize="34" fontWeight="700" fill="var(--teal)">A</text>
+            <rect x="56" y="38" width="4" height="18" rx="2" fill="var(--teal)" transform="translate(58,47)"/>
+            <rect x="52" y="43" width="16" height="4" rx="2" fill="var(--teal)" transform="translate(60,45)"/>
+          </svg>
+        </div>
+      </div>
+      <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",letterSpacing:"-.3px",marginBottom:6,animation:"fadeUp .5s .1s cubic-bezier(.22,1,.36,1) both"}}>Adhera</div>
+      <div style={{fontSize:13,color:"var(--t3)",marginBottom:20,animation:"fadeUp .5s .2s cubic-bezier(.22,1,.36,1) both"}}>Loading your medications…</div>
+      <div style={{width:100,height:"3px",background:"var(--sep)",borderRadius:99,overflow:"hidden",animation:"fadeUp .5s .3s cubic-bezier(.22,1,.36,1) both"}}>
+        <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,rgba(0,122,255,.1),rgba(0,122,255,.4),rgba(0,122,255,.1))",backgroundSize:"200% 100%",animation:"transShimmer 1.6s ease-in-out infinite"}}/>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>

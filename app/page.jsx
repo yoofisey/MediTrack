@@ -45,26 +45,33 @@ export default function App() {
   const [user,   setUser]     = useState(null);
   const [profile,setProfile]  = useState(null);
   const [hasSession, setHasSession] = useState(false);
+  const [destScreen, setDestScreen] = useState(null);
 
   async function handleAuth(u, isNew = false) {
     setUser(u);
     try {
       const prof = await fetchProfile(u.id, u.user_metadata);
       setProfile(prof);
-      setScreen(prof?.onboarded === true ? "app" : "onboarding");
+      smoothTransition(prof?.onboarded === true ? "app" : "onboarding");
     } catch {
-      setScreen(isNew ? "onboarding" : "app");
+      smoothTransition(isNew ? "onboarding" : "app");
     }
   }
 
   async function handleOnboardDone(prefs) {
     setProfile(p => ({ ...p, ...prefs, onboarded: true }));
-    setScreen("app");
+    smoothTransition("app");
   }
 
   async function handleSignOut() {
     await sb.auth.signOut();
     setUser(null); setProfile(null); setScreen("landing");
+  }
+
+  function smoothTransition(target) {
+    setDestScreen(target);
+    setScreen("fading");
+    setTimeout(() => setScreen(target), 420);
   }
 
   useEffect(() => {
@@ -92,11 +99,21 @@ export default function App() {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, MIN_LOAD_MS - elapsed);
       await new Promise(r => setTimeout(r, remaining));
-      if (!cancelled) setScreen(dest);
+      if (!cancelled) {
+        setDestScreen(dest);
+        setScreen("fading");
+        setTimeout(() => { if (!cancelled) setScreen(dest); }, 420);
+      }
     }
 
     init();
-    const fallback = setTimeout(() => { if (!cancelled) setScreen(dest); }, MAX_LOAD_MS);
+    const fallback = setTimeout(() => {
+      if (!cancelled) {
+        setDestScreen(dest);
+        setScreen("fading");
+        setTimeout(() => { if (!cancelled) setScreen(dest); }, 420);
+      }
+    }, MAX_LOAD_MS);
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 
@@ -107,6 +124,7 @@ export default function App() {
   }, [screen]);
 
   if (screen === "loading")    return <TransitionScreen showMessages={hasSession} />;
+  if (screen === "fading")     return <TransitionScreen showMessages={hasSession} fadeOut />;
   if (screen === "landing")    return <LandingPage onGetStarted={() => setScreen("transition")} />;
   if (screen === "transition") return <TransitionScreen />;
   if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;
