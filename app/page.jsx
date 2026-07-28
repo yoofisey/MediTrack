@@ -117,23 +117,16 @@ export default function App() {
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 
-  useEffect(() => {
-    if (screen !== "transition") return;
-    const t = setTimeout(() => setScreen("auth"), 1800);
-    return () => clearTimeout(t);
-  }, [screen]);
-
   if (screen === "loading")    return <TransitionScreen showMessages={hasSession} />;
   if (screen === "fading")     return (
     <>
       {destScreen === "app" && user && <MainApp user={user} profile={profile} onSignOut={handleSignOut} />}
       {destScreen === "onboarding" && user && <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />}
-      {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("transition")} />}
+      {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("auth")} />}
       <TransitionScreen showMessages={hasSession} fadeOut />
     </>
   );
-  if (screen === "landing")    return <LandingPage onGetStarted={() => setScreen("transition")} />;
-  if (screen === "transition") return <TransitionScreen />;
+  if (screen === "landing")    return <LandingPage onGetStarted={() => setScreen("auth")} />;
   if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;
   if (screen === "onboarding") return <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />;
   if (!user)                   return <TransitionScreen />;
