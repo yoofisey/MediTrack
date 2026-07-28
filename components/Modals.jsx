@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
-import { COUNTRIES, getPricing, usesPaystack } from "@/lib/data";
+import { COUNTRIES, getPricing } from "@/lib/data";
+import { Crown, Users, Sparkles, Trash2, Pill } from "lucide-react";
+
+function Ico({ children, ...props }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
+}
 
 export function PrivacyModal({ onClose }) {
   return (
@@ -15,20 +20,22 @@ export function PrivacyModal({ onClose }) {
             <p><strong>Effective date:</strong> July 1, 2026</p>
             <p>Adhera (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This policy explains how we collect, use, and safeguard your personal information when you use our medication tracking application.</p>
             <p><strong>1. Information We Collect</strong></p>
-            <p>We collect information you provide directly: name, email address, medication names, dosages, schedules, dose logs, and health goals. We also collect usage data such as app interactions and notification preferences.</p>
-            <p><strong>2. How We Use Your Information</strong></p>
+            <p>We collect information you provide directly: name, email address, medication names, dosages, schedules, dose logs, health conditions, and health goals. We also collect usage data such as app interactions and notification preferences.</p>
+            <p><strong>2. Health Data</strong></p>
+            <p>Adhera processes health-related data including medication schedules, dose history, and adherence patterns. This data is classified as &quot;special category data&quot; under GDPR and is treated with the highest level of protection. We process this data solely to deliver the Adhera service to you.</p>
+            <p><strong>3. How We Use Your Information</strong></p>
             <p>Your data is used solely to deliver the Adhera service: tracking medications, sending reminders, generating adherence reports, and improving the app experience. We never sell your personal data.</p>
-            <p><strong>3. Data Storage & Security</strong></p>
-            <p>Your data is stored securely on Supabase servers with encryption at rest and in transit. We implement industry-standard security measures including HTTPS, encrypted database connections, and strict access controls.</p>
-            <p><strong>4. Data Retention</strong></p>
-            <p>We retain your data for as long as your account is active. You may request deletion of your data at any time by contacting us or deleting your account within the app.</p>
-            <p><strong>5. Third-Party Services</strong></p>
-            <p>We use Supabase for authentication and database hosting. Push notifications may use your browser&apos;s notification API. No other third parties have access to your personal medication data.</p>
+            <p><strong>4. Data Storage & Security</strong></p>
+            <p>Your data is stored securely on Supabase servers with encryption at rest (AES-256) and in transit (TLS). We implement industry-standard security measures including HTTPS, encrypted database connections, and strict access controls.</p>
+            <p><strong>5. Data Retention</strong></p>
+            <p>We retain your data for as long as your account is active. You may request deletion of your data at any time by deleting your account within the app&apos;s Privacy & Data settings.</p>
             <p><strong>6. Your Rights</strong></p>
-            <p>You have the right to access, correct, or delete your personal data. You can manage most information directly through the app&apos;s profile settings.</p>
-            <p><strong>7. Changes to This Policy</strong></p>
+            <p>You have the right to: access your data, export your data (JSON or CSV), correct your data, delete your account and all associated data. You can exercise these rights directly through the app&apos;s Profile → Privacy & Data settings.</p>
+            <p><strong>7. Third-Party Services</strong></p>
+            <p>We use Supabase for authentication and database hosting. We use Paystack for payment processing. Push notifications may use your browser&apos;s notification API. No other third parties have access to your personal medication data.</p>
+            <p><strong>8. Changes to This Policy</strong></p>
             <p>We may update this policy from time to time. Significant changes will be notified via email or in-app notice.</p>
-            <p><strong>8. Contact</strong></p>
+            <p><strong>9. Contact</strong></p>
             <p>For privacy-related inquiries, contact us at privacy@adhera.app.</p>
           </div>
           <button className="btn btn-primary" style={{marginTop:20}} onClick={onClose}>Close</button>
@@ -80,15 +87,30 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
   const [selected, setSelected] = useState("pro");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [paystackOpen, setPaystackOpen] = useState(false);
+
+  function closePaystack() {
+    document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
+    document.querySelectorAll('iframe[src*="paystack"]').forEach(el => el.remove());
+    document.querySelectorAll('.paystack-iframe-modal, .paystack-overlay, .paystack-backdrop').forEach(el => el.remove());
+    setPaystackOpen(false);
+    setBusy(false);
+  }
+
+  useEffect(() => {
+    if (!paystackOpen) return;
+    function onKey(e) { if (e.key === "Escape") closePaystack(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [paystackOpen]);
   const { pricing } = getPricing(country || "GH");
   const selCountry = COUNTRIES.find(c => c.code === (country || "GH")) || COUNTRIES[0];
-  const usePaystack = usesPaystack(country);
 
   const plans = [
     {
       id: "pro",
       name: "Pro",
-      icon: "⭐",
+      icon: <Crown size={22} strokeWidth={2.2} color="var(--teal)"/>,
       color: "var(--teal)",
       price: pricing.pro.label,
       period: "/month",
@@ -106,7 +128,7 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
     {
       id: "family",
       name: "Family",
-      icon: "👨‍👩‍👧",
+      icon: <Users size={22} strokeWidth={2.2} color="var(--teal2)"/>,
       color: "var(--teal2)",
       price: pricing.family.label,
       period: "/month",
@@ -120,25 +142,6 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
         "Caregiver mode with alerts",
       ],
     },
-    {
-      id: "enterprise",
-      name: "Enterprise",
-      icon: "🏥",
-      color: "var(--teal)",
-      price: pricing.enterprise.label,
-      period: "/month",
-      tagline: "For hospitals, clinics & insurers",
-      features: [
-        "Everything in Family",
-        "Bulk patient management",
-        "API access & integrations",
-        "Custom branding & white-label",
-        "HIPAA-compliant infrastructure",
-        "Dedicated account manager",
-        "Custom reporting & analytics",
-        "Priority 24/7 support",
-      ],
-    },
   ];
 
   const plan = plans.find(p => p.id === selected);
@@ -147,69 +150,45 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
     setBusy(true);
     setErr("");
 
-    if (selected === "enterprise") {
-      const subj = encodeURIComponent("Adhera Enterprise Inquiry");
-      const body = encodeURIComponent(`I'm interested in the Enterprise plan for my organization.\n\nCountry: ${selCountry.name}\nPlan: ${plan.name} (${plan.price}/month)`);
-      window.open(`mailto:sales@adhera.app?subject=${subj}&body=${body}`, "_blank");
-      setBusy(false);
-      onClose();
-      return;
-    }
-
-    const amountInCents = Math.round(pricing[selected].amount * 100);
-
     try {
-      if (usePaystack) {
-        await new Promise((resolve, reject) => {
-          if (typeof window.PaystackPop === "undefined") {
-            const s = document.createElement("script");
-            s.src = "https://js.paystack.co/v1/inline.js";
-            s.onload = resolve;
-            s.onerror = () => reject(new Error("Failed to load Paystack"));
-            document.head.appendChild(s);
-          } else {
-            resolve();
-          }
-        });
+      await new Promise((resolve, reject) => {
+        if (typeof window.PaystackPop === "undefined") {
+          const s = document.createElement("script");
+          s.src = "https://js.paystack.co/v1/inline.js";
+          s.onload = () => { setTimeout(resolve, 300); };
+          s.onerror = () => reject(new Error("Failed to load Paystack. Check your internet connection."));
+          document.head.appendChild(s);
+        } else {
+          resolve();
+        }
+      });
 
-        const handler = window.PaystackPop.setup({
-          key: "pk_test_8a7b6c5d4e3f2a1b0c9d8e7f", // demo key — replace with real key
-          email: userEmail || "patient@example.com",
-          amount: pricing[selected].amount * 100,
-          currency: selCountry.currency,
-          ref: "adr_" + Date.now() + "_" + Math.random().toString(36).slice(2,8),
-          metadata: { plan: selected, country: country },
-          callback: function() {
-            onUpgrade(selected);
-            setBusy(false);
-          },
-          onClose: function() {
-            setBusy(false);
-          },
-        });
+      if (typeof window.PaystackPop?.setup !== "function") throw new Error("Paystack SDK not ready. Please try again.");
+
+      const planCode = selected === "pro" ? "PLN_w5rq3bkd5uh5mqj" : "PLN_h9mlqfmujuh74c9";
+      const handler = window.PaystackPop.setup({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_KEY,
+        email: userEmail || "patient@example.com",
+        plan: planCode,
+        ref: "ADR" + Date.now() + Math.random().toString(36).slice(2,8).toUpperCase(),
+        metadata: { plan: selected, country },
+        callback: function(response) {
+          onUpgrade(selected);
+          setBusy(false);
+        },
+        onClose: function() {
+          setBusy(false);
+        },
+      });
+      sessionStorage.setItem("adhera_pending_plan", selected);
+      if (handler?.openPopup) {
+        handler.openPopup();
+        setPaystackOpen(true);
+      } else if (handler?.openIframe) {
         handler.openIframe();
+        setPaystackOpen(true);
       } else {
-        await new Promise((resolve, reject) => {
-          if (typeof window.Stripe === "undefined") {
-            const s = document.createElement("script");
-            s.src = "https://js.stripe.com/v3/";
-            s.onload = resolve;
-            s.onerror = () => reject(new Error("Failed to load Stripe"));
-            document.head.appendChild(s);
-          } else {
-            resolve();
-          }
-        });
-
-        const stripe = window.Stripe("pk_test_51ABCDEFGHIJKLMNOPQRSTUVWXYZ"); // demo key — replace with real key
-        const { error } = await stripe.redirectToCheckout({
-          lineItems: [{ price: selected === "pro" ? "price_pro_monthly" : "price_family_monthly", quantity: 1 }],
-          mode: "subscription",
-          successUrl: window.location.href + "?payment=success",
-          cancelUrl: window.location.href + "?payment=cancelled",
-          customerEmail: userEmail,
-        });
-        if (error) throw error;
+        throw new Error("Paystack failed to initialize.");
       }
     } catch (e) {
       setErr(e.message || "Payment failed. Please try again.");
@@ -219,13 +198,32 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      {paystackOpen && (
+        <div style={{
+          position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:99999,
+          pointerEvents:"none",
+        }}>
+          <button onClick={closePaystack}
+            style={{
+              position:"absolute", top:14, left:14, width:44, height:44,
+              borderRadius:22, border:"none", cursor:"pointer",
+              background:"rgba(0,0,0,.06)", backdropFilter:"blur(8px)",
+              WebkitBackdropFilter:"blur(8px)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:22, color:"white", pointerEvents:"auto",
+              boxShadow:"0 2px 8px rgba(0,0,0,.15)",
+            }}
+            aria-label="Back to app"
+          >←</button>
+        </div>
+      )}
       <div className="sheet" style={{maxHeight:"95vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
-          <div style={{fontSize:28,marginBottom:4}}>✨</div>
+          <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Upgrade Adhera</div>
           <div style={{fontSize:14,color:"var(--t3)"}}>
-            {selCountry.flag} {selCountry.name} · {usePaystack ? "Paystack" : "Stripe"} ✓
+            {selCountry.flag} {selCountry.name} · Paystack ✓
           </div>
         </div>
 
@@ -241,7 +239,7 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
                 transition:"all .15s",
               }}
             >
-              <div style={{fontSize:22,marginBottom:2}}>{p.icon}</div>
+              <div style={{marginBottom:2,display:"flex",justifyContent:"center"}}>{p.icon}</div>
               <div style={{fontWeight:700,fontSize:13,color:selected===p.id?p.color:"var(--t1)"}}>{p.name}</div>
               <div style={{fontSize:15,fontWeight:800,color:selected===p.id?p.color:"var(--t2)",marginTop:2}}>
                 {p.price}
@@ -275,15 +273,13 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
             }}
             onClick={handlePayment}
           >
-            {busy ? "Processing…" : selected === "enterprise"
-              ? "Contact sales →"
-              : `${usePaystack ? "Pay with Paystack" : "Pay with Stripe"} · ${plan.price}/month`}
+            {busy ? "Processing…" : `Unlock ${plan.name} · ${plan.price}/month`}
           </button>
           <button className="btn btn-ghost" onClick={onClose}>
             {busy ? "Cancel" : "Maybe later"}
           </button>
           <div style={{fontSize:10,color:"var(--t3)",textAlign:"center",marginTop:8,lineHeight:1.4}}>
-            Secure payment via {usePaystack ? "Paystack" : "Stripe"}. Cancel anytime.
+            Secure payment via Paystack. Cancel anytime.
           </div>
         </div>
       </div>
@@ -316,7 +312,7 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
               <div className="list">
                 {members.map((m, i) => (
                   <div key={i} className="row" style={{cursor:"default"}}>
-                    <div className="row-icon" style={{background:"var(--ib4)",fontSize:18}}>👤</div>
+                    <div className="row-icon" style={{background:"var(--ib4)"}}><Ico><User size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
                     <div className="row-body">
                       <div className="row-title">{m.email}</div>
                       <div className="row-sub">{m.status === "pending" ? "Invitation sent" : "Active"}</div>
@@ -351,7 +347,7 @@ export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
       <div className="sheet" style={{maxHeight:"50vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
-          <div style={{fontSize:48,marginBottom:12}}>🗑️</div>
+          <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><Trash2 size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Delete medication?</div>
           <div style={{fontSize:15,color:"var(--t3)",lineHeight:1.5,marginBottom:20}}>
             This will permanently remove <strong style={{color:"var(--t1)"}}>{medName}</strong> and all its dose history. This cannot be undone.
@@ -373,7 +369,7 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
       <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>💊 Log dose</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4,display:"flex",alignItems:"center",gap:6}}><Ico><Pill size={20} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
           <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>
             {med.name} · {med.dosage_amount} {med.dosage_unit}
           </div>
@@ -383,7 +379,7 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
             <textarea className="sheet-input" rows={3}
               placeholder="How are you feeling? Any side effects?"
               value={journal} onChange={e => setJournal(e.target.value)}
-              style={{resize:"vertical",fontSize:14,background:"var(--bg)"}}/>
+              style={{resize:"vertical",fontSize:16,background:"var(--bg)"}}/>
           </div>
 
           <div className="sheet-actions" style={{gap:8}}>

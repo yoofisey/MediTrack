@@ -2,6 +2,13 @@
 
 import { CSS, fmtDate } from "@/lib/constants";
 import { TIER_LIMITS } from "@/lib/data";
+import { useState } from "react";
+import InteractionChecker from "@/components/InteractionChecker";
+import { Pill, AlertTriangle, FileText, Package, Plus, CheckCircle2 } from "lucide-react";
+
+function Ico({ children, ...props }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
+}
 
 function rem(med, logs) {
   if (!med.pills_per_package) return null;
@@ -11,6 +18,7 @@ function rem(med, logs) {
 }
 
 export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill, plan, medCount }) {
+  const [showChecker, setShowChecker] = useState(false);
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
   const active = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e>=today&&m.active;});
@@ -29,10 +37,10 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
     const remaining = rem(med, logs);
     const lowStock = remaining !== null && remaining <= (med.refill_reminder_at || 5);
     return (
-      <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"16px",marginBottom:10}}>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
+      <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"18px",marginBottom:12,boxShadow:"var(--card-shadow)"}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14}}>
           <div>
-            <div style={{fontSize:17,fontWeight:600,marginBottom:3}}>{med.name}</div>
+            <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>{med.name}</div>
             <div style={{fontSize:14,color:"var(--t3)"}}>{med.dosage_amount} {med.dosage_unit} · {exp}× daily</div>
           </div>
           <span className={`badge ${isActive?"badge-green":"badge-gray"}`}>{isActive?"Active":"Ended"}</span>
@@ -47,12 +55,12 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
         </div>
         <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>Day {prog} of {med.course_duration_days}</div>
         <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
-        {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8}}>📝 {med.notes}</div>}
+        {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8,display:"flex",alignItems:"center",gap:5}}><Ico><FileText size={14} strokeWidth={2.2}/></Ico> {med.notes}</div>}
         {remaining !== null && (
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:13}}>
-            <span style={{color:lowStock?"var(--red)":"var(--teal2)",fontWeight:600}}>📦 {remaining} remaining</span>
+            <span style={{color:lowStock?"var(--red)":"var(--teal2)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Ico><Package size={14} strokeWidth={2.2}/></Ico> {remaining} remaining</span>
             {lowStock && <span style={{color:"var(--red)",fontWeight:500}}>· Refill soon!</span>}
-            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11}} onClick={()=>onRefill(med.id)}>➕ Refill</button>
+            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11,display:"flex",alignItems:"center",gap:4}} onClick={()=>onRefill(med.id)}><Ico><Plus size={13} strokeWidth={2.5}/></Ico> Refill</button>
           </div>
         )}
         <div style={{display:"flex",gap:8,marginTop:12}}>
@@ -77,7 +85,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
       </div>
 
       {plan==="free" && (
-        <div style={{margin:"0 16px 12px",background:"var(--card)",borderRadius:"var(--rl)",padding:"12px 16px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
+        <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>Medication limit</span>
             <span style={{fontSize:13,fontWeight:600,color:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}>{medCount}/{limits.maxMeds} used</span>
@@ -87,11 +95,21 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
         </div>
       )}
 
+      {active.length>0&&limits.interactionCheck&&(
+        <div style={{padding:"0 20px",marginBottom:14}}>
+          <button className="btn" style={{width:"100%",background:"var(--ib5)",color:"var(--t1)",fontWeight:500,fontSize:13,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>setShowChecker(true)}>
+            <Ico><AlertTriangle size={16} strokeWidth={2.2}/></Ico> Check drug interactions ({meds.length} medication{meds.length!==1?"s":""})
+          </button>
+        </div>
+      )}
+
+      {showChecker&&<InteractionChecker meds={meds} onClose={()=>setShowChecker(false)}/>}
+
       {active.length>0&&<div className="section"><div className="section-header">Active</div>{active.map(m=><MedCard key={m.id} med={m}/>)}</div>}
       {ended.length>0&&<div className="section"><div className="section-header">Completed</div>{ended.map(m=><MedCard key={m.id} med={m}/>)}</div>}
       {meds.length===0&&(
         <div className="empty-state" style={{paddingTop:60}}>
-          <div className="empty-state-icon">💊</div>
+          <div className="empty-state-icon"><Ico><Pill size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div>
           <div className="empty-state-title">No medications yet</div>
           <div className="empty-state-sub">Tap + to add your first medication</div>
         </div>

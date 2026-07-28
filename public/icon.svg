@@ -1,19 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#2563EB"/>
+      <stop offset="0%" stop-color="#007AFF"/>
+      <stop offset="100%" stop-color="#5856D6"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#g)"/>
   <g fill="white">
-    <circle cx="256" cy="256" r="185" fill="none" stroke="white" stroke-width="10" stroke-opacity=".2"/>
-    <circle cx="256" cy="71" r="22" fill="white"/>
-    <circle cx="256" cy="441" r="22" fill="white"/>
-    <text x="132" y="282" font-family="system-ui,sans-serif" font-size="120" font-weight="700" fill="white">A</text>
-    <rect x="300" y="232" width="16" height="64" rx="8" fill="white"/>
-    <rect x="276" y="256" width="64" height="16" rx="8" fill="white"/>
-    <path d="M345 133 L400 168 L425 135" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".6"/>
-    <path d="M167 379 L112 344 L87 377" fill="none" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".6"/>
+    <text x="140" y="310" font-family="system-ui,-apple-system,sans-serif" font-size="170" font-weight="800" fill="white">A</text>
+    <rect x="298" y="220" width="18" height="80" rx="9" fill="white"/>
+    <rect x="267" y="251" width="80" height="18" rx="9" fill="white"/>
+    <circle cx="256" cy="256" r="190" fill="none" stroke="white" stroke-width="6" opacity=".15"/>
   </g>
 </svg>

@@ -1,15 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { canAddMed } from "@/lib/data";
+import PrescriptionScanner from "@/components/PrescriptionScanner";
+import BarcodeScanner from "@/components/BarcodeScanner";
+import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
+import { Camera, ScanBarcode } from "lucide-react";
 
-export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose }) {
-  const isPro = plan === "pro" || plan === "family" || plan === "enterprise";
-  const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", notes:"" };
-  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), notes:med.notes||"" } : blank);
+function Ico({ children, ...props }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
+}
+
+export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, allMeds }) {
+  const isPro = plan === "pro" || plan === "family";
+  const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
+  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
+  const [showBarcode, setShowBarcode] = useState(false);
+  const existingMeds = allMeds || [];
+  const currentInteractions = useMemo(() => {
+    if (!f.name.trim() || !existingMeds.length) return [];
+    return checkInteractions(f.name, existingMeds);
+  }, [f.name, existingMeds]);
 
   function set(k, v) {
     setF(p => {
@@ -37,7 +52,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
     const maxDuration = 3650;
     if (parseInt(f.course_duration_days) > maxDuration) { setErr(`Duration seems too long (max ${maxDuration} days).`); return; }
     setBusy(true); setErr("");
-    const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, notes:f.notes, active:true };
+    const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, cost_per_package:f.cost_per_package?parseFloat(f.cost_per_package):null, cost_currency:f.cost_currency||null, notes:f.notes, active:true };
     const result = med?.id ? await sb.from("medications").eq("id",med.id).update(payload) : await sb.from("medications").insert([payload]);
     if (result.error) {
       const msg = result.error?.message || result.error?.error_description || JSON.stringify(result.error);
@@ -58,7 +73,42 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         <div className="sheet-section">
           <div className="sheet-label">Medication name</div>
           <input className="sheet-input" placeholder="e.g. Amoxicillin 500mg" value={f.name} onChange={e=>set("name",e.target.value)}/>
+          {!med && (
+            <div style={{marginTop:8,display:"flex",gap:8}}>
+              <button type="button" className="btn btn-ghost" style={{flex:1,fontSize:13,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => setShowScanner(true)}>
+                <Ico><Camera size={15} strokeWidth={2.2}/></Ico> Scan prescription label
+              </button>
+              <button type="button" className="btn btn-ghost" style={{flex:1,fontSize:13,padding:"8px 12px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => setShowBarcode(true)}>
+                <Ico><ScanBarcode size={15} strokeWidth={2.2}/></Ico> Scan barcode
+              </button>
+            </div>
+          )}
         </div>
+
+        {currentInteractions.length > 0 && <InteractionBadge interactions={currentInteractions}/>}
+
+        {showScanner && (
+          <PrescriptionScanner
+            onUseResult={(r) => {
+              if (r.name) set("name", r.name);
+              if (r.dosage_amount) set("dosage_amount", String(r.dosage_amount));
+              if (r.dosage_unit) set("dosage_unit", r.dosage_unit);
+              if (r.times_per_day) set("times_per_day", String(r.times_per_day));
+              setShowScanner(false);
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        )}
+        {showBarcode && (
+          <BarcodeScanner
+            onScan={(r) => {
+              if (r.name) set("name", r.name);
+              if (r.dosage_unit) set("dosage_unit", r.dosage_unit);
+              setShowBarcode(false);
+            }}
+            onClose={() => setShowBarcode(false)}
+          />
+        )}
 
         <div className="sheet-section">
           <div className="sheet-label">Dosage</div>
@@ -105,21 +155,45 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
           </select>
         </div>
 
-        {isPro && (
-          <div className="sheet-section">
-            <div className="sheet-label">Refill tracking {plan==="free"?"(Pro feature)":""}</div>
-            <div className="sheet-row">
-              <div>
-                <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Pills per package</div>
-                <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 30" value={f.pills_per_package} onChange={e=>set("pills_per_package",e.target.value)}/>
-              </div>
-              <div>
-                <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Alert when ≤</div>
-                <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 5" value={f.refill_reminder_at} onChange={e=>set("refill_reminder_at",e.target.value)}/>
-              </div>
+        <div className="sheet-section">
+          <div className="sheet-label">Stock & refill tracking</div>
+          <div className="sheet-row">
+            <div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Pills/doses per package</div>
+              <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 30" value={f.pills_per_package} onChange={e=>set("pills_per_package",e.target.value)}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Alert when ≤</div>
+              <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 5" value={f.refill_reminder_at} onChange={e=>set("refill_reminder_at",e.target.value)}/>
             </div>
           </div>
-        )}
+          <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>Set your package size and Adhera will alert you when stock is running low.</div>
+        </div>
+
+        <div className="sheet-section">
+          <div className="sheet-label">Cost tracking</div>
+          <div className="sheet-row">
+            <div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Cost per package</div>
+              <input className="sheet-input" type="number" inputMode="decimal" min="0" step="0.01" placeholder="e.g. 50" value={f.cost_per_package} onChange={e=>set("cost_per_package",e.target.value)}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Currency</div>
+              <select className="sheet-input" value={f.cost_currency} onChange={e=>set("cost_currency",e.target.value)}>
+                <option value="">Select</option>
+                <option value="GHS">₵ GHS</option>
+                <option value="NGN">₦ NGN</option>
+                <option value="KES">KSh KES</option>
+                <option value="ZAR">R ZAR</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
+                <option value="GBP">£ GBP</option>
+                <option value="INR">₹ INR</option>
+              </select>
+            </div>
+          </div>
+          <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>Track how much you spend on medications. Cost per dose calculated automatically.</div>
+        </div>
 
         <div className="sheet-section">
           <div className="sheet-label">Notes (optional)</div>

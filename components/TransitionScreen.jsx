@@ -1,10 +1,20 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 
-export default function TransitionScreen({ emoji, message, sub }) {
+export default function TransitionScreen({ emoji, message, sub, showMessages = false }) {
+  const [step, setStep] = useState(0);
   const showDefault = !message && !sub;
   const key = showDefault ? "default" : `${emoji}-${message}-${sub}`;
+
+  useEffect(() => {
+    if (!showDefault || !showMessages) return;
+    const msgs = ["Verifying your session", "Syncing your data", "Almost ready"];
+    const timers = msgs.map((_, i) => setTimeout(() => setStep(i), (i + 1) * 1400));
+    return () => timers.forEach(clearTimeout);
+  }, [showDefault, showMessages]);
+
   return (
     <div className="trans-screen">
       <style>{CSS}</style>
@@ -26,6 +36,27 @@ export default function TransitionScreen({ emoji, message, sub }) {
             <>
               <div className="trans-title">Adhera</div>
               <div className="trans-msg">Your Personal Treatment Companion</div>
+              {showMessages && (
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,marginTop:8}}>
+                  <div className="trans-dots">
+                    <div className="trans-dot"/>
+                    <div className="trans-dot"/>
+                    <div className="trans-dot"/>
+                  </div>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,.55)",transition:"opacity .3s",animation:"fadeUp .5s .6s ease both"}}>
+                    {["Verifying your session", "Syncing your data", "Almost ready"][Math.min(step, 2)]}
+                  </div>
+                </div>
+              )}
+              {!showMessages && (
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,marginTop:8}}>
+                  <div className="trans-dots">
+                    <div className="trans-dot"/>
+                    <div className="trans-dot"/>
+                    <div className="trans-dot"/>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>

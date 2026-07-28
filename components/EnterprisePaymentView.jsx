@@ -31,7 +31,7 @@ export default function EnterprisePaymentView({
             className="input-field"
             type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
             placeholder="000000" value={otp} onChange={onOtpChange}
-            style={{textAlign:"center",fontSize:28,fontWeight:700,letterSpacing:12}}
+            style={{textAlign:"center",fontSize:28,fontWeight:700,letterSpacing:12,fontFamily:"ui-monospace,SFMono-Regular,monospace"}}
             autoFocus required
           />
         </div>

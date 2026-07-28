@@ -5,6 +5,7 @@ import TransitionScreen from "@/components/TransitionScreen";
 import AuthScreen from "@/components/AuthScreen";
 import Onboarding from "@/components/Onboarding";
 import MainApp from "@/components/MainApp";
+import LandingPage from "@/components/LandingPage";
 
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
@@ -43,6 +44,7 @@ export default function App() {
   const [screen, setScreen]   = useState("loading");
   const [user,   setUser]     = useState(null);
   const [profile,setProfile]  = useState(null);
+  const [hasSession, setHasSession] = useState(false);
 
   async function handleAuth(u, isNew = false) {
     setUser(u);
@@ -62,14 +64,14 @@ export default function App() {
 
   async function handleSignOut() {
     await sb.auth.signOut();
-    setUser(null); setProfile(null); setScreen("auth");
+    setUser(null); setProfile(null); setScreen("landing");
   }
 
   useEffect(() => {
     const MIN_LOAD_MS = 4500;
     const MAX_LOAD_MS = 7000;
     let cancelled = false;
-    let dest = "auth";
+    let       dest = "landing";
 
     async function init() {
       const start = Date.now();
@@ -79,6 +81,7 @@ export default function App() {
         if (cancelled) return;
         if (u) {
           setUser(u);
+          setHasSession(true);
           const prof = await fetchProfile(u.id, u.user_metadata);
           if (cancelled) return;
           setProfile(prof);
@@ -97,7 +100,15 @@ export default function App() {
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 
-  if (screen === "loading")    return <TransitionScreen />;
+  useEffect(() => {
+    if (screen !== "transition") return;
+    const t = setTimeout(() => setScreen("auth"), 1800);
+    return () => clearTimeout(t);
+  }, [screen]);
+
+  if (screen === "loading")    return <TransitionScreen showMessages={hasSession} />;
+  if (screen === "landing")    return <LandingPage onGetStarted={() => setScreen("transition")} />;
+  if (screen === "transition") return <TransitionScreen />;
   if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;
   if (screen === "onboarding") return <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />;
   if (!user)                   return <TransitionScreen />;

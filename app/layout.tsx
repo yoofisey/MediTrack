@@ -24,6 +24,19 @@ export const metadata: Metadata = {
     title: "Adhera",
     statusBarStyle: "default",
   },
+  openGraph: {
+    title: "Adhera — Your Personal Treatment Companion",
+    description: "Track medications, get smart alarm reminders, and stay on top of your health.",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "https://meditrack-delta-pied.vercel.app",
+    siteName: "Adhera",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Adhera — Your Personal Treatment Companion",
+    description: "Track medications, get smart alarm reminders, and stay on top of your health.",
+  },
 };
 
 export const viewport: Viewport = {
@@ -43,7 +56,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-title" content="Adhera" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />

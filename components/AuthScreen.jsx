@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
-import { COUNTRIES, getPricing, TIER_LIMITS, ENTERPRISE_TIERS } from "@/lib/data";
+import { COUNTRIES, getPricing, TIER_LIMITS } from "@/lib/data";
 import SentOtpView from "./SentOtpView";
-import EnterprisePaymentView from "./EnterprisePaymentView";
 
 export default function AuthScreen({ onAuth }) {
   const [view, setView]     = useState("welcome");
@@ -22,14 +21,6 @@ export default function AuthScreen({ onAuth }) {
   const [sent, setSent]     = useState(false);
   const [pwStore, setPwStore] = useState("");
   const [pwShow, setPwShow] = useState(false);
-  const [regType, setRegType] = useState("individual");
-  const [orgName, setOrgName] = useState("");
-  const [orgType, setOrgType] = useState("");
-  const [orgSize, setOrgSize] = useState("");
-  const [phone, setPhone]     = useState("");
-  const [deployment, setDeployment] = useState("cloud");
-  const [enterpriseTier, setEnterpriseTier] = useState("small");
-  const [step, setStep]       = useState("form");
   const [cooldown, setCooldown] = useState(0);
 
   function startCooldown(sec = 60) { setCooldown(sec); const t = setInterval(() => { setCooldown(p => { if (p <= 1) { clearInterval(t); return 0; } return p - 1; }); }, 1000); }
@@ -116,48 +107,6 @@ export default function AuthScreen({ onAuth }) {
     }
   }
 
-  async function handleEnterpriseSignUp(e) {
-    e.preventDefault(); setBusy(true); setErr("");
-    if (!orgName.trim()) { setErr("Enter your organization name."); setBusy(false); return; }
-    if (!orgType) { setErr("Select your organization type."); setBusy(false); return; }
-    if (!sanitizeHtml(name).trim()) { setErr("Enter your full name."); setBusy(false); return; }
-    if (!isValidEmail(email)) { setErr("Enter a valid work email."); setBusy(false); return; }
-    if (!phone.trim()) { setErr("Enter a contact phone number."); setBusy(false); return; }
-    if (pw.length < 8) { setErr("Password must be at least 8 characters."); setBusy(false); return; }
-    if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
-    try {
-      const { error } = await sb.auth.signUpOtp({
-        email,
-        options: { data: { full_name: sanitizeHtml(name).trim(), org_name: orgName.trim(), org_type: orgType, org_size: orgSize, phone: phone.trim(), deployment, country, plan: "enterprise", enterprise_tier: enterpriseTier } },
-      });
-      if (error) throw error;
-      setPwStore(pw);
-      startCooldown(60);
-      setStep("payment");
-    } catch (e) {
-      const m = e?.message || "";
-      if (m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable")) {
-        setErr("📧 Email service not configured. Configure SMTP in Supabase dashboard → Authentication → Settings → SMTP to enable email delivery.");
-      } else {
-        setErr(m || "Something went wrong. Please try again.");
-      }
-    } finally { setBusy(false); }
-  }
-
-  async function handleEnterpriseResend() {
-    if (cooldown>0) return;
-    setOtp(""); setErr(""); setBusy(true);
-    try {
-      const { error } = await sb.auth.signUpOtp({ email });
-      if (error) throw error;
-      startCooldown(60);
-      setErr("Code resent — check your inbox.");
-    } catch (e) {
-      const m = e?.message||"";
-      setErr(m.includes("SMTP")||m.includes("rate")||m.includes("timeout")||m.includes("unavailable") ? "Email not configured. Set up SMTP in Supabase dashboard." : "Failed to resend.");
-    } finally { setBusy(false); }
-  }
-
   async function handleOtpVerify(e) {
     e.preventDefault();
     if (otp.length < 6) { setErr("Enter the 6-digit code from your email."); return; }
@@ -171,9 +120,6 @@ export default function AuthScreen({ onAuth }) {
         await sb.auth.signOut();
         throw new Error("This email is already registered — please sign in instead.");
       }
-      if (isEnt) {
-        await sb.auth.updateUser({ data: { enterprise_tier: enterpriseTier } });
-      }
       await sb.auth.updateUser({ password: pwStore });
       onAuth(vData.user, true);
     } catch (e) {
@@ -183,25 +129,6 @@ export default function AuthScreen({ onAuth }) {
 
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
   const { pricing } = getPricing(country);
-  const selectedEntTier = ENTERPRISE_TIERS.find(t => t.id === enterpriseTier) || ENTERPRISE_TIERS[0];
-  const isEnt = regType === "enterprise";
-
-  function RegToggle() {
-    const tabs = [
-      { id:"individual", label:"👤 Individual" },
-      { id:"enterprise", label:"🏥 Enterprise" },
-    ];
-    return (
-      <div style={{display:"flex",background:"var(--bg)",borderRadius:12,padding:3,marginBottom:16,border:"1px solid var(--sep)"}}>
-        {tabs.map(t => (
-          <button key={t.id} type="button" onClick={()=>{setRegType(t.id);setErr("");}}
-            style={{flex:1,padding:"8px 12px",borderRadius:9,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,fontFamily:"inherit",
-              background:regType===t.id?"var(--card)":"transparent",color:regType===t.id?"var(--t1)":"var(--t3)",
-              boxShadow:regType===t.id?"0 1px 4px rgba(0,0,0,.06)":"none",transition:"all .2s"}}>{t.label}</button>
-        ))}
-      </div>
-    );
-  }
 
   if (view === "welcome") return (
     <div className="auth-screen" style={{padding:0,justifyContent:"flex-end",background:"linear-gradient(180deg,#007AFF 0%,#0055CC 100%)",overflow:"hidden"}}>
@@ -300,131 +227,56 @@ export default function AuthScreen({ onAuth }) {
     </div>
   );
 
-  if (isEnt && step === "payment") return (
-    <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card" key="enterprise-payment">
-        <EnterprisePaymentView
-          orgName={orgName} email={email} otp={otp}
-          onOtpChange={handleOtpChange} onOtpVerify={handleOtpVerify}
-          onResend={handleEnterpriseResend}
-          onBack={() => { setStep("form"); setErr(""); }}
-          busy={busy} cooldown={cooldown} err={err}
-          selCountry={selCountry} selectedEntTier={selectedEntTier}
-          enterpriseTier={enterpriseTier} setEnterpriseTier={setEnterpriseTier}
-          ENTERPRISE_TIERS={ENTERPRISE_TIERS}
-        />
-      </div>
-    </div>
-  );
-
   return (
     <div className="auth-screen"><style>{CSS}</style>
-      <div className="auth-card" style={{maxWidth:isEnt?480:440}} key="signup">
+      <div className="auth-card" key="signup">
         <AuthLogo/>
-        <div className="auth-title">{isEnt ? "Register your organization" : "Create your account"}</div>
-        <div className="auth-sub">{isEnt ? "Enterprise-grade medication management" : "Free forever · Upgrade anytime"}</div>
+        <div className="auth-title">Create your account</div>
+        <div className="auth-sub">Free forever · Upgrade anytime</div>
 
-        <RegToggle/>
-
-        {!isEnt && (
-          <>
-            <div className="oauth-stack">
-              <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}</button>
-            </div>
-            <div className="divider">or sign up with email</div>
-          </>
-        )}
+        <div className="oauth-stack">
+          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}</button>
+        </div>
+        <div className="divider">or sign up with email</div>
 
         {err && <div className="err-msg">{err}</div>}
 
-        <form onSubmit={isEnt ? handleEnterpriseSignUp : handleSignUp}>
+        <form onSubmit={handleSignUp}>
           <div className="input-group">
-            {isEnt ? (
-              <>
-                <input className="input-field" type="text" placeholder="Organization name *" value={orgName} onChange={e=>setOrgName(e.target.value)} required autoComplete="organization"/>
-                <div style={{position:"relative"}}>
-                  <select className="input-field" value={orgType} onChange={e=>setOrgType(e.target.value)} required style={{color:orgType?"var(--t1)":"var(--t4)",width:"100%"}}>
-                    <option value="" disabled>Organization type *</option>
-                    <option value="hospital">🏥 Hospital</option>
-                    <option value="clinic">🏪 Clinic</option>
-                    <option value="insurance">🛡️ Insurance</option>
-                    <option value="pharmacy">💊 Pharmacy</option>
-                    <option value="research">🔬 Research</option>
-                    <option value="govt">🏛️ Government</option>
-                    <option value="other">📋 Other</option>
-                  </select>
+            <input className="input-field" type="text" placeholder="Full name" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
+            <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
+            <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
+            <div style={{position:"relative",marginBottom:8}}>
+              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
+              <select className="input-field" style={{paddingLeft:40,width:"100%"}} value={country} onChange={e=>setCountry(e.target.value)}>
+                {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
+              </select>
+            </div>
+            <div style={{background:"var(--card)",border:"1px solid var(--sep)",borderRadius:12,padding:"10px 14px"}}>
+              <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:".3px",marginBottom:8}}>
+                {selCountry.flag} {selCountry.name} — Choose plan
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                <div onClick={()=>setTier("free")} style={{background:tier==="free"?"var(--sel)":"var(--input)",borderRadius:8,padding:"8px 10px",border:tier==="free"?"1.5px solid var(--teal)":"1px solid var(--sep)",cursor:"pointer",transition:"all .15s"}}>
+                  <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Free</div>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--teal2)"}}>Free</div>
+                  <div style={{fontSize:9,color:"var(--t3)",marginTop:2}}>{TIER_LIMITS.free.maxMeds} meds · {TIER_LIMITS.free.history}d</div>
                 </div>
-                <div style={{position:"relative"}}>
-                  <select className="input-field" value={orgSize} onChange={e=>setOrgSize(e.target.value)} required style={{color:orgSize?"var(--t1)":"var(--t4)"}}>
-                    <option value="" disabled>Organization size *</option>
-                    <option value="1-100">Up to 100</option>
-                    <option value="100-1000">100 – 1,000</option>
-                    <option value="1000-10000">1,000 – 10,000</option>
-                    <option value="10000+">10,000+</option>
-                  </select>
+                <div onClick={()=>setTier("pro")} style={{background:tier==="pro"?"var(--sel)":"var(--input)",borderRadius:8,padding:"8px 10px",border:tier==="pro"?"1.5px solid var(--teal)":"1px solid var(--sep)",cursor:"pointer",transition:"all .15s"}}>
+                  <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Pro</div>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--teal)"}}>{pricing.pro.label}<span style={{fontSize:10,fontWeight:400}}>/mo</span></div>
+                  <div style={{fontSize:9,color:"var(--t3)",marginTop:2}}>Unlimited · Full history</div>
                 </div>
-                <input className="input-field" type="text" placeholder="Your full name *" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
-                <input className="input-field" type="email" placeholder="Work email *" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
-                <input className="input-field" type="tel" placeholder="Phone *" value={phone} onChange={e=>setPhone(e.target.value)} required autoComplete="tel"/>
-                <div style={{position:"relative",marginBottom:8}}>
-                  <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
-                  <select className="input-field" style={{paddingLeft:40,width:"100%"}} value={country} onChange={e=>setCountry(e.target.value)}>
-                    {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
-                  </select>
+                <div onClick={()=>setTier("family")} style={{background:tier==="family"?"var(--sel)":"var(--input)",borderRadius:8,padding:"8px 10px",border:tier==="family"?"1.5px solid var(--teal)":"1px solid var(--sep)",cursor:"pointer",transition:"all .15s"}}>
+                  <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Family</div>
+                  <div style={{fontSize:15,fontWeight:700,color:"var(--teal)"}}>{pricing.family.label}<span style={{fontSize:10,fontWeight:400}}>/mo</span></div>
+                  <div style={{fontSize:9,color:"var(--t3)",marginTop:2}}>5 profiles · Dashboard</div>
                 </div>
-                <div style={{position:"relative",marginBottom:8}}>
-                  <select className="input-field" value={deployment} onChange={e=>setDeployment(e.target.value)}>
-                    <option value="cloud">☁️ Cloud hosted</option>
-                    <option value="onprem">🖥️ On-premise</option>
-                    <option value="hybrid">🔀 Hybrid</option>
-                  </select>
-                </div>
-                <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
-                <div style={{background:"linear-gradient(135deg,var(--teal2),var(--teal))",borderRadius:12,padding:"10px 14px",color:"white",marginTop:4}}>
-                  <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>Enterprise pricing (annual)</div>
-                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {ENTERPRISE_TIERS.map(t => (
-                      <div key={t.id} style={{display:"flex",justifyContent:"space-between",fontSize:11,opacity:.9}}>
-                        <span>{t.label}</span>
-                        <span style={{fontWeight:600}}>{selCountry.code === "GH" ? t.annualLabel : t.annualUsdLabel}/yr</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <input className="input-field" type="text" placeholder="Full name" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
-                <input className="input-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
-                <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
-                <div style={{position:"relative",marginBottom:8}}>
-                  <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
-                  <select className="input-field" style={{paddingLeft:40,width:"100%"}} value={country} onChange={e=>setCountry(e.target.value)}>
-                    {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
-                  </select>
-                </div>
-                <div style={{background:"var(--card)",border:"1px solid var(--sep)",borderRadius:12,padding:"10px 14px"}}>
-                  <div style={{fontSize:11,color:"var(--t3)",fontWeight:600,textTransform:"uppercase",letterSpacing:".3px",marginBottom:8}}>
-                    {selCountry.flag} {selCountry.name} — Choose plan
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                    <div onClick={()=>setTier("free")} style={{background:tier==="free"?"var(--sel)":"var(--input)",borderRadius:8,padding:"8px 10px",border:tier==="free"?"1.5px solid var(--teal)":"1px solid var(--sep)",cursor:"pointer",transition:"all .15s"}}>
-                      <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Free</div>
-                      <div style={{fontSize:16,fontWeight:700,color:"var(--teal2)"}}>Free</div>
-                      <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>{TIER_LIMITS.free.maxMeds} meds · {TIER_LIMITS.free.history}d history</div>
-                    </div>
-                    <div onClick={()=>setTier("pro")} style={{background:tier==="pro"?"var(--sel)":"var(--input)",borderRadius:8,padding:"8px 10px",border:tier==="pro"?"1.5px solid var(--teal)":"1px solid var(--sep)",cursor:"pointer",transition:"all .15s"}}>
-                      <div style={{fontSize:11,color:"var(--t3)",marginBottom:2}}>Pro</div>
-                      <div style={{fontSize:16,fontWeight:700,color:"var(--teal)"}}>{pricing.pro.label}<span style={{fontSize:11,fontWeight:400}}>/mo</span></div>
-                      <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>Unlimited · Full history</div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+              </div>
+            </div>
           </div>
           <button className="btn btn-primary" type="submit" disabled={busy}>
-            {busy ? "Processing..." : isEnt ? "Register organization" : "Create free account"}
+            {busy ? "Processing..." : "Create free account"}
           </button>
         </form>
         <div style={{fontSize:12,color:"var(--t3)",textAlign:"center",marginTop:14,lineHeight:1.5}}>

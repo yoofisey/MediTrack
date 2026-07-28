@@ -3,10 +3,16 @@
 export default function SentOtpView({ email, otp, onOtpChange, onOtpVerify, onResend, onBack, busy, cooldown, err }) {
   return (
     <div>
-      <div style={{fontSize:52,marginBottom:16,textAlign:"center"}}>📬</div>
-      <div style={{fontSize:22,fontWeight:700,marginBottom:8,letterSpacing:"-.3px"}}>Check your email</div>
-      <div style={{fontSize:15,color:"var(--t3)",lineHeight:1.5,marginBottom:20}}>
-        We sent a 6-digit code to <strong style={{color:"var(--t1)",fontWeight:600}}>{email}</strong>
+      <div style={{width:56,height:56,borderRadius:16,background:"linear-gradient(135deg,var(--teal),var(--teal2))",display:"grid",placeItems:"center",margin:"0 auto 20px",boxShadow:"0 8px 24px rgba(0,122,255,.25)"}}>
+        <svg viewBox="0 0 24 24" width={28} height={28} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M2 7l10 6 10-6"/>
+        </svg>
+      </div>
+      <div style={{fontSize:22,fontWeight:700,marginBottom:8,letterSpacing:"-.3px",textAlign:"center"}}>Check your inbox</div>
+      <div style={{fontSize:14,color:"var(--t3)",lineHeight:1.5,marginBottom:24,textAlign:"center"}}>
+        We sent a 6-digit code to<br/>
+        <strong style={{color:"var(--t1)",fontWeight:600}}>{email}</strong>
       </div>
       {err && <div className="err-msg">{err}</div>}
       <form onSubmit={onOtpVerify}>
@@ -15,18 +21,18 @@ export default function SentOtpView({ email, otp, onOtpChange, onOtpVerify, onRe
             className="input-field"
             type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
             placeholder="000000" value={otp} onChange={onOtpChange}
-            style={{textAlign:"center",fontSize:30,fontWeight:700,letterSpacing:14,padding:"16px",borderRadius:14}}
+            style={{textAlign:"center",fontSize:30,fontWeight:700,letterSpacing:14,padding:"16px",borderRadius:14,fontFamily:"ui-monospace,SFMono-Regular,monospace",width:"100%",boxSizing:"border-box"}}
             autoFocus required
           />
         </div>
-        <button className="btn btn-primary" type="submit" disabled={busy || otp.length < 6}>
+        <button className="btn btn-primary" type="submit" disabled={busy || otp.length < 6} style={{width:"100%"}}>
           {busy ? "Verifying..." : "Verify email"}
         </button>
       </form>
-      <div style={{textAlign:"center",marginTop:18,fontSize:15,color:"var(--t3)"}}>
+      <div style={{textAlign:"center",marginTop:18,fontSize:14,color:"var(--t3)"}}>
         Didn&apos;t get it?{" "}
         <button
-          style={{background:"none",border:"none",color:"var(--teal)",fontWeight:600,cursor:cooldown>0?"not-allowed":"pointer",fontSize:15,fontFamily:"inherit",opacity:cooldown>0?0.5:1,transition:"opacity .2s"}}
+          style={{background:"none",border:"none",color:"var(--teal)",fontWeight:600,cursor:cooldown>0?"not-allowed":"pointer",fontSize:14,fontFamily:"inherit",opacity:cooldown>0?0.5:1,transition:"opacity .2s"}}
           disabled={cooldown>0}
           onClick={onResend}
         >
@@ -34,15 +40,15 @@ export default function SentOtpView({ email, otp, onOtpChange, onOtpVerify, onRe
         </button>
         {" · "}
         <button
-          style={{background:"none",border:"none",color:"var(--t3)",cursor:"pointer",fontSize:15,fontFamily:"inherit",fontWeight:500}}
+          style={{background:"none",border:"none",color:"var(--t3)",cursor:"pointer",fontSize:14,fontFamily:"inherit",fontWeight:500}}
           onClick={onBack}
         >
           Back
         </button>
       </div>
-      <div style={{marginTop:20,padding:"14px 16px",background:"var(--bg)",borderRadius:12}}>
+      <div style={{marginTop:20,padding:"12px 16px",background:"var(--bg)",borderRadius:12}}>
         <div style={{fontSize:13,color:"var(--t3)",lineHeight:1.6}}>
-          📧 Didn&apos;t get it? Check your spam folder. If issues persist, configure SMTP in Supabase dashboard → Authentication → Settings.
+          📧 Check your spam folder if you don&apos;t see it.
         </div>
       </div>
     </div>
