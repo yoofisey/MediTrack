@@ -1,6 +1,7 @@
 "use client";
 
 import { CSS, fmtTime } from "@/lib/constants";
+import { useLang } from "@/lib/i18n";
 import { calcStreak, getStockStatus, getUpcomingVisits } from "@/lib/data";
 import { isVitalDue } from "@/lib/notifications";
 import Ring from "@/components/Ring";
@@ -19,6 +20,7 @@ function milestone(streak) {
 }
 
 export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, vitals, vitalReminders, onNavigateVitals }) {
+  const { t, lang } = useLang();
   const today = new Date();
 
   const todayStr = today.toISOString().split("T")[0];
@@ -42,18 +44,18 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
     <div className="scroll" style={{paddingTop:0}}>
       <div className="hero-card" style={{margin:"16px 20px 14px"}}>
         <div style={{position:"relative",zIndex:1}}>
-          <div className="hero-label">{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
+          <div className="hero-label">{today.toLocaleDateString(lang==="fr"?"fr-FR":lang==="sw"?"sw-KE":"en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div>
               <div className="hero-big">{taken}<span style={{fontSize:28,fontWeight:500,opacity:.7}}>/{total}</span></div>
-              <div className="hero-sub">doses taken today</div>
+              <div className="hero-sub">{t("today.dosesTaken")}</div>
             </div>
             <Ring pct={pct} size={84} color="rgba(255,255,255,.9)" stroke={7}/>
           </div>
           <div className="hero-row">
-            <div className="hero-stat"><div className="hero-stat-val">{activeMeds.length}</div><div className="hero-stat-lbl">Active meds</div></div>
-            <div className="hero-stat"><div className="hero-stat-val">🔥 {streak}</div><div className="hero-stat-lbl">{streak===1?"day":"days"} streak</div></div>
-            <div className="hero-stat"><div className="hero-stat-val">{Math.max(0,total-taken)}</div><div className="hero-stat-lbl">remaining</div></div>
+            <div className="hero-stat"><div className="hero-stat-val">{activeMeds.length}</div><div className="hero-stat-lbl">{t("today.activeMeds")}</div></div>
+            <div className="hero-stat"><div className="hero-stat-val">🔥 {streak}</div><div className="hero-stat-lbl">{streak===1?t("day"):t("days")} {t("today.streak")}</div></div>
+            <div className="hero-stat"><div className="hero-stat-val">{Math.max(0,total-taken)}</div><div className="hero-stat-lbl">{t("today.remaining")}</div></div>
           </div>
         </div>
       </div>
@@ -62,8 +64,8 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
         <div style={{margin:"0 20px 14px",display:"flex",alignItems:"center",gap:12,background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
           <span style={{fontSize:28}}>{STREAK_EMOJIS[ms]}</span>
           <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{STREAK_LABELS[ms]}</div>
-            <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Keep going! You&apos;re building a healthy habit.</div>
+            <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{t(`streak.${ms}`)}</div>
+            <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{t("today.keepGoing")}</div>
           </div>
         </div>
       )}
@@ -72,9 +74,9 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
         <div className="notif-banner" onClick={onEnableNotif}>
           <div className="notif-banner-text" style={{display:"flex",alignItems:"center",gap:6}}>
             <Ico><Bell size={16} color="white" strokeWidth={2.2}/></Ico>
-            Enable reminders so you never miss a dose
+            {t("today.enableReminders")}
           </div>
-          <button className="notif-banner-btn">Enable</button>
+          <button className="notif-banner-btn">{t("today.enable")}</button>
         </div>
       )}
 
@@ -82,7 +84,7 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
         <div style={{margin:"0 20px 14px",background:"linear-gradient(135deg,#FF3B30,#FF6B3A)",borderRadius:16,padding:"16px 18px",color:"white"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Ico><Package size={17} color="white" strokeWidth={2.2}/></Ico>
-            <span style={{fontSize:14,fontWeight:600}}>Low stock alert</span>
+            <span style={{fontSize:14,fontWeight:600}}>{t("today.lowStock")}</span>
           </div>
           {lowStockMeds.map(m => {
             const s = getStockStatus(m, logs);
@@ -92,7 +94,7 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
               </div>
             );
           })}
-          <div style={{fontSize:11,opacity:.7,marginTop:4}}>Tap "Refill" in Meds tab to restock</div>
+          <div style={{fontSize:11,opacity:.7,marginTop:4}}>{t("today.refillSoon")}</div>
         </div>
       )}
 
@@ -112,14 +114,14 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
           <div style={{margin:"0 20px 14px",background:"linear-gradient(135deg,#FF9500,#FF6B00)",borderRadius:16,padding:"16px 18px",color:"white",cursor:"pointer"}} onClick={onNavigateVitals}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
             <Ico><BarChart3 size={17} color="white" strokeWidth={2.2}/></Ico>
-            <span style={{fontSize:14,fontWeight:600}}>Vital check due</span>
+            <span style={{fontSize:14,fontWeight:600}}>{t("today.vitalCheck")}</span>
           </div>
             {dueVitals.map(v => (
               <div key={v.id} style={{fontSize:13,opacity:.95,marginBottom:2,display:"flex",alignItems:"center",gap:6}}>
                 <Ico>{v.icon}</Ico> Time to check your {v.label}
               </div>
             ))}
-            <div style={{fontSize:11,opacity:.7,marginTop:4}}>Tap to log now</div>
+            <div style={{fontSize:11,opacity:.7,marginTop:4}}>{t("today.tapToLog")}</div>
           </div>
         );
       })()}
@@ -128,8 +130,8 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
         <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",cursor:"pointer"}} onClick={onViewVisits}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
             <Ico><Building2 size={17} strokeWidth={2.2} color="var(--t1)"/></Ico>
-            <span style={{fontSize:14,fontWeight:600,color:"var(--t1)",flex:1}}>Upcoming visits</span>
-            <span style={{fontSize:12,color:"var(--teal)",fontWeight:500}}>See all →</span>
+            <span style={{fontSize:14,fontWeight:600,color:"var(--t1)",flex:1}}>{t("today.upcomingVisits")}</span>
+            <span style={{fontSize:12,color:"var(--teal)",fontWeight:500}}>{t("today.seeAll")}</span>
           </div>
           {upcomingVisits.slice(0, 3).map(v => {
             const d = new Date(v.date + "T" + (v.time || "09:00"));
@@ -151,25 +153,25 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
 
       <div style={{padding:"0 20px",marginBottom:14}}>
         <button className="btn" style={{width:"100%",background:"var(--ib5)",color:"var(--t1)",fontWeight:500,fontSize:13,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={onViewVisits}>
-          <Ico><Building2 size={16} strokeWidth={2.2}/></Ico> Schedule a visit
+          <Ico><Building2 size={16} strokeWidth={2.2}/></Ico> {t("today.scheduleVisit")}
         </button>
       </div>
 
       <div className="section">
-        <div className="section-header">Today&apos;s medications</div>
+        <div className="section-header">{t("today.medsTitle")}</div>
         {activeMeds.length===0 ? (
           <div className="empty-state">
             <div className="empty-state-icon"><Ico size={52}><Pill size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div>
-            <div className="empty-state-title">No medications yet</div>
-            <div className="empty-state-sub">Add your first medication to start tracking</div>
-            <button className="btn btn-primary" style={{width:"auto",padding:"12px 24px"}} onClick={onAdd}>+ Add medication</button>
+            <div className="empty-state-title">{t("today.noMeds")}</div>
+            <div className="empty-state-sub">{t("today.noMedsSub")}</div>
+            <button className="btn btn-primary" style={{width:"auto",padding:"12px 24px"}} onClick={onAdd}>{t("today.addMed")}</button>
           </div>
         ) : (
           <div className="list">
             {activeMeds.map(med => {
-              const t = todayLogs.filter(l=>l.medication_id===med.id).length;
+              const taken = todayLogs.filter(l=>l.medication_id===med.id).length;
               const e = exp(med);
-              const done = t>=e;
+              const done = taken>=e;
               const lastLog = logs.filter(l=>l.medication_id===med.id).sort((a,b)=>b.taken_at.localeCompare(a.taken_at))[0];
               const interval = med.dose_interval_hours || 24/med.times_per_day;
               let locked = false;
@@ -190,12 +192,12 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
                   </div>
                   <div className="row-body">
                     <div className="row-title" style={{fontWeight:500}}>{med.name}</div>
-                    <div className="row-sub">{med.dosage_amount} {med.dosage_unit} · {e}× daily</div>
-                    <div className="prog"><div className="prog-fill" style={{width:`${Math.min(t/e,1)*100}%`,background:done?"var(--teal2)":"var(--teal)"}}/></div>
-                    <div style={{fontSize:12,color:"var(--t3)",marginTop:4}}>{t} of {e} doses taken</div>
+                    <div className="row-sub">{med.dosage_amount} {med.dosage_unit} · {e}× {t("meds.daily")}</div>
+                    <div className="prog"><div className="prog-fill" style={{width:`${Math.min(taken/e,1)*100}%`,background:done?"var(--teal2)":"var(--teal)"}}/></div>
+                    <div style={{fontSize:12,color:"var(--t3)",marginTop:4}}>{taken} {t("today.of")} {e} {t("today.dosesTaken2")}</div>
                   </div>
                   <button className={`btn btn-green btn-sm${done?" btn-disabled":""}`} style={{flexShrink:0,opacity:locked?0.6:1}} onClick={()=>onLog(med)} disabled={done||locked}>
-                    {done?"Done ✓":locked?<span style={{display:"flex",alignItems:"center",gap:4}}><Lock size={12} strokeWidth={2.2}/> {lockMsg}</span>:"Log"}
+                    {done?t("btn.done_"):locked?<span style={{display:"flex",alignItems:"center",gap:4}}><Lock size={12} strokeWidth={2.2}/> {lockMsg}</span>:t("btn.log")}
                   </button>
                 </div>
               );
@@ -206,7 +208,7 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
 
       {todayLogs.length>0 && (
         <div className="section">
-          <div className="section-header">Logged today</div>
+          <div className="section-header">{t("today.loggedToday")}</div>
           <div className="list">
             {todayLogs.slice(0,5).map(log=>(
               <div key={log.id} className="row" style={{cursor:"default"}}>

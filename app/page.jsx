@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { sb, fetchProfile } from "@/lib/supabase";
+import { LanguageProvider } from "@/lib/i18n";
 import TransitionScreen from "@/components/TransitionScreen";
 import AuthScreen from "@/components/AuthScreen";
 import Onboarding from "@/components/Onboarding";
@@ -117,18 +118,18 @@ export default function App() {
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 
-  if (screen === "loading")    return <TransitionScreen showMessages={hasSession} />;
+  if (screen === "loading")    return <LanguageProvider><TransitionScreen showMessages={hasSession} /></LanguageProvider>;
   if (screen === "fading")     return (
-    <>
+    <LanguageProvider>
       {destScreen === "app" && user && <MainApp user={user} profile={profile} onSignOut={handleSignOut} />}
       {destScreen === "onboarding" && user && <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />}
       {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("auth")} />}
       <TransitionScreen showMessages={hasSession} fadeOut />
-    </>
+    </LanguageProvider>
   );
-  if (screen === "landing")    return <LandingPage onGetStarted={() => setScreen("auth")} />;
-  if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;
-  if (screen === "onboarding") return <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />;
-  if (!user)                   return <TransitionScreen />;
-  return <MainApp user={user} profile={profile} onSignOut={handleSignOut} />;
+  if (screen === "landing")    return <LanguageProvider><LandingPage onGetStarted={() => setScreen("auth")} /></LanguageProvider>;
+  if (screen === "auth")       return <LanguageProvider><AuthScreen onAuth={handleAuth} /></LanguageProvider>;
+  if (screen === "onboarding") return <LanguageProvider><Onboarding user={user} profile={profile} onDone={handleOnboardDone} /></LanguageProvider>;
+  if (!user)                   return <LanguageProvider><TransitionScreen /></LanguageProvider>;
+  return <LanguageProvider><MainApp user={user} profile={profile} onSignOut={handleSignOut} /></LanguageProvider>;
 }

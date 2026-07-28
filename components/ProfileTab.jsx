@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CSS, Chevron } from "@/lib/constants";
+import { useLang } from "@/lib/i18n";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/notifications";
 import { sb } from "@/lib/supabase";
@@ -34,6 +35,7 @@ function Toggle({ on, onChange, disabled }) {
 }
 
 export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs }) {
+  const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
@@ -56,21 +58,13 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [editLang, setEditLang] = useState(false);
-  const [language, setLanguage] = useState(() => { try { return localStorage.getItem("mt_lang") || "en"; } catch { return "en"; } });
 
   const LANGUAGES = [
     { code:"en", label:"English" },
-    { code:"es", label:"Español" },
     { code:"fr", label:"Français" },
-    { code:"ha", label:"Hausa" },
-    { code:"ig", label:"Igbo" },
-    { code:"yo", label:"Yorùbá" },
     { code:"sw", label:"Kiswahili" },
-    { code:"pt", label:"Português" },
-    { code:"ar", label:"العربية" },
-    { code:"zh", label:"中文" },
   ];
-  const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
+  const currentLang = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0];
   const [showPersonalDetails, setShowPersonalDetails] = useState(false);
   const [personalDetails, setPersonalDetails] = useState(() => {
     try { return JSON.parse(localStorage.getItem("adhera_personal") || "{}"); } catch { return {}; }
@@ -214,9 +208,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
 
   const planMeta = {
-    free:      { label:"Free Plan",            color:"var(--t3)",        badge:"" },
-    pro:       { label:"Pro Plan",          color:"var(--teal)",     badge:"Pro", icon: <Crown size={13} strokeWidth={2.5} color="var(--teal)"/> },
-    family:    { label:"Family Plan",   color:"var(--teal2)",   badge:"Family", icon: <Users size={13} strokeWidth={2.5} color="var(--teal2)"/> },
+    free:      { label:t("profile.freePlan"),            color:"var(--t3)",        badge:"" },
+    pro:       { label:t("profile.proPlan"),          color:"var(--teal)",     badge:"Pro", icon: <Crown size={13} strokeWidth={2.5} color="var(--teal)"/> },
+    family:    { label:t("profile.familyPlan"),   color:"var(--teal2)",   badge:"Family", icon: <Users size={13} strokeWidth={2.5} color="var(--teal2)"/> },
 
   };
   const pm = planMeta[plan] || planMeta.free;
@@ -246,13 +240,13 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   if (editing) return (
     <div className="scroll">
       <style>{CSS}</style>
-      <div className="nav-large" style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:16}}>
-        <span>Edit Profile</span>
-        <button className="nav-action" onClick={saveEdit}>Done</button>
+        <div className="nav-large" style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:16}}>
+          <span>{t("profile.editProfile")}</span>
+          <button className="nav-action" onClick={saveEdit}>{t("btn.done")}</button>
       </div>
 
       <div className="section">
-        <div className="section-header">Avatar</div>
+        <div className="section-header">{t("profile.avatar")}</div>
         <div style={{padding:"0 16px",marginBottom:14}}>
           <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:editData.avatar_url?10:0}}>
             <div style={{width:72,height:72,borderRadius:"50%",background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:34,flexShrink:0,overflow:"hidden",boxShadow:"0 4px 16px rgba(0,0,0,.1)",border:"3px solid var(--card)",transition:"transform .2s"}}>
@@ -260,11 +254,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,justifyContent:"flex-start",display:"flex",alignItems:"center",gap:4}} onClick={() => fileInputRef.current?.click()}>
-                <Ico><Camera size={14} strokeWidth={2.2}/></Ico> {uploading ? "Uploading…" : "Upload photo"}
+                <Ico><Camera size={14} strokeWidth={2.2}/></Ico> {uploading ? t("profile.uploading") : t("profile.uploadPhoto")}
               </button>
               {editData.avatar_url && (
                 <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,color:"var(--red)",borderColor:"rgba(255,59,48,.2)",justifyContent:"flex-start",display:"flex",alignItems:"center",gap:4}} onClick={() => setEditData(p=>({...p,avatar_url:""}))}>
-                  <Ico><Trash2 size={14} strokeWidth={2.2}/></Ico> Remove photo
+                  <Ico><Trash2 size={14} strokeWidth={2.2}/></Ico> {t("profile.removePhoto")}
                 </button>
               )}
             </div>
@@ -284,14 +278,14 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
       <div className="section">
-        <div className="section-header">Name</div>
+        <div className="section-header">{t("profile.name")}</div>
         <div style={{padding:"0 16px"}}>
           <input className="sheet-input" value={editData.full_name} onChange={e=>setEditData(p=>({...p,full_name:e.target.value}))}/>
         </div>
       </div>
 
       <div className="section">
-        <div className="section-header">Schedule</div>
+        <div className="section-header">{t("profile.schedule")}</div>
         <div style={{padding:"0 16px",display:"flex",flexDirection:"column",gap:12}}>
           {[{label:"Wake up time",key:"wake_time"},{label:"Bedtime",key:"sleep_time"}].map(({label,key})=>(
             <div key={key} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 16px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
@@ -303,7 +297,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
       <div className="section">
-        <div className="section-header">Country</div>
+        <div className="section-header">{t("profile.country")}</div>
         <div style={{padding:"0 16px"}}>
           <select className="sheet-input" value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))} style={{width:"100%"}}>
             {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
@@ -312,7 +306,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
       <div className="section">
-        <div className="section-header">Goals</div>
+        <div className="section-header">{t("profile.healthGoals")}</div>
         <div style={{padding:"0 16px",display:"flex",flexDirection:"column",gap:8}}>
           {[
             {icon:<Ico><Pill size={15} strokeWidth={2.2}/></Ico>,label:"Never miss a dose"},
@@ -336,7 +330,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
       <div className="section">
-        <div className="section-header">Theme</div>
+        <div className="section-header">{t("profile.theme")}</div>
         <div className="theme-grid" style={{margin:"0 16px"}}>
           {[
             {id:"blue",  colors:["#007AFF","#0055CC"]},
@@ -360,7 +354,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarUpload}/>
 
       <div style={{padding:"16px"}}>
-        <button className="btn btn-ghost" onClick={()=>setEditing(false)} style={{color:"var(--t3)"}}>Cancel</button>
+        <button className="btn btn-ghost" onClick={()=>setEditing(false)} style={{color:"var(--t3)"}}>{t("btn.cancel")}</button>
       </div>
     </div>
   );
@@ -377,7 +371,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             ) : (
               profile?.avatar_emoji || "😊"
             )}
-            {uploading && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"grid",placeItems:"center",color:"white",fontSize:13,borderRadius:"50%"}}>Uploading...</div>}
+            {uploading && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"grid",placeItems:"center",color:"white",fontSize:13,borderRadius:"50%"}}>{t("profile.uploading")}</div>}
           </div>
           <div onClick={() => fileInputRef.current?.click()}
             style={{position:"absolute",bottom:-2,right:-2,width:30,height:30,borderRadius:"50%",background:"var(--teal)",border:"3px solid var(--card)",display:"grid",placeItems:"center",fontSize:18,color:"white",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.2)",transition:"transform .15s",userSelect:"none",lineHeight:1}}
@@ -392,7 +386,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <span style={{fontSize:13,color:"var(--t3)"}}>{selCountry.flag} {selCountry.name}</span>
         </div>
         <div style={{display:"flex",gap:8,marginTop:6}}>
-          <button className="btn btn-ghost btn-sm" style={{width:"auto",display:"flex",alignItems:"center",gap:4}} onClick={startEdit}><Ico><Pencil size={13} strokeWidth={2.2}/></Ico> Edit profile</button>
+          <button className="btn btn-ghost btn-sm" style={{width:"auto",display:"flex",alignItems:"center",gap:4}} onClick={startEdit}><Ico><Pencil size={13} strokeWidth={2.2}/></Ico> {t("profile.editProfile")}</button>
           <button className="btn btn-ghost btn-sm" style={{width:"auto",display:"flex",alignItems:"center",gap:4}} onClick={() => onSaveProfile({ theme: (profile?.theme || "blue") === "dark" ? "blue" : "dark" })}>
             {(profile?.theme || "blue") === "dark" ? <><Ico><Sun size={13} strokeWidth={2.2}/></Ico> Light</> : <><Ico><Moon size={13} strokeWidth={2.2}/></Ico> Dark</>}
           </button>
@@ -412,7 +406,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       {profile?.goals?.length > 0 && (
       <div className="section" style={{marginBottom:16}}>
-        <div className="section-header">Health goals</div>
+        <div className="section-header">{t("profile.healthGoals")}</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"0 16px"}}>
             {profile.goals.map(g => <span key={g} className="tag">{g}</span>)}
           </div>
@@ -421,8 +415,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       {plan === "free" ? (
         <div className="upgrade-card" style={{margin:"0 20px 20px"}}>
-          <div className="upgrade-title" style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>Unlock Pro <Ico><Sparkles size={16} strokeWidth={2.2} color="var(--orange)"/></Ico></div>
-          <div className="upgrade-sub">Unlimited medications, caregiver sharing, adherence reports and more.</div>
+          <div className="upgrade-title" style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>{t("profile.unlockPro")} <Ico><Sparkles size={16} strokeWidth={2.2} color="var(--orange)"/></Ico></div>
+          <div className="upgrade-sub">{t("profile.unlimitedMedsAd")}</div>
           <div className="upgrade-features">
             {["Unlimited medications","Full history","Refill reminders","Adherence reports","Drug interaction check"].map(f => (
               <div key={f} className="upgrade-feature"><span>✓</span> {f}</div>
@@ -440,7 +434,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
       ) : (
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">Your plan includes</div>
+      <div className="section-header">{t("profile.yourPlanIncludes")}</div>
           <div className="list">
             {[,
                [<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Unlimited medications","No cap on medications"],
@@ -455,7 +449,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           </div>
           <div style={{padding:"10px 4px"}}>
             <button className="btn btn-ghost" style={{border:"1.5px solid var(--sep)"}} onClick={() => setShowUpgrade(true)}>
-              {plan === "pro" ? "Upgrade to Family →" : "Manage subscription →"}
+              {plan === "pro" ? t("profile.upgradeToFamily") : t("profile.manageSubscription")}
             </button>
           </div>
         </div>
@@ -463,23 +457,23 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       {plan === "family" && (
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}><Ico><Users size={15} strokeWidth={2.2} color="var(--t1)"/></Ico> Family dashboard</div>
+      <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}><Ico><Users size={15} strokeWidth={2.2} color="var(--t1)"/></Ico> {t("profile.familyDashboard")}</div>
           <div className="list">
-            <Row icon={<Ico><User size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Primary member" sub={profile?.full_name || user?.email}/>
-            <Row icon={<Ico><UserPlus size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib4)" title="Add family member" sub="Invite via email to link profiles" onClick={() => setShowAddMember(true)}/>
-            <Row icon={<Ico><BarChart3 size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Shared compliance view" sub="See everyone's adherence at a glance"/>
-            <Row icon={<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Caregiver notifications" sub="Alerts when loved ones miss doses"/>
+            <Row icon={<Ico><User size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title={t("profile.primaryMember")} sub={profile?.full_name || user?.email}/>
+            <Row icon={<Ico><UserPlus size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib4)" title={t("profile.addFamilyMember")} sub={t("profile.inviteViaEmail")} onClick={() => setShowAddMember(true)}/>
+            <Row icon={<Ico><BarChart3 size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title={t("profile.sharedCompliance")} sub={t("profile.seeAdherence")}/>
+            <Row icon={<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title={t("profile.caregiverNotif")} sub={t("profile.alertsMissed")}/>
           </div>
         </div>
       )}
 
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">Notifications & Schedule</div>
+      <div className="section-header">{t("profile.notifications")}</div>
         <div className="list">
           <Row
             icon={<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)"
             title="Push notifications"
-            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? "Blocked — enable in Settings" : notifPerm==="unsupported" ? "Add to home screen to enable" : "Tap to enable" : "Alarms & reminders on"}
+            sub={!notifOn || notifPerm !== "granted" ? notifPerm==="denied" ? t("profile.notifDenied") : notifPerm==="unsupported" ? t("profile.notifUnsupported") : t("profile.notifSub") : t("profile.notifOn")}
           >
             <Toggle on={notifOn && notifPerm === "granted"} onChange={notifPerm === "denied" ? undefined : enableNotifs} disabled={notifPerm === "denied"}/>
           </Row>
@@ -515,8 +509,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           ) : null}
           <Row
             icon={<Ico><ClipboardList size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)"
-            title="Health condition"
-            sub={profile?.condition || "Not set"}
+            title={t("profile.healthCondition")}
+            sub={profile?.condition || t("profile.notSet")}
             onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(true);}}
           />
           {editCondition ? (
@@ -537,7 +531,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             <>
               <div className="row" style={{cursor:"default"}}>
                 <div className="row-icon" style={{background:"var(--ib1)"}}><Ico><Timer size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
-                <div className="row-body"><div className="row-title">Reminder before dose</div><div className="row-sub">Get notified before each scheduled dose</div></div>
+                <div className="row-body"><div className="row-title">{t("profile.reminderBeforeDose")}</div><div className="row-sub">{t("profile.getNotified")}</div></div>
                 <div style={{position:"relative",flexShrink:0}}>
                   <select
                     value={reminderLead}
@@ -555,7 +549,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               </div>
               <div className="row" style={{cursor:"pointer"}} onClick={() => { stopAlarmSound(); testAlarm(); }}>
                 <div className="row-icon" style={{background:"var(--ib3)"}}><Ico><Volume2 size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
-                <div className="row-body"><div className="row-title">Test alarm</div><div className="row-sub">Play test notification & sound</div></div>
+                <div className="row-body"><div className="row-title">{t("profile.testAlarm")}</div><div className="row-sub">{t("profile.playTest")}</div></div>
                 <span style={{fontSize:16,color:"var(--t3)"}}>▶</span>
               </div>
             </>
@@ -564,20 +558,20 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">Personal details</div>
+      <div className="section-header">{t("profile.personalDetails")}</div>
         <div className="list">
-          <Row icon={<Ico><Cake size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Age & demographics" sub={personalDetails.age ? `${personalDetails.age} years old` : "Add your age"} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Ruler size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title="Height & weight" sub={personalDetails.height ? `${personalDetails.height} cm · ${personalDetails.weight || "—"} kg` : "Add measurements"} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Blood type" sub={personalDetails.blood_type || "Not set"} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={personalDetails.allergies || "None recorded"} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={personalDetails.emergency_name || "Not set"} onClick={()=>setShowPersonalDetails(true)}/>
+          <Row icon={<Ico><Cake size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title={t("profile.ageDemo")} sub={personalDetails.age ? t("profile.yearsOld", {n: personalDetails.age}) : t("profile.addAge")} onClick={()=>setShowPersonalDetails(true)}/>
+          <Row icon={<Ico><Ruler size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title={t("profile.heightWeight")} sub={personalDetails.height ? `${personalDetails.height} cm · ${personalDetails.weight || "—"} kg` : t("profile.addMeasurements")} onClick={()=>setShowPersonalDetails(true)}/>
+          <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title={t("profile.bloodType")} sub={personalDetails.blood_type || t("profile.notSet")} onClick={()=>setShowPersonalDetails(true)}/>
+          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title={t("profile.allergies")} sub={personalDetails.allergies || t("profile.noneRecorded")} onClick={()=>setShowPersonalDetails(true)}/>
+          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title={t("profile.emergencyContact")} sub={personalDetails.emergency_name || t("profile.notSet")} onClick={()=>setShowPersonalDetails(true)}/>
         </div>
       </div>
 
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">Account</div>
+      <div className="section-header">{t("profile.account")}</div>
         <div className="list">
-          <Row icon={<Ico><Mail size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Email" sub={user?.email}/>
+          <Row icon={<Ico><Mail size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title={t("profile.email")} sub={user?.email}/>
 
           {editCountryPick ? (
             <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
@@ -601,26 +595,26 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
               <div className="row-icon" style={{background:"var(--ib2)",marginTop:2}}><Ico><Languages size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
               <div className="row-body" style={{flex:"1",minWidth:200}}>
-                <div className="row-title">Language</div>
-                <select className="sheet-input" value={language} onChange={e=>{const v=e.target.value; setLanguage(v); try{localStorage.setItem("mt_lang",v);}catch{} setEditLang(false);}}
+                <div className="row-title">{t("profile.language")}</div>
+                <select className="sheet-input" value={lang} onChange={e=>{const v=e.target.value; setLang(v); setEditLang(false);}}
                   style={{marginTop:8,fontSize:14}} autoFocus>
                   {LANGUAGES.map(l=><option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
               </div>
               <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
-                <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditLang(false)}>Cancel</button>
+                <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditLang(false)}>{t("btn.cancel")}</button>
               </div>
             </div>
           ) : (
-            <Row icon={<Ico><Languages size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title="Language" sub={currentLang.label} onClick={()=>setEditLang(true)}/>
+            <Row icon={<Ico><Languages size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title={t("profile.language")} sub={currentLang.label} onClick={()=>setEditLang(true)}/>
           )}
 
-          <Row icon={<Ico><LogOut size={18} strokeWidth={2} color="var(--red)"/></Ico>} bg="var(--ib6)" title={<span style={{color:"var(--red)"}}>Sign out</span>} onClick={onSignOut}/>
+            <Row icon={<Ico><LogOut size={18} strokeWidth={2} color="var(--red)"/></Ico>} bg="var(--ib6)" title={<span style={{color:"var(--red)"}}>{t("profile.signOut")}</span>} onClick={onSignOut}/>
         </div>
       </div>
 
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">About</div>
+      <div className="section-header">{t("profile.about")}</div>
         <div className="list">
           <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version 1.0.1</div></div></div>
           <div className="row" onClick={()=>setShowPrivacy(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Privacy Policy</div></div><Chevron/></div>
@@ -629,21 +623,21 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">Privacy & Data</div>
+      <div className="section-header">{t("profile.privacyData")}</div>
         <div className="list">
           <div className="row" onClick={() => exportData("json")} style={{cursor:"pointer"}}>
             <div className="row-icon" style={{background:"var(--ib1)"}}><Ico><Download size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
-            <div className="row-body"><div className="row-title">Export data (JSON)</div><div className="row-sub">Download all your medication & dose data</div></div>
+            <div className="row-body"><div className="row-title">{t("profile.exportJson")}</div><div className="row-sub">{t("profile.exportJsonSub")}</div></div>
             <Chevron/>
           </div>
           <div className="row" onClick={() => exportData("csv")} style={{cursor:"pointer"}}>
             <div className="row-icon" style={{background:"var(--ib2)"}}><Ico><FileSpreadsheet size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
-            <div className="row-body"><div className="row-title">Export data (CSV)</div><div className="row-sub">Spreadsheet-friendly format for your records</div></div>
+            <div className="row-body"><div className="row-title">{t("profile.exportCsv")}</div><div className="row-sub">{t("profile.exportCsvSub")}</div></div>
             <Chevron/>
           </div>
           <div className="row" onClick={() => setShowDeleteAccount(true)} style={{cursor:"pointer"}}>
             <div className="row-icon" style={{background:"var(--ib6)"}}><Ico><Trash2 size={18} strokeWidth={2} color="var(--red)"/></Ico></div>
-            <div className="row-body"><div className="row-title" style={{color:"var(--red)"}}>Delete account</div><div className="row-sub">Permanently remove all your data</div></div>
+            <div className="row-body"><div className="row-title" style={{color:"var(--red)"}}>{t("profile.deleteAccount")}</div><div className="row-sub">{t("profile.deleteAccountSub")}</div></div>
             <Chevron/>
           </div>
         </div>
@@ -677,19 +671,19 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div className="sheet-handle"/>
               <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
                 <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><ShieldAlert size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
-                <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Delete your account?</div>
+                <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>{t("profile.deleteTitle")}</div>
                 <div style={{fontSize:14,color:"var(--t3)",lineHeight:1.6,marginBottom:20}}>
-                  This will permanently delete all your medications, dose history, and profile data. This action cannot be undone.
+                  {t("profile.deleteDesc")}
                 </div>
                 <div style={{marginBottom:16,textAlign:"left"}}>
-                  <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Type your email to confirm</div>
+                  <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>{t("profile.typeEmail")}</div>
                   <input className="sheet-input" type="email" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)}
                     placeholder={user?.email} style={{fontSize:14}}/>
                 </div>
                 <div className="sheet-actions" style={{gap:8}}>
                   <button className="btn" onClick={handleDeleteAccount} disabled={deleteConfirm !== user?.email}
                     style={{flex:1,background:"var(--red)",color:"white",opacity:deleteConfirm===user?.email?1:0.5}}>
-                    Delete permanently
+                    {t("profile.deletePermanently")}
                   </button>
                   <button className="btn btn-ghost" onClick={() => { setShowDeleteAccount(false); setDeleteConfirm(""); }}>Cancel</button>
                 </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
+import { useLang } from "@/lib/i18n";
 import { calcStreak, TIER_LIMITS } from "@/lib/data";
 import AdherenceChart from "@/components/AdherenceChart";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
@@ -13,6 +14,7 @@ function Ico({ children, ...props }) {
 }
 
 export default function ReportsTab({ logs, meds, plan, onNavigate, onViewFamily }) {
+  const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntries, setJournalEntries] = useState([]);
@@ -476,18 +478,18 @@ ${limits.reports ? `
 
   return (
     <div className="scroll">
-      <div className="nav-large">Reports</div>
+      <div className="nav-large">{t("reports.title")}</div>
 
       <div className="chips">
-        <div className="chip blue"><div className="chip-val">{daysTracked}</div><div className="chip-lbl">Days tracked</div></div>
-        <div className="chip green"><div className="chip-val">{adherence}%</div><div className="chip-lbl">Adherence</div></div>
-        <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">Best streak</div></div>
+        <div className="chip blue"><div className="chip-val">{daysTracked}</div><div className="chip-lbl">{t("reports.daysTracked")}</div></div>
+        <div className="chip green"><div className="chip-val">{adherence}%</div><div className="chip-lbl">{t("reports.adherenceRate")}</div></div>
+        <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">{t("reports.bestStreak")}</div></div>
       </div>
 
       <div className="section">
-        <div className="section-header">Adherence by medication</div>
+        <div className="section-header">{t("reports.adherenceByMed")}</div>
         {meds.length === 0 ? (
-          <div className="empty-state"><div className="empty-state-icon"><Ico><BarChart3 size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div><div className="empty-state-title">No data yet</div><div className="empty-state-sub">Add medications and log doses to see reports</div></div>
+          <div className="empty-state"><div className="empty-state-icon"><Ico><BarChart3 size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div><div className="empty-state-title">{t("reports.noData")}</div><div className="empty-state-sub">{t("reports.noDataSub")}</div></div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {pm.map((m,i)=> <AdherenceCard key={m.id} m={m} index={i}/>)}

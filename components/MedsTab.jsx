@@ -1,6 +1,7 @@
 "use client";
 
 import { CSS, fmtDate } from "@/lib/constants";
+import { useLang } from "@/lib/i18n";
 import { TIER_LIMITS } from "@/lib/data";
 import { useState } from "react";
 import InteractionChecker from "@/components/InteractionChecker";
@@ -18,6 +19,7 @@ function rem(med, logs) {
 }
 
 export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill, plan, medCount }) {
+  const { t } = useLang();
   const [showChecker, setShowChecker] = useState(false);
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
@@ -43,29 +45,33 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
             <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>{med.name}</div>
             <div style={{fontSize:14,color:"var(--t3)"}}>{med.dosage_amount} {med.dosage_unit} · {exp}× daily</div>
           </div>
-          <span className={`badge ${isActive?"badge-green":"badge-gray"}`}>{isActive?"Active":"Ended"}</span>
+          <span className={`badge ${isActive?"badge-green":"badge-gray"}`}>{isActive?t("meds.active"):t("meds.completed")}</span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
-          {[["Course",`${med.course_duration_days}d`],["Taken today",`${takenToday}/${exp}`],["Ends",fmtDate(endDate.toISOString())]].map(([l,v])=>(
+          {[
+            [t("meds.course"),`${med.course_duration_days}d`],
+            [t("meds.takenToday"),`${takenToday}/${exp}`],
+            [t("meds.ends"),fmtDate(endDate.toISOString())]
+          ].map(([l,v])=>(
             <div key={l} style={{background:"var(--bg)",borderRadius:10,padding:"8px 10px"}}>
               <div style={{fontSize:11,color:"var(--t3)",fontWeight:500,marginBottom:2}}>{l}</div>
               <div style={{fontSize:14,fontWeight:600}}>{v}</div>
             </div>
           ))}
         </div>
-        <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>Day {prog} of {med.course_duration_days}</div>
+        <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{t("meds.day")} {prog} {t("meds.of")} {med.course_duration_days}</div>
         <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
         {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8,display:"flex",alignItems:"center",gap:5}}><Ico><FileText size={14} strokeWidth={2.2}/></Ico> {med.notes}</div>}
         {remaining !== null && (
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:13}}>
-            <span style={{color:lowStock?"var(--red)":"var(--teal2)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Ico><Package size={14} strokeWidth={2.2}/></Ico> {remaining} remaining</span>
-            {lowStock && <span style={{color:"var(--red)",fontWeight:500}}>· Refill soon!</span>}
-            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11,display:"flex",alignItems:"center",gap:4}} onClick={()=>onRefill(med.id)}><Ico><Plus size={13} strokeWidth={2.5}/></Ico> Refill</button>
+            <span style={{color:lowStock?"var(--red)":"var(--teal2)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Ico><Package size={14} strokeWidth={2.2}/></Ico> {remaining} {t("meds.remaining")}</span>
+            {lowStock && <span style={{color:"var(--red)",fontWeight:500}}>· {t("meds.refillSoon")}</span>}
+            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11,display:"flex",alignItems:"center",gap:4}} onClick={()=>onRefill(med.id)}><Ico><Plus size={13} strokeWidth={2.5}/></Ico> {t("meds.refill")}</button>
           </div>
         )}
         <div style={{display:"flex",gap:8,marginTop:12}}>
-          <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>onEdit(med)}>Edit</button>
-          <button className="btn btn-sm" style={{flex:1,background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={()=>onDelete(med.id)}>Delete</button>
+          <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>onEdit(med)}>{t("meds.edit")}</button>
+          <button className="btn btn-sm" style={{flex:1,background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={()=>onDelete(med.id)}>{t("meds.delete")}</button>
         </div>
       </div>
     );
@@ -74,44 +80,44 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
   return (
     <div className="scroll">
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:4}}>
-        <div className="nav-large" style={{paddingBottom:4}}>Medications</div>
+        <div className="nav-large" style={{paddingBottom:4}}>{t("meds.title")}</div>
         <button className="nav-action" onClick={onAdd} style={{fontSize:28,lineHeight:1}}>＋</button>
       </div>
 
       <div className="chips">
-        <div className="chip blue"><div className="chip-val">{meds.length}</div><div className="chip-lbl">Total</div></div>
-        <div className="chip green"><div className="chip-val">{active.length}</div><div className="chip-lbl">Active</div></div>
-        <div className="chip"><div className="chip-val">{ended.length}</div><div className="chip-lbl">Completed</div></div>
+        <div className="chip blue"><div className="chip-val">{meds.length}</div><div className="chip-lbl">{t("meds.total")}</div></div>
+        <div className="chip green"><div className="chip-val">{active.length}</div><div className="chip-lbl">{t("meds.active")}</div></div>
+        <div className="chip"><div className="chip-val">{ended.length}</div><div className="chip-lbl">{t("meds.completed")}</div></div>
       </div>
 
       {plan==="free" && (
         <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>Medication limit</span>
-            <span style={{fontSize:13,fontWeight:600,color:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}>{medCount}/{limits.maxMeds} used</span>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>{t("meds.medLimit")}</span>
+            <span style={{fontSize:13,fontWeight:600,color:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}>{medCount}/{limits.maxMeds} {t("meds.used")}</span>
           </div>
           <div className="prog"><div className="prog-fill" style={{width:`${Math.min(medCount/limits.maxMeds,1)*100}%`,background:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}/></div>
-          {medCount>=limits.maxMeds && <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>Upgrade to Pro for unlimited medications.</div>}
+          {medCount>=limits.maxMeds && <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>{t("meds.upgradeForUnlimited")}</div>}
         </div>
       )}
 
       {active.length>0&&limits.interactionCheck&&(
         <div style={{padding:"0 20px",marginBottom:14}}>
           <button className="btn" style={{width:"100%",background:"var(--ib5)",color:"var(--t1)",fontWeight:500,fontSize:13,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>setShowChecker(true)}>
-            <Ico><AlertTriangle size={16} strokeWidth={2.2}/></Ico> Check drug interactions ({meds.length} medication{meds.length!==1?"s":""})
+            <Ico><AlertTriangle size={16} strokeWidth={2.2}/></Ico> {t("meds.checkInteractions", {n: meds.length, s: meds.length!==1?"s":""})}
           </button>
         </div>
       )}
 
       {showChecker&&<InteractionChecker meds={meds} onClose={()=>setShowChecker(false)}/>}
 
-      {active.length>0&&<div className="section"><div className="section-header">Active</div>{active.map(m=><MedCard key={m.id} med={m}/>)}</div>}
-      {ended.length>0&&<div className="section"><div className="section-header">Completed</div>{ended.map(m=><MedCard key={m.id} med={m}/>)}</div>}
+      {active.length>0&&<div className="section"><div className="section-header">{t("meds.activeSection")}</div>{active.map(m=><MedCard key={m.id} med={m}/>)}</div>}
+      {ended.length>0&&<div className="section"><div className="section-header">{t("meds.completedSection")}</div>{ended.map(m=><MedCard key={m.id} med={m}/>)}</div>}
       {meds.length===0&&(
         <div className="empty-state" style={{paddingTop:60}}>
           <div className="empty-state-icon"><Ico><Pill size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div>
-          <div className="empty-state-title">No medications yet</div>
-          <div className="empty-state-sub">Tap + to add your first medication</div>
+          <div className="empty-state-title">{t("meds.noMeds")}</div>
+          <div className="empty-state-sub">{t("meds.noMedsSub")}</div>
         </div>
       )}
     </div>

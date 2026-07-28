@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useLang } from "@/lib/i18n";
 
 const VITAL_TYPES = [
   { id:"blood_pressure", label:"Blood Pressure", icon:"🩺", unit:"mmHg", secondaryLabel:"Systolic / Diastolic", color:"#FF3B30", normal:{min:90,max:120}, normalDiastolic:{min:60,max:80}, hasSecondary:true, placeholderA:"120", placeholderB:"80" },
@@ -77,6 +78,7 @@ function MiniSparkline({ data, color, width = 120, height = 32 }) {
 }
 
 function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
+  const { t } = useLang();
   const latest = entries[0];
   const status = latest ? getStatus(latest) : null;
   const recent7 = entries.slice(0, 7).reverse();
@@ -129,7 +131,7 @@ function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
               color:statusColor(status),
               fontSize:12,fontWeight:600,
             }}>
-              {status === "normal" ? "Normal" : status === "high" ? "High" : "Low"}
+          {status === "normal" ? t("vitals.normal") : status === "high" ? t("vitals.high") : t("vitals.low")}
             </div>
           )}
         </div>
@@ -145,13 +147,14 @@ function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
         fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
         transition:"all .15s",
       }}>
-        + Log {vitalType.label}
+        + {t("btn.log")} {vitalType.label}
       </button>
     </div>
   );
 }
 
 function LogSheet({ vitalType, onSave, onClose }) {
+  const { t } = useLang();
   const [valA, setValA] = useState("");
   const [valB, setValB] = useState("");
   const [notes, setNotes] = useState("");
@@ -180,36 +183,36 @@ function LogSheet({ vitalType, onSave, onClose }) {
               {vitalType.icon}
             </div>
             <div>
-              <div style={{fontSize:18,fontWeight:700,color:"var(--t1)"}}>Log {vitalType.label}</div>
-              <div style={{fontSize:13,color:"var(--t3)"}}>{vitalType.normal.min}–{vitalType.normal.max} {vitalType.unit} is normal</div>
+              <div style={{fontSize:18,fontWeight:700,color:"var(--t1)"}}>{t("btn.log")} {vitalType.label}</div>
+              <div style={{fontSize:13,color:"var(--t3)"}}>{vitalType.normal.min}–{vitalType.normal.max} {vitalType.unit} {t("vitals.isNormal")}</div>
             </div>
           </div>
 
           {vitalType.hasSecondary ? (
             <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center",marginBottom:14}}>
               <div>
-                <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Systolic</div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>{t("vitals.systolic")}</div>
                 <input className="sheet-input" type="number" inputMode="decimal" placeholder={vitalType.placeholderA}
                   value={valA} onChange={e => setValA(e.target.value)} style={{fontSize:20,fontWeight:700,textAlign:"center",padding:"16px 12px"}}/>
               </div>
               <div style={{fontSize:24,fontWeight:300,color:"var(--t4)",paddingTop:20}}>/</div>
               <div>
-                <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Diastolic</div>
+                <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>{t("vitals.diastolic")}</div>
                 <input className="sheet-input" type="number" inputMode="decimal" placeholder={vitalType.placeholderB}
                   value={valB} onChange={e => setValB(e.target.value)} style={{fontSize:20,fontWeight:700,textAlign:"center",padding:"16px 12px"}}/>
               </div>
             </div>
           ) : (
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Value ({vitalType.unit})</div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>{t("vitals.value")} ({vitalType.unit})</div>
               <input className="sheet-input" type="number" inputMode="decimal" placeholder={vitalType.placeholderA}
                 value={valA} onChange={e => setValA(e.target.value)} style={{fontSize:28,fontWeight:700,textAlign:"center",padding:"20px 12px",letterSpacing:-.5}}/>
             </div>
           )}
 
           <div style={{marginBottom:16}}>
-            <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Notes (optional)</div>
-            <textarea className="sheet-input" rows={2} placeholder="How are you feeling?"
+            <div style={{fontSize:12,color:"var(--t3)",marginBottom:6,fontWeight:500}}>{t("vitals.notes")}</div>
+            <textarea className="sheet-input" rows={2} placeholder={t("vitals.howFeeling")}
               value={notes} onChange={e => setNotes(e.target.value)} style={{resize:"none",fontSize:16,background:"var(--bg)"}}/>
           </div>
 
@@ -217,9 +220,9 @@ function LogSheet({ vitalType, onSave, onClose }) {
             width:"100%",marginBottom:8,
             background:vitalType.color,opacity:!valA || saving ? .6 : 1,
           }}>
-            {saving ? "Saving…" : "Save Reading"}
+            {saving ? t("vitals.saving") : t("vitals.saveReading")}
           </button>
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t("vitals.cancel")}</button>
         </div>
       </div>
     </div>
@@ -227,6 +230,7 @@ function LogSheet({ vitalType, onSave, onClose }) {
 }
 
 function HistorySheet({ vitalType, entries, onClose }) {
+  const { t } = useLang();
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
@@ -236,11 +240,11 @@ function HistorySheet({ vitalType, entries, onClose }) {
             <div style={{width:36,height:36,borderRadius:10,background:`${vitalType.color}12`,display:"grid",placeItems:"center",fontSize:18}}>
               {vitalType.icon}
             </div>
-            <div style={{fontSize:18,fontWeight:700,color:"var(--t1)"}}>{vitalType.label} History</div>
+            <div style={{fontSize:18,fontWeight:700,color:"var(--t1)"}}>{vitalType.label} {t("vitals.historyTitle")}</div>
           </div>
 
           {entries.length === 0 ? (
-            <div style={{textAlign:"center",padding:"32px 0",color:"var(--t3)",fontSize:14}}>No readings yet</div>
+            <div style={{textAlign:"center",padding:"32px 0",color:"var(--t3)",fontSize:14}}>{t("vitals.noReadings")}</div>
           ) : (
             <div className="list">
               {entries.map(e => {
@@ -265,7 +269,7 @@ function HistorySheet({ vitalType, entries, onClose }) {
             </div>
           )}
 
-          <button className="btn btn-ghost" style={{marginTop:16}} onClick={onClose}>Close</button>
+          <button className="btn btn-ghost" style={{marginTop:16}} onClick={onClose}>{t("btn.close")}</button>
         </div>
       </div>
     </div>
@@ -278,10 +282,10 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
       <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
-          <div style={{fontSize:18,fontWeight:700,marginBottom:16}}>Configure Vitals</div>
+        <div style={{fontSize:18,fontWeight:700,marginBottom:16}}>{t("vitals.configureTitle")}</div>
 
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:10}}>Track these vitals:</div>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:10}}>{t("vitals.trackThese")}</div>
             {VITAL_TYPES.map(vt => {
               const isOn = enabled.includes(vt.id);
               return (
@@ -310,7 +314,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
           </div>
 
           <div>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:10}}>Default logging frequency:</div>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:10}}>{t("vitals.defaultFreq")}</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {FREQUENCIES.map(f => (
                 <div key={f.id} onClick={() => onFrequency(f.id)} style={{
@@ -327,8 +331,8 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
           </div>
 
           <div style={{marginTop:20}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:6}}>Reminder intervals</div>
-            <div style={{fontSize:12,color:"var(--t3)",marginBottom:10}}>Set how often you want to be reminded to check your vitals.</div>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:6}}>{t("vitals.reminderIntervals")}</div>
+            <div style={{fontSize:12,color:"var(--t3)",marginBottom:10}}>{t("vitals.setReminder")}</div>
             {["blood_pressure","glucose"].map(vtId => {
               const vt = VITAL_TYPES.find(v => v.id === vtId);
               const rem = vitalReminders[vtId] || { intervalId:"off" };
@@ -356,7 +360,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
             })}
           </div>
 
-          <button className="btn btn-ghost" style={{marginTop:16}} onClick={onClose}>Done</button>
+          <button className="btn btn-ghost" style={{marginTop:16}} onClick={onClose}>{t("vitals.done")}</button>
         </div>
       </div>
     </div>
@@ -364,6 +368,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
 }
 
 export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
+  const { t } = useLang();
   const [logType, setLogType] = useState(null);
   const [historyType, setHistoryType] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
@@ -411,27 +416,27 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
         <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
         <div style={{position:"absolute",bottom:-30,left:-10,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
         <div style={{position:"relative",zIndex:1}}>
-          <div style={{fontSize:13,fontWeight:500,opacity:.8,marginBottom:4}}>Vitals Overview</div>
+          <div style={{fontSize:13,fontWeight:500,opacity:.8,marginBottom:4}}>{t("vitals.overview")}</div>
           <div style={{display:"flex",gap:20,alignItems:"flex-end"}}>
             <div>
               <div style={{fontSize:34,fontWeight:700,letterSpacing:-.8,lineHeight:1}}>{todayReadings}</div>
-              <div style={{fontSize:12,opacity:.7,marginTop:2}}>readings today</div>
+              <div style={{fontSize:12,opacity:.7,marginTop:2}}>{t("vitals.readingsToday")}</div>
             </div>
             <div style={{flex:1}}>
-              <div style={{fontSize:13,opacity:.7}}>{enabled.length} vitals tracked</div>
-              <div style={{fontSize:13,opacity:.7}}>{totalReadings} total readings</div>
+              <div style={{fontSize:13,opacity:.7}}>{enabled.length} {t("vitals.tracked")}</div>
+              <div style={{fontSize:13,opacity:.7}}>{totalReadings} {t("vitals.totalReadings")}</div>
             </div>
           </div>
         </div>
       </div>
 
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 16px 8px"}}>
-        <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>Tracked Vitals</div>
+        <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>{t("vitals.trackedVitals")}</div>
         <button onClick={() => setShowConfig(true)} style={{
           background:"none",border:"none",color:"var(--teal)",fontSize:13,fontWeight:600,
           cursor:"pointer",fontFamily:"inherit",padding:"4px 8px",
         }}>
-          Configure
+          {t("vitals.configure")}
         </button>
       </div>
 
@@ -439,9 +444,9 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
         {enabled.length === 0 ? (
           <div style={{textAlign:"center",padding:"48px 24px",color:"var(--t3)"}}>
             <div style={{fontSize:48,marginBottom:12}}>📊</div>
-            <div style={{fontSize:17,fontWeight:600,color:"var(--t2)",marginBottom:6}}>No vitals configured</div>
-            <div style={{fontSize:14,marginBottom:20}}>Tap Configure to start tracking vitals</div>
-            <button className="btn btn-primary" style={{width:"auto",padding:"12px 24px"}} onClick={() => setShowConfig(true)}>Configure Vitals</button>
+            <div style={{fontSize:17,fontWeight:600,color:"var(--t2)",marginBottom:6}}>{t("vitals.noConfigured")}</div>
+            <div style={{fontSize:14,marginBottom:20}}>{t("vitals.tapConfigure")}</div>
+            <button className="btn btn-primary" style={{width:"auto",padding:"12px 24px"}} onClick={() => setShowConfig(true)}>{t("vitals.configureVitals")}</button>
           </div>
         ) : (
           enabled.map((id, i) => {
