@@ -124,7 +124,14 @@ export default function App() {
   }, [screen]);
 
   if (screen === "loading")    return <TransitionScreen showMessages={hasSession} />;
-  if (screen === "fading")     return <TransitionScreen showMessages={hasSession} fadeOut />;
+  if (screen === "fading")     return (
+    <>
+      {destScreen === "app" && user && <MainApp user={user} profile={profile} onSignOut={handleSignOut} />}
+      {destScreen === "onboarding" && user && <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />}
+      {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("transition")} />}
+      <TransitionScreen showMessages={hasSession} fadeOut />
+    </>
+  );
   if (screen === "landing")    return <LandingPage onGetStarted={() => setScreen("transition")} />;
   if (screen === "transition") return <TransitionScreen />;
   if (screen === "auth")       return <AuthScreen onAuth={handleAuth} />;

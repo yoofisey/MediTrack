@@ -305,27 +305,49 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   ];
 
   if (loading) return (
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--bg)",animation:"fadeIn .4s ease both"}}>
+    <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
-      <div style={{position:"relative",marginBottom:24,animation:"logoPop .7s cubic-bezier(.175,.885,.32,1.275) both"}}>
-        <div style={{position:"absolute",inset:-36,borderRadius:"50%",background:"radial-gradient(circle,rgba(0,122,255,.1) 0%,transparent 60%)",animation:"logoBreathe 3s ease-in-out infinite"}}/>
-        <div style={{position:"absolute",inset:-6,borderRadius:"50%",border:"1.5px solid transparent",borderTopColor:"rgba(0,122,255,.15)",borderRightColor:"rgba(0,122,255,.06)",animation:"ringRotate 4s linear infinite"}}/>
-        <div style={{position:"absolute",inset:-2,borderRadius:"50%",border:"1px solid transparent",borderBottomColor:"rgba(0,122,255,.1)",borderLeftColor:"rgba(0,122,255,.05)",animation:"ringRotate 6s linear infinite reverse"}}/>
-        <div style={{width:80,height:80,borderRadius:24,background:"rgba(0,122,255,.06)",border:"0.5px solid rgba(0,122,255,.1)",display:"grid",placeItems:"center",boxShadow:"0 0 0 1px rgba(0,122,255,.04) inset,0 4px 20px rgba(0,122,255,.08),0 8px 32px rgba(0,0,0,.04),0 0 40px rgba(0,122,255,.06)",position:"relative",zIndex:1}}>
-          <svg viewBox="0 0 48 48" width="40" height="40">
-            <rect x="17" y="4" width="14" height="40" rx="5" fill="var(--teal)"/>
-            <rect x="4" y="17" width="40" height="14" rx="5" fill="var(--teal)"/>
-          </svg>
+      <div className="scroll" style={{paddingTop:0}}>
+        <div className="skel-hero">
+          <div className="skel-line skel-pulse" style={{width:"40%",height:14,marginBottom:14}}/>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div>
+              <div className="skel-line skel-pulse" style={{width:90,height:42,marginBottom:8}}/>
+              <div className="skel-line skel-pulse" style={{width:110,height:14}}/>
+            </div>
+            <div className="skel-line skel-pulse" style={{width:72,height:72,borderRadius:"50%"}}/>
+          </div>
+          <div style={{display:"flex",gap:10,marginTop:22}}>
+            {[1,2,3].map(i => (
+              <div key={i} style={{flex:1,background:"var(--hover)",borderRadius:16,padding:"14px 8px",textAlign:"center"}}>
+                <div className="skel-line skel-pulse" style={{width:32,height:20,margin:"0 auto 6px"}}/>
+                <div className="skel-line skel-pulse" style={{width:48,height:10,margin:"0 auto"}}/>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="section">
+          <div className="list">
+            {[1,2,3].map(i => (
+              <div key={i} className="row" style={{cursor:"default"}}>
+                <div className="skel-line skel-pulse" style={{width:36,height:36,borderRadius:10,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="skel-line skel-pulse" style={{width:`${50 + i * 10}%`,height:14,marginBottom:6}}/>
+                  <div className="skel-line skel-pulse" style={{width:`${30 + i * 8}%`,height:10}}/>
+                </div>
+                <div className="skel-line skel-pulse" style={{width:40,height:14,flexShrink:0}}/>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <div style={{display:"flex",gap:2,marginBottom:8}}>
-        {"Adhera".split("").map((l, i) => (
-          <span key={i} style={{fontSize:18,fontWeight:600,color:"var(--t1)",letterSpacing:"-.3px",animation:`letterIn .5s ${.15 + i * .07}s cubic-bezier(.22,1,.36,1) both`,display:"inline-block"}}>{l}</span>
+      <div className="tabbar">
+        {tabs.map((t,i) => (
+          <div key={t.id} className={`tbi${i===0?" on":""}`}>
+            {t.icon}
+            {t.label && <span>{t.label}</span>}
+          </div>
         ))}
-      </div>
-      <div style={{fontSize:12,color:"var(--t3)",letterSpacing:".3px",textTransform:"uppercase",marginBottom:20,animation:"fadeUp .5s .6s cubic-bezier(.22,1,.36,1) both"}}>Loading your medications…</div>
-      <div style={{width:120,height:"3px",background:"var(--sep)",borderRadius:99,overflow:"hidden",animation:"fadeUp .5s .7s cubic-bezier(.22,1,.36,1) both"}}>
-        <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,rgba(0,122,255,.08),rgba(0,122,255,.35),rgba(0,122,255,.08))",backgroundSize:"300% 100%",animation:"transShimmer 2s ease-in-out infinite"}}/>
       </div>
     </div>
   );
@@ -335,7 +357,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       <style>{CSS}</style>
 
       <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
-        <div key={tab + (viewFamily ? "-family" : "")} className="tab-enter">
+        <div className="content-reveal">
         {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")}/>}
         {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan||"free"} medCount={meds.length}/>}
         {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
