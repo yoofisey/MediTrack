@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import webpush from "web-push";
+import { sendNativePush } from "@/lib/server-fcm";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,6 +13,14 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY,
   );
+}
+
+async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string) {
+  if (sub.endpoint?.startsWith("fcm:")) {
+    const { title, body, tag } = JSON.parse(payload);
+    return sendNativePush({ endpoint: sub.endpoint, title, body, tag });
+  }
+  return webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
 }
 
 async function fetchApi(path: string, options?: RequestInit) {
@@ -49,8 +58,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  const hasFCM = !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON && !!process.env.FCM_PROJECT_ID;
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-    return NextResponse.json({ ok: false, error: "VAPID keys not configured" }, { status: 500 });
+    if (!hasFCM) return NextResponse.json({ ok: false, error: "VAPID keys not configured" }, { status: 500 });
   }
 
   try {
@@ -100,14 +110,10 @@ export async function GET(req: Request) {
 
         for (const sub of subscriptions) {
           try {
-            await webpush.sendNotification({
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            }, payload);
+            await sendPush(sub, payload);
             sentCount++;
           } catch (pushErr: any) {
             if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
-              // Subscription expired — clean up
               try {
                 await fetchApi(`push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`, { method: "DELETE" });
               } catch {}
@@ -139,10 +145,7 @@ export async function GET(req: Request) {
 
         for (const sub of subscriptions) {
           try {
-            await webpush.sendNotification({
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            }, payload);
+            await sendPush(sub, payload);
             sentCount++;
           } catch {}
         }
