@@ -1,0 +1,61 @@
+workflows:
+  web-build:
+    name: Web (Vercel)
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - supabase
+        - vercel
+    scripts:
+      - npm install
+      - npm run build
+    artifacts:
+      - .next/**/*
+    publishing:
+      scripts:
+        - npx vercel deploy --prod --token=$VERCEL_TOKEN
+
+  android-build:
+    name: Android
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - supabase
+      vars:
+        CAPACITOR_SERVER_URL: https://useadhera.com
+    scripts:
+      - npm install
+      - npm run build
+      - npx cap sync android
+      - cd android && ./gradlew assembleRelease
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/bundle/release/*.aab
+
+  ios-build:
+    name: iOS
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - supabase
+        - ios_credentials
+      vars:
+        CAPACITOR_SERVER_URL: https://useadhera.com
+    scripts:
+      - npm install
+      - npm run build
+      - npx cap sync ios
+      - cd ios && xcodebuild -workspace App/App.xcworkspace \
+          -scheme App \
+          -configuration Release \
+          -archivePath build/App.xcarchive \
+          archive
+      - xcodebuild -exportArchive \
+          -archivePath build/App.xcarchive \
+          -exportOptionsPlist export-options.plist \
+          -exportPath build/
+    artifacts:
+      - ios/build/*.ipa
+    publishing:
+      app_store_connect:
+        submit_to_testflight: true
