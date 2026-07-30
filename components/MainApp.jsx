@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
+import { getCached, setCache, queueDoseLog, flushQueue } from "@/lib/offline";
 import TodayTab from "@/components/TodayTab";
 import MedsTab from "@/components/MedsTab";
 import ReportsTab from "@/components/ReportsTab";
@@ -50,6 +51,14 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
+
+    const cachedMeds = getCached("meds");
+    const cachedLogs = getCached("logs");
+    const cachedVitals = getCached("vitals");
+    if (cachedMeds && cachedMeds.length) { setMeds(cachedMeds); }
+    if (cachedLogs && cachedLogs.length) { setLogs(cachedLogs); }
+    if (cachedVitals && cachedVitals.length) { setVitals(cachedVitals); }
+
     (async () => {
       try {
         const [mr, lr, vr] = await Promise.all([
@@ -60,12 +69,14 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         if (!cancelled) {
           if (Array.isArray(mr.data)) {
             setMeds(mr.data);
+            setCache("meds", mr.data);
             mr.data.filter(m => m.pills_per_package && m.active).forEach(m => initStockForMed(m));
           }
-          if (Array.isArray(lr.data)) setLogs(lr.data);
-          if (Array.isArray(vr.data)) setVitals(vr.data);
+          if (Array.isArray(lr.data)) { setLogs(lr.data); setCache("logs", lr.data); }
+          if (Array.isArray(vr.data)) { setVitals(vr.data); setCache("vitals", vr.data); }
           try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch (e) { console.error("journal load:", e); }
           try { const { checkRefillReminders } = await import("@/lib/notifications"); checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
+          flushQueue();
         }
       } catch (e) {
         if (!cancelled) console.error("load error:", e?.message || e);
@@ -306,6 +317,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           alert(`⏳ Wait ~${waitH} more hour${waitH>1?"s":""} before your next dose.`); return;
         }
       }
+    }
+    if (!isOnline()) {
+      await queueDoseLog({ userId: user.id, medId: med.id, takenAt: takenAtISO, notes: journal });
+      reload();
+      return;
     }
     try {
       const { error } = await sb.from("dose_logs").insert([{
