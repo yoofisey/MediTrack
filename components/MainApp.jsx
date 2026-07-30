@@ -5,7 +5,8 @@ import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
-import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs } from "@/lib/notifications";
+import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
+import { initPushNotifications, removePushToken } from "@/lib/push";
 import TodayTab from "@/components/TodayTab";
 import MedsTab from "@/components/MedsTab";
 import ReportsTab from "@/components/ReportsTab";
@@ -134,10 +135,57 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, []);
 
   useEffect(() => {
+    function onDeeplink(e) {
+      const { medId, doseTimeMs } = e.detail || {};
+      if (!medId) return;
+      const med = meds.find(m => m.id === medId);
+      if (med) { setEditMed(med); setTab("meds"); setShowAdd(true); }
+    }
+    window.addEventListener("mt-deeplink", onDeeplink);
+    return () => window.removeEventListener("mt-deeplink", onDeeplink);
+  }, [meds]);
+
+  useEffect(() => {
+    async function onLogDose(e) {
+      const { medId, doseTimeMs } = e.detail || {};
+      if (!medId) return;
+      try {
+        await sb.from("dose_logs").insert({
+          medication_id: medId,
+          taken_at: new Date(doseTimeMs || Date.now()).toISOString(),
+          user_id: user?.id,
+        });
+        const { data } = await sb.from("dose_logs").select("*").eq("user_id", user?.id).order("taken_at", { ascending: false }).limit(500);
+        if (Array.isArray(data)) setLogs(data);
+      } catch {}
+    }
+    window.addEventListener("mt-log-dose", onLogDose);
+    return () => window.removeEventListener("mt-log-dose", onLogDose);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id && isNativePlatform()) {
+      initPushNotifications(user.id);
+      return () => { removePushToken(user.id); };
+    }
+  }, [user?.id]);
+
+  function isToday(isoStr) {
+    if (!isoStr) return false;
+    const d = new Date(isoStr);
+    const n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  }
+
+  function makeDate(h, m) {
+    const d = new Date(); d.setHours(h, m || 0, 0, 0); return d;
+  }
+
+  useEffect(() => {
     if (loading || !meds.length) return;
     const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
     const wakeTime = profile?.wake_time || "08:00";
+    const wakeHour = parseInt(wakeTime) || 8;
     const streak = calcStreak(logs, meds);
     const overdue = [];
 
@@ -149,10 +197,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
       const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
       const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
-      const todayStart = new Date(`${todayStr}T${wakeTime}:00`);
+      const todayStart = makeDate(wakeHour, 0);
 
       let doseTimes = [];
-      if (lastLog && new Date(lastLog.taken_at) >= todayStart) {
+      if (lastLog && isToday(lastLog.taken_at)) {
         const next = new Date(new Date(lastLog.taken_at).getTime() + intervalMs);
         if (next <= now) doseTimes.push(next);
       } else {
@@ -163,7 +211,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         }
       }
 
-      const todayCount = logs.filter(l => l.medication_id === med.id && l.taken_at?.startsWith(todayStr)).length;
+      const todayCount = logs.filter(l => l.medication_id === med.id && isToday(l.taken_at)).length;
       const expectedToday = med.times_per_day || 1;
       const alreadyDone = todayCount >= expectedToday;
       if (alreadyDone) return;
@@ -228,14 +276,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     if (!user?.id) return;
     const takenAtISO = takenAt || new Date().toISOString();
     if (!takenAt) {
-      const todayStr = new Date().toISOString().split("T")[0];
       const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
-      const logsToday = logs.filter(l => l.medication_id === med.id && l.taken_at?.startsWith(todayStr));
+      const logsToday = logs.filter(l => l.medication_id === med.id && isToday(l.taken_at));
       let nextDoseTime = null;
       if (med.reminder_times && med.reminder_times.trim()) {
         const times = med.reminder_times.split(",").map(t => {
           const [h, m] = t.trim().split(":");
-          return new Date(`${todayStr}T${(h||"08").padStart(2,"0")}:${(m||"00").padStart(2,"0")}:00`);
+          return makeDate(parseInt(h) || 8, parseInt(m) || 0);
         });
         const takenClosest = logsToday.map(l => new Date(l.taken_at)).sort((a,b) => b - a);
         const takenSet = new Set(takenClosest.map(d => d.getHours() * 60 + d.getMinutes()));
