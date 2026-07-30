@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { calcStreak, TIER_LIMITS } from "@/lib/data";
+import { calcStreak, TIER_LIMITS, getVisits } from "@/lib/data";
 import AdherenceChart from "@/components/AdherenceChart";
 import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
@@ -459,6 +459,126 @@ ${limits.reports ? `
     setTimeout(() => { win.print(); }, 800);
   }
 
+  async function exportHealthSummary() {
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageW = 210, pageH = 297, ml = 20, mr = 20, cw = pageW - ml - mr;
+      let y = 20;
+
+      function addSection(title, cb) {
+        if (y > pageH - 60) { doc.addPage(); y = 20; }
+        doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+        doc.setTextColor(0, 122, 255);
+        doc.text(title, ml, y); y += 8;
+        doc.setDrawColor(0, 122, 255); doc.setLineWidth(0.5);
+        doc.line(ml, y, pageW - mr, y); y += 8;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60);
+        cb();
+      }
+
+      function text(t, size = 10, bold = false) {
+        if (y > pageH - 30) { doc.addPage(); y = 20; }
+        doc.setFont("helvetica", bold ? "bold" : "normal");
+        doc.setFontSize(size);
+        doc.text(String(t), ml, y); y += size * 0.45;
+      }
+
+      doc.setFont("helvetica", "bold"); doc.setFontSize(24);
+      doc.setTextColor(0, 122, 255);
+      doc.text("Adhera", ml, y); y += 4;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      doc.setTextColor(140, 140, 140);
+      doc.text("Health Summary Report", ml, y); y += 3;
+      doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, ml, y);
+      y += 16;
+
+      addSection("Medication Plan", () => {
+        const active = meds.filter(m => {
+          if (!m.active) return false;
+          const e = new Date(m.start_date); e.setDate(e.getDate() + m.course_duration_days);
+          return e >= new Date();
+        });
+        if (!active.length) { text("No active medications."); y += 4; return; }
+        active.forEach(med => {
+          if (y > pageH - 40) { doc.addPage(); y = 20; }
+          doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+          doc.setTextColor(30, 30, 30);
+          doc.text(`\u2022 ${med.name}`, ml, y); y += 5;
+          doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`  ${med.dosage_amount} ${med.dosage_unit} · ${med.times_per_day}x daily`, ml + 4, y); y += 4;
+          if (med.doctor_name) { doc.text(`  Dr: ${med.doctor_name}`, ml + 4, y); y += 4; }
+          if (med.pharmacy_name) { doc.text(`  Pharmacy: ${med.pharmacy_name}`, ml + 4, y); y += 4; }
+          y += 3;
+        });
+      });
+
+      addSection("Adherence Summary", () => {
+        text(`Overall adherence: ${adherence}%`, 12, true); y += 2;
+        text(`Current streak: ${streak} day${streak !== 1 ? "s" : ""}`); y += 2;
+        text(`Days tracked: ${daysTracked}`); y += 2;
+        text(`Total doses logged: ${totalDoses}`); y += 6;
+        const pm = perMedAdherence();
+        pm.forEach(m => {
+          if (y > pageH - 30) { doc.addPage(); y = 20; }
+          const status = m.pct >= 80 ? "Good" : m.pct >= 50 ? "Fair" : "Poor";
+          doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+          doc.setTextColor(30, 30, 30);
+          doc.text(`\u2022 ${m.name}: ${m.pct}% (${status})`, ml + 2, y); y += 4;
+          doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`  ${m.taken}/${m.expected} doses taken`, ml + 4, y); y += 5;
+        });
+      });
+
+      const journal = (() => { try { return JSON.parse(localStorage.getItem("mt_journal") || "[]"); } catch { return []; } })();
+      if (journal.length > 0) {
+        addSection("Recent Journal Entries", () => {
+          const recent = [...journal].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+          recent.forEach(e => {
+            if (y > pageH - 30) { doc.addPage(); y = 20; }
+            const moods = { great: "\u{1F604}", good: "\u{1F642}", okay: "\u{1F610}", bad: "\u{1F614}", terrible: "\u{1F622}" };
+            const mood = moods[e.mood] || "";
+            doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+            doc.setTextColor(30, 30, 30);
+            doc.text(`${e.date}  ${mood}`, ml, y); y += 4;
+            doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            if (e.symptoms?.length) { doc.text(`  Symptoms: ${e.symptoms.join(", ")}`, ml + 2, y); y += 4; }
+            if (e.notes) { doc.text(`  ${e.notes}`, ml + 2, y); y += 4; }
+            y += 2;
+          });
+        });
+      }
+
+      const visits = getVisits().filter(v => v.date >= new Date().toISOString().split("T")[0]).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+      if (visits.length > 0) {
+        addSection("Upcoming Appointments", () => {
+          visits.forEach(v => {
+            if (y > pageH - 30) { doc.addPage(); y = 20; }
+            doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+            doc.setTextColor(30, 30, 30);
+            doc.text(`\u2022 ${v.reason || "Visit"} — ${v.date} at ${v.time}`, ml, y); y += 4;
+            doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            if (v.facility) doc.text(`  ${v.facility}`, ml + 4, y); y += 4;
+            if (v.doctor) doc.text(`  ${v.doctor}`, ml + 4, y); y += 4;
+            y += 2;
+          });
+        });
+      }
+
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+      doc.setTextColor(180, 180, 180);
+      doc.text("Generated by Adhera · adhera.app · Confidential", ml, pageH - 10);
+      doc.save(`adhera_health_summary_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (e) {
+      console.error("PDF export error:", e);
+    }
+  }
+
   const pm = perMedAdherence();
 
   function AdherenceCard({ m, index }) {
@@ -755,21 +875,28 @@ ${limits.reports ? `
         })()}
       </div>
 
-      <div style={{padding:"4px 20px 20px",display:"flex",gap:10}}>
+      <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
         <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-          <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Generate PDF report
+          <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Full PDF report
         </button>
-        <button className="btn" onClick={shareWithDoctor} disabled={meds.length === 0}
+        <button className="btn" onClick={exportHealthSummary} disabled={meds.length === 0}
           style={{flex:1,background:"var(--teal2)",color:"white",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-          <Ico><Stethoscope size={15} strokeWidth={2.2} color="white"/></Ico> Share with doctor
+          <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Quick PDF
         </button>
       </div>
 
-      <div style={{padding:"4px 20px 20px",display:"flex",gap:10}}>
+      <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
+        <button className="btn" onClick={shareWithDoctor} disabled={meds.length === 0}
+          style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+          <Ico><Stethoscope size={15} strokeWidth={2.2}/></Ico> Share with doctor
+        </button>
         <button className="btn" onClick={() => exportCsv("dose_logs", logs, meds)}
           style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
           <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export CSV
         </button>
+      </div>
+
+      <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
         <button className="btn" onClick={exportJournalCsv}
           style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
           <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal

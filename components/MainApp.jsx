@@ -19,6 +19,7 @@ import { DeleteConfirmModal, LogDoseModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import SearchSheet from "@/components/SearchSheet";
+import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import { Search } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
@@ -44,6 +45,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [editVisit, setEditVisit] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [journalEntries, setJournalEntries] = useState([]);
+  const [journalDate, setJournalDate] = useState(null);
+  const [journalEntry, setJournalEntry] = useState(null);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -471,7 +474,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
       <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
         <div className="content-reveal">
-        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} onViewVisitList={()=>setShowVisitList(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")}/>}
+        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} onViewVisitList={()=>setShowVisitList(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")} onCheckIn={(date)=>{setJournalDate(date);setJournalEntry(getJournalEntry(date));}}/>}
         {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan||"free"} medCount={meds.length}/>}
         {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
         {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab} onViewFamily={() => setViewFamily(true)}/>}
@@ -518,6 +521,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
       {(showVisitSheet||showVisitList) && <VisitSheet initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); reload(); }}/>}
       {showSearch && <SearchSheet meds={meds} logs={logs} journalEntries={journalEntries} onClose={()=>setShowSearch(false)} onEditMed={(m) => { setEditMed(m); setShowSearch(false); }}/>}
+      {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
     </div>
   );
 }

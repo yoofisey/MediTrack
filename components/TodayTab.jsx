@@ -4,8 +4,9 @@ import { CSS, fmtTime } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { calcStreak, getStockStatus, getUpcomingVisits } from "@/lib/data";
 import { isVitalDue } from "@/lib/notifications";
+import { getJournalEntry } from "@/components/HealthJournal";
 import Ring from "@/components/Ring";
-import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock } from "lucide-react";
+import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock, Smile } from "lucide-react";
 
 function Ico({ children, size = 18, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -19,7 +20,7 @@ function milestone(streak) {
   return STREAK_MILESTONES.filter(m => streak >= m).pop() || null;
 }
 
-export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, onViewVisitList, vitals, vitalReminders, onNavigateVitals }) {
+export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, onViewVisitList, vitals, vitalReminders, onNavigateVitals, onCheckIn }) {
   const { t, lang } = useLang();
   const today = new Date();
 
@@ -122,6 +123,21 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
               </div>
             ))}
             <div style={{fontSize:11,opacity:.7,marginTop:4}}>{t("today.tapToLog")}</div>
+          </div>
+        );
+      })()}
+
+      {(() => {
+        const todayEntry = getJournalEntry(todayStr);
+        if (todayEntry) return null;
+        return (
+          <div style={{margin:"0 20px 14px",background:"linear-gradient(135deg,#5AC8FA,#007AFF)",borderRadius:16,padding:"16px 18px",color:"white",cursor:"pointer"}} onClick={() => onCheckIn?.(todayStr)}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+              <Ico><Smile size={20} color="white" strokeWidth={2.2}/></Ico>
+              <span style={{fontSize:15,fontWeight:600}}>Daily check-in</span>
+            </div>
+            <div style={{fontSize:13,opacity:.9,marginBottom:6}}>How are you feeling today? Tap to log your mood, sleep, and any symptoms.</div>
+            <div style={{fontSize:11,opacity:.7}}>Takes 10 seconds</div>
           </div>
         );
       })()}

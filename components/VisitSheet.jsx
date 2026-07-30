@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { addVisit, updateVisit, deleteVisit, getVisits } from "@/lib/data";
+import { scheduleVisitReminder, cancelVisitReminder } from "@/lib/notifications";
 import { Building2, ClipboardList } from "lucide-react";
 
 function Ico({ children, ...props }) {
@@ -31,16 +32,21 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   function handleSave() {
     if (!f.date) return;
     setBusy(true);
+    let saved;
     if (editingId) {
+      cancelVisitReminder(editingId);
       updateVisit(editingId, f);
+      saved = getVisits().find(v => v.id === editingId);
     } else {
-      addVisit(f);
+      saved = addVisit(f);
     }
+    if (saved) scheduleVisitReminder(saved);
     onSaved?.();
     setBusy(false);
   }
 
   function handleDelete(id) {
+    cancelVisitReminder(id);
     deleteVisit(id);
     setDelId(null);
   }
