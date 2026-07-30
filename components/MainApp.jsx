@@ -5,7 +5,7 @@ import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
-import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers } from "@/lib/notifications";
+import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs } from "@/lib/notifications";
 import TodayTab from "@/components/TodayTab";
 import MedsTab from "@/components/MedsTab";
 import ReportsTab from "@/components/ReportsTab";
@@ -89,6 +89,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       }).catch(() => {});
     }
   }, [user?.id]);
+
+  useEffect(() => { initCapacitorNotifs(); }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
