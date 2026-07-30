@@ -20,27 +20,6 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   } catch {}
 })();
 
-(function captureOAuthTokens() {
-  if (typeof window === "undefined") return;
-  try {
-    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const at = hash.get("access_token");
-    const rt = hash.get("refresh_token");
-    if (at) {
-      localStorage.setItem("mt_at", at);
-      if (rt) localStorage.setItem("mt_rt", rt);
-      window.history.replaceState(null, "", window.location.pathname);
-      return;
-    }
-    const qs = new URLSearchParams(window.location.search);
-    const code = qs.get("code");
-    if (code) {
-      sessionStorage.setItem("mt_code", code);
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-  } catch {}
-})();
-
 export default function App() {
   const [screen, setScreen]   = useState("loading");
   const [user,   setUser]     = useState(null);
@@ -83,6 +62,20 @@ export default function App() {
 
     async function init() {
       const start = Date.now();
+
+      try {
+        const oldAt = typeof localStorage !== "undefined" ? localStorage.getItem("mt_at") : null;
+        if (oldAt && !localStorage.getItem("mt_sb_session")) {
+          const oldRt = localStorage.getItem("mt_rt");
+          await sb.auth.setSession({
+            access_token: oldAt,
+            refresh_token: oldRt,
+          }).catch(() => {});
+          localStorage.removeItem("mt_at");
+          localStorage.removeItem("mt_rt");
+        }
+      } catch {}
+
       try {
         const { data } = await sb.auth.getUser();
         const u = data?.user ?? null;

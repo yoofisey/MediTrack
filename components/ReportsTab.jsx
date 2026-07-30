@@ -5,9 +5,10 @@ import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { calcStreak, TIER_LIMITS } from "@/lib/data";
 import AdherenceChart from "@/components/AdherenceChart";
+import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, Users, User, Bell, DollarSign, FileText, Stethoscope, BookOpen } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, Users, User, Bell, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -497,6 +498,13 @@ ${limits.reports ? `
         )}
       </div>
 
+      <div className="section">
+        <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
+          <Ico><CalendarDays size={15} strokeWidth={2.2} color="var(--teal2)"/></Ico> Adherence calendar
+        </div>
+        <AdherenceCalendar logs={logs} meds={meds}/>
+      </div>
+
       {limits.reports && (
         <div className="section">
           <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
@@ -756,6 +764,56 @@ ${limits.reports ? `
           <Ico><Stethoscope size={15} strokeWidth={2.2} color="white"/></Ico> Share with doctor
         </button>
       </div>
+
+      <div style={{padding:"4px 20px 20px",display:"flex",gap:10}}>
+        <button className="btn" onClick={() => exportCsv("dose_logs", logs, meds)}
+          style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+          <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export CSV
+        </button>
+        <button className="btn" onClick={exportJournalCsv}
+          style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+          <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal
+        </button>
+      </div>
     </div>
   );
+}
+
+function exportCsv(name, logs, meds) {
+  const medMap = {};
+  meds.forEach(m => { medMap[m.id] = m.name; });
+  const header = "Date,Time,Medication,Dosage,Journal\n";
+  const rows = [...logs].reverse().map(l => {
+    const d = new Date(l.taken_at);
+    const date = d.toISOString().split("T")[0];
+    const time = d.toTimeString().split(" ")[0].slice(0, 5);
+    const medName = medMap[l.medication_id] || "Unknown";
+    const dosage = l.medications ? `${l.medications.dosage_amount} ${l.medications.dosage_unit}` : "";
+    const journal = (l.journal || "").replace(/"/g, '""');
+    return `"${date}","${time}","${medName}","${dosage}","${journal}"`;
+  }).join("\n");
+  downloadCsv(header + rows, `${name}_${new Date().toISOString().split("T")[0]}.csv`);
+}
+
+function exportJournalCsv() {
+  let entries = [];
+  try { entries = JSON.parse(localStorage.getItem("mt_journal") || "[]"); } catch {}
+  const header = "Date,Entry,Mood\n";
+  const rows = entries.map(e => {
+    const date = e.date || "";
+    const text = (e.text || e.entry || "").replace(/"/g, '""');
+    const mood = e.mood || "";
+    return `"${date}","${text}","${mood}"`;
+  }).join("\n");
+  downloadCsv(header + rows, `journal_${new Date().toISOString().split("T")[0]}.csv`);
+}
+
+function downloadCsv(content, filename) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

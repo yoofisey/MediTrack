@@ -38,7 +38,11 @@ export default function AuthScreen({ onAuth }) {
   async function oauth(provider) {
     setErr(""); setObl(provider);
     await new Promise(r => setTimeout(r, 80));
-    sb.auth.signInWithOAuth({ provider });
+    const { error } = await sb.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) { setObl(""); setErr(error.message); }
   }
 
   async function handleSignIn(e) {
@@ -76,9 +80,9 @@ export default function AuthScreen({ onAuth }) {
     if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
     if (pwScore(pw) < 3) { setErr("Password is too weak — use a mix of upper/lowercase, numbers, and symbols."); setBusy(false); return; }
     try {
-      const { error } = await sb.auth.signUpOtp({
+      const { error } = await sb.auth.signInWithOtp({
         email,
-        options: { data: { full_name: cleanName, country, plan: tier } },
+        options: { shouldCreateUser: true, data: { full_name: cleanName, country, plan: tier } },
       });
       if (error) throw error;
       setPwStore(pw);
@@ -87,7 +91,7 @@ export default function AuthScreen({ onAuth }) {
     } catch (e) {
       const m = e?.message || "";
       if (m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") || m.includes("sending magic link")) {
-        setErr("Email service not configured. Set up SMTP in your Supabase dashboard.");
+        setErr("Email service not configured. Please try again later.");
       } else {
         setErr(m || "Something went wrong. Please try again.");
       }
@@ -97,10 +101,10 @@ export default function AuthScreen({ onAuth }) {
   async function handleResendOtp() {
     if (cooldown>0) return;
     setErr("");
-    const { error } = await sb.auth.signUpOtp({ email });
+    const { error } = await sb.auth.signInWithOtp({ email });
     if (error) {
       const m = error.message || "";
-      setErr(m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") ? "Email service not configured. Set up SMTP in Supabase dashboard." : "Failed to resend - " + m);
+      setErr(m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") ? "Email service not configured. Please try again later." : "Failed to resend - " + m);
     } else {
       startCooldown(60);
       setErr("Code resent - check your inbox.");

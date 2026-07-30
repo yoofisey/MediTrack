@@ -8,7 +8,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function VisitSheet({ onClose, editingVisit, onSaved }) {
+export default function VisitSheet({ onClose, editingVisit, onSaved, initialView }) {
   const today = new Date().toISOString().split("T")[0];
   const [f, setF] = useState({
     date: editingVisit?.date || today,
@@ -20,7 +20,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved }) {
     reminder_minutes: editingVisit?.reminder_minutes || "60",
   });
   const [busy, setBusy] = useState(false);
-  const [showList, setShowList] = useState(false);
+  const [showList, setShowList] = useState(initialView === "list");
   const [delId, setDelId] = useState(null);
   const [editingId, setEditingId] = useState(editingVisit?.id || null);
 

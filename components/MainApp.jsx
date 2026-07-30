@@ -16,6 +16,8 @@ import MedSheet from "@/components/MedSheet";
 import { DeleteConfirmModal, LogDoseModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
+import SearchSheet from "@/components/SearchSheet";
+import { Search } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
@@ -36,7 +38,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [vitals, setVitals] = useState([]);
   const [viewFamily, setViewFamily] = useState(false);
   const [showVisitSheet, setShowVisitSheet] = useState(false);
+  const [showVisitList, setShowVisitList] = useState(false);
   const [editVisit, setEditVisit] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+  const [journalEntries, setJournalEntries] = useState([]);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -58,6 +63,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           }
           if (Array.isArray(lr.data)) setLogs(lr.data);
           if (Array.isArray(vr.data)) setVitals(vr.data);
+          try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch (e) { console.error("journal load:", e); }
+          try { const { checkRefillReminders } = await import("@/lib/notifications"); checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
         }
       } catch (e) {
         if (!cancelled) console.error("load error:", e?.message || e);
@@ -73,7 +80,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       const vitalReminders = JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}");
       if (notifOn() && vitals.length) scheduleVitalReminders(vitalReminders, vitals);
     } catch {}
-  }, [vitals]);
+  }, [vitals, loadKey]);
   useEffect(() => {
     if (notifOn() && user?.id && "serviceWorker" in navigator && "PushManager" in window) {
       navigator.serviceWorker.ready.then(async reg => {
@@ -97,6 +104,19 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     }
   }, []);
 
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible" && notifOn()) {
+        if (meds.length) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30);
+        try {
+          const vitalReminders = JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}");
+          if (vitals.length) scheduleVitalReminders(vitalReminders, vitals);
+        } catch {}
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [meds, logs, profile?.wake_time, profile?.reminder_lead]);
   useEffect(() => {
     function onMsg(e) { if (e.data?.type === "alarm-ack") stopAlarmSound(); }
     if (typeof navigator !== "undefined" && navigator.serviceWorker) {
@@ -202,23 +222,47 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   function reload() { setLoadKey(k => k + 1); }
 
-  async function logDose(med, journal = "") {
+  async function logDose(med, journal = "", takenAt) {
     if (!user?.id) return;
-    const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
-    if (lastLog) {
-      const elapsed = (Date.now() - new Date(lastLog.taken_at).getTime()) / 3600000;
-      if (elapsed < (med.dose_interval_hours || 24/med.times_per_day)) {
-        const waitH = Math.ceil((med.dose_interval_hours || 24/med.times_per_day) - elapsed);
-        const waitM = Math.round(waitH * 60);
-        if (waitM < 60) { alert(`⏳ Wait ${waitM} more minutes before your next dose.`); return; }
-        alert(`⏳ Wait ~${waitH} more hour${waitH>1?"s":""} before your next dose.`); return;
+    const takenAtISO = takenAt || new Date().toISOString();
+    if (!takenAt) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
+      const logsToday = logs.filter(l => l.medication_id === med.id && l.taken_at?.startsWith(todayStr));
+      let nextDoseTime = null;
+      if (med.reminder_times && med.reminder_times.trim()) {
+        const times = med.reminder_times.split(",").map(t => {
+          const [h, m] = t.trim().split(":");
+          return new Date(`${todayStr}T${(h||"08").padStart(2,"0")}:${(m||"00").padStart(2,"0")}:00`);
+        });
+        const takenClosest = logsToday.map(l => new Date(l.taken_at)).sort((a,b) => b - a);
+        const takenSet = new Set(takenClosest.map(d => d.getHours() * 60 + d.getMinutes()));
+        const remaining = times.filter(dt => !takenSet.has(dt.getHours() * 60 + dt.getMinutes()) && dt > new Date());
+        if (remaining.length === 0) { alert("✅ All doses taken today!"); return; }
+        nextDoseTime = remaining[0];
+      } else {
+        const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
+        if (lastLog) {
+          nextDoseTime = new Date(new Date(lastLog.taken_at).getTime() + intervalMs);
+        } else {
+          nextDoseTime = new Date();
+        }
+      }
+      if (nextDoseTime && nextDoseTime > new Date()) {
+        const remainingMs = nextDoseTime - new Date();
+        const waitM = Math.ceil(remainingMs / 60000);
+        if (waitM >= 1) {
+          if (waitM < 60) { alert(`⏳ Wait ${waitM} more minutes before your next dose.`); return; }
+          const waitH = Math.ceil(waitM / 60);
+          alert(`⏳ Wait ~${waitH} more hour${waitH>1?"s":""} before your next dose.`); return;
+        }
       }
     }
     try {
       const { error } = await sb.from("dose_logs").insert([{
         user_id: user.id,
         medication_id: med.id,
-        taken_at: new Date().toISOString(),
+        taken_at: takenAtISO,
         journal: journal || null,
       }]);
       if (error) {
@@ -301,7 +345,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const tabs = [
     { id:"today", label:t("nav.today"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 18a8 8 0 110-16 8 8 0 010 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> },
     { id:"medications", label:t("nav.meds"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M6.5 10h-2v5h2v-5zm4 0h-2v5h2v-5zm8.5 7H4v2h15v-2zm-4.5-7h-2v5h2v-5zM11.5 1L2 6v2h19V6l-9.5-5z"/></svg> },
-    { id:"vitals", label:t("nav.vitals"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> },
+    { id:"vitals", label:t("nav.vitals"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M17 3H7C4.79 3 3 4.79 3 7v10c0 2.21 1.79 4 4 4h10c2.21 0 4-1.79 4-4V7c0-2.21-1.79-4-4-4zm0 2c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h10zm-1 7h-3v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H8c-.55 0-1 .45-1 1s.45 1 1 1h3v3c0 .55.45 1 1 1s1-.45 1-1v-3h3c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg> },
     { id:"reports", label:t("nav.reports"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg> },
     { id:"profile", label:"", icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg> },
   ];
@@ -358,9 +402,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
 
+      <button onClick={()=>setShowSearch(true)} style={{position:"fixed",bottom:"calc(72px + var(--safe-bottom))",right:18,zIndex:150,width:56,height:56,borderRadius:18,border:"none",cursor:"pointer",display:"grid",placeItems:"center",background:"var(--card)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",boxShadow:"0 8px 32px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.06)",color:"var(--t1)",transition:"transform .2s, box-shadow .2s",userSelect:"none"}} onMouseDown={e=>{e.currentTarget.style.transform="scale(.92)";e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.12)"}} onMouseUp={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 8px 32px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.06)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 8px 32px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.06)"}}><Search size={22} strokeWidth={2}/></button>
+
       <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
         <div className="content-reveal">
-        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")}/>}
+        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} onViewVisitList={()=>setShowVisitList(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")}/>}
         {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan||"free"} medCount={meds.length}/>}
         {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
         {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab} onViewFamily={() => setViewFamily(true)}/>}
@@ -400,12 +446,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       {logDoseMed && (
         <LogDoseModal
           med={logDoseMed}
-          onConfirm={(journal) => { const m = logDoseMed; setLogDoseMed(null); logDose(m, journal); }}
+          onConfirm={(journal, takenAt) => { const m = logDoseMed; setLogDoseMed(null); logDose(m, journal, takenAt); }}
           onCancel={() => setLogDoseMed(null)}
         />
       )}
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
-      {showVisitSheet && <VisitSheet onClose={() => { setShowVisitSheet(false); setEditVisit(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setEditVisit(null); reload(); }}/>}
+      {(showVisitSheet||showVisitList) && <VisitSheet initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); reload(); }}/>}
+      {showSearch && <SearchSheet meds={meds} logs={logs} journalEntries={journalEntries} onClose={()=>setShowSearch(false)} onEditMed={(m) => { setEditMed(m); setShowSearch(false); }}/>}
     </div>
   );
 }

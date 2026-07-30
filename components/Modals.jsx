@@ -364,14 +364,33 @@ export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
 
 export function LogDoseModal({ med, onConfirm, onCancel }) {
   const [journal, setJournal] = useState("");
+  const now = new Date();
+  const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [takenAt, setTakenAt] = useState(localISO);
+  const todayStr = now.toISOString().split("T")[0];
+
+  function handleConfirm() {
+    const selected = new Date(takenAt);
+    if (selected > now) { alert("Cannot log doses in the future."); return; }
+    onConfirm(journal, takenAt);
+  }
+
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
-      <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"75vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4,display:"flex",alignItems:"center",gap:6}}><Ico><Pill size={20} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
           <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>
             {med.name} · {med.dosage_amount} {med.dosage_unit}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Date & time taken</div>
+            <input className="sheet-input" type="datetime-local" value={takenAt}
+              max={`${todayStr}T23:59`}
+              onChange={e => setTakenAt(e.target.value)}
+              style={{fontSize:16}}/>
           </div>
 
           <div style={{marginBottom:16}}>
@@ -383,7 +402,7 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
           </div>
 
           <div className="sheet-actions" style={{gap:8}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={() => onConfirm(journal)}>Log dose</button>
+            <button className="btn btn-primary" style={{flex:1}} onClick={handleConfirm}>Log dose</button>
             <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
           </div>
         </div>

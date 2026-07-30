@@ -5,7 +5,7 @@ import { useLang } from "@/lib/i18n";
 import { TIER_LIMITS } from "@/lib/data";
 import { useState } from "react";
 import InteractionChecker from "@/components/InteractionChecker";
-import { Pill, AlertTriangle, FileText, Package, Plus, CheckCircle2 } from "lucide-react";
+import { Pill, AlertTriangle, FileText, Package, Plus, CheckCircle2, Clock } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -41,9 +41,12 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
     return (
       <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"18px",marginBottom:12,boxShadow:"var(--card-shadow)"}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14}}>
-          <div>
-            <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>{med.name}</div>
-            <div style={{fontSize:14,color:"var(--t3)"}}>{med.dosage_amount} {med.dosage_unit} · {exp}× daily</div>
+          <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
+            {med.image_url && <img src={med.image_url} alt="" style={{width:40,height:40,borderRadius:10,objectFit:"cover",flexShrink:0}}/>}
+            <div>
+              <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>{med.name}</div>
+              <div style={{fontSize:14,color:"var(--t3)"}}>{med.dosage_amount} {med.dosage_unit} · {exp}× daily</div>
+            </div>
           </div>
           <span className={`badge ${isActive?"badge-green":"badge-gray"}`}>{isActive?t("meds.active"):t("meds.completed")}</span>
         </div>
@@ -61,6 +64,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
         </div>
         <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{t("meds.day")} {prog} {t("meds.of")} {med.course_duration_days}</div>
         <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
+        {med.reminder_times&&<div style={{fontSize:12,color:"var(--t3)",marginTop:6,display:"flex",alignItems:"center",gap:5}}><Ico><Clock size={13} strokeWidth={2.2}/></Ico> {med.reminder_times.split(",").join(" · ")}</div>}
         {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8,display:"flex",alignItems:"center",gap:5}}><Ico><FileText size={14} strokeWidth={2.2}/></Ico> {med.notes}</div>}
         {remaining !== null && (
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:13}}>
@@ -69,6 +73,11 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
             <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11,display:"flex",alignItems:"center",gap:4}} onClick={()=>onRefill(med.id)}><Ico><Plus size={13} strokeWidth={2.5}/></Ico> {t("meds.refill")}</button>
           </div>
         )}
+        {(med.doctor_name||med.pharmacy_name)&&<div style={{marginTop:10,paddingTop:10,borderTop:"0.5px solid var(--sep)",display:"flex",gap:12,fontSize:12,color:"var(--t3)"}}>
+          {med.doctor_name&&<div><span style={{fontWeight:500,color:"var(--t2)"}}>Dr:</span> {med.doctor_name}{med.doctor_phone?` · ${med.doctor_phone}`:""}</div>}
+          {med.pharmacy_name&&<div><span style={{fontWeight:500,color:"var(--t2)"}}>Rx:</span> {med.pharmacy_name}{med.pharmacy_phone?` · ${med.pharmacy_phone}`:""}</div>}
+          {med.next_refill_date&&<div><span style={{fontWeight:500,color:"var(--t2)"}}>Refill:</span> {fmtDate(med.next_refill_date)}</div>}
+        </div>}
         <div style={{display:"flex",gap:8,marginTop:12}}>
           <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>onEdit(med)}>{t("meds.edit")}</button>
           <button className="btn btn-sm" style={{flex:1,background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={()=>onDelete(med.id)}>{t("meds.delete")}</button>

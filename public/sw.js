@@ -1,13 +1,18 @@
+const CACHE = "adhera-v2";
+const API_CACHE = "adhera-api-v1";
+
 self.addEventListener("install", () => self.skipWaiting());
+
 self.addEventListener("activate", e => e.waitUntil(
-  caches.keys().then(keys => Promise.all(keys.filter(k => k !== "adhera-v1").map(k => caches.delete(k)))).then(() => clients.claim())
+  caches.keys().then(keys => Promise.all(
+    keys.filter(k => k !== CACHE && k !== API_CACHE).map(k => caches.delete(k))
+  )).then(() => clients.claim())
 ));
 
 const doseDB = {};
 
 self.addEventListener("notificationclick", e => {
   e.notification.close();
-  const tag = e.notification.tag || "";
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(cls => {
       cls.forEach(c => c.postMessage?.({ type: "alarm-ack" }));
@@ -69,6 +74,7 @@ self.addEventListener("push", e => {
   const d = e.data?.json() || {};
   self.registration.showNotification(d.title || "Adhera", {
     body: d.body || "Time to take your medication",
+    icon: "/icon.svg",
     vibrate: [500, 200, 500, 200, 500],
     tag: d.tag || "mt-push",
     requireInteraction: true,
@@ -78,23 +84,45 @@ self.addEventListener("push", e => {
 self.addEventListener("fetch", e => {
   const { request } = e;
   if (request.method !== "GET") return;
-  if (request.mode === "navigate") {
+
+  const url = new URL(request.url);
+
+  // Cache API responses for offline use (stale-while-revalidate)
+  if (url.pathname.startsWith("/api/") || url.hostname.endsWith(".supabase.co")) {
     e.respondWith(
-      fetch(request).catch(() => caches.match(request)).then(r => {
-        const clone = r.clone();
-        caches.open("adhera-v1").then(c => c.put(request, clone));
-        return r;
-      })
+      caches.open(API_CACHE).then(cache =>
+        fetch(request).then(res => {
+          if (res.ok) cache.put(request, res.clone());
+          return res;
+        }).catch(() => cache.match(request) || new Response(null, { status: 503 }))
+      )
     );
     return;
   }
+
+  // Navigation requests: network-first with cache fallback
+  if (request.mode === "navigate") {
+    e.respondWith(
+      fetch(request).then(r => {
+        const clone = r.clone();
+        caches.open(CACHE).then(c => c.put(request, clone));
+        return r;
+      }).catch(() => caches.match(request).then(cached => {
+        if (cached) return cached;
+        return caches.match("/");
+      }))
+    );
+    return;
+  }
+
+  // Static assets: cache-first
   e.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
       return fetch(request).then(r => {
-        if (r.ok && request.url.startsWith(self.location.origin)) {
+        if (r.ok && url.origin === self.location.origin) {
           const clone = r.clone();
-          caches.open("adhera-v1").then(c => c.put(request, clone));
+          caches.open(CACHE).then(c => c.put(request, clone));
         }
         return r;
       });

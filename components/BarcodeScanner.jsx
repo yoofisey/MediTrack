@@ -36,53 +36,28 @@ export default function BarcodeScanner({ onScan, onClose }) {
     return () => stopCamera();
   }, [stopCamera]);
 
+  useEffect(() => {
+    if (!scanning || !videoRef.current || stoppedRef.current) return;
+    let cancelled = false;
+    const zxing = new BrowserMultiFormatReader();
+    zxingRef.current = zxing;
+    zxing.decodeOnceFromVideoDevice(null, videoRef.current)
+      .then(r => { if (!cancelled) handleBarcode(r.getText()); })
+      .catch(err => {
+        if (!cancelled) {
+          console.error("zxing error:", err);
+          setError("Could not read barcode. Try adjusting the camera or enter the code manually.");
+          setScanning(false);
+        }
+      });
+    return () => { cancelled = true; try { zxing.reset(); } catch {} };
+  }, [scanning]);
+
   async function startCamera() {
     setError("");
     setResult(null);
     stoppedRef.current = false;
-
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setError("Camera not available on this device");
-        return;
-      }
-
-      const zxing = new BrowserMultiFormatReader();
-      zxingRef.current = zxing;
-
-      const constraints = {
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      };
-
-      setScanning(true);
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (stoppedRef.current) {
-        stream.getTracks().forEach(t => t.stop());
-        return;
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-
-      zxing.decodeFromVideoElement(videoRef.current, (res, err) => {
-        if (stoppedRef.current) return;
-        if (res) {
-          handleBarcode(res.getText());
-        }
-      }).catch(() => {});
-    } catch (e) {
-      if (!stoppedRef.current) {
-        setError("Camera access denied. You can enter the barcode manually below.");
-        setScanning(false);
-      }
-    }
+    setScanning(true);
   }
 
   function handleBarcode(code) {
@@ -118,10 +93,10 @@ export default function BarcodeScanner({ onScan, onClose }) {
           </div>
 
           {scanning && (
-            <div style={{borderRadius:14,overflow:"hidden",marginBottom:16,position:"relative",background:"black",aspectRatio:"4/3"}}>
-              <video ref={videoRef} style={{width:"100%",height:"100%",objectFit:"cover"}} playsInline muted autoPlay/>
+            <div style={{borderRadius:14,overflow:"hidden",marginBottom:16,position:"relative",background:"#000",aspectRatio:"4/3"}}>
+              <video ref={videoRef} style={{width:"100%",height:"100%",objectFit:"cover"}} playsInline muted/>
               <div style={{position:"absolute",inset:0,border:"3px solid rgba(255,255,255,.5)",borderRadius:14,pointerEvents:"none"}}/>
-              <div style={{position:"absolute",bottom:12,left:0,right:0,textAlign:"center",fontSize:13,color:"white",textShadow:"0 1px 4px rgba(0,0,0,.5)"}}>
+              <div style={{position:"absolute",bottom:12,left:0,right:0,textAlign:"center",fontSize:13,color:"#fff",textShadow:"0 1px 4px rgba(0,0,0,.5)"}}>
                 Point camera at medication barcode
               </div>
             </div>

@@ -19,7 +19,7 @@ function milestone(streak) {
   return STREAK_MILESTONES.filter(m => streak >= m).pop() || null;
 }
 
-export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, vitals, vitalReminders, onNavigateVitals }) {
+export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, onViewVisitList, vitals, vitalReminders, onNavigateVitals }) {
   const { t, lang } = useLang();
   const today = new Date();
 
@@ -127,7 +127,7 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
       })()}
 
       {upcomingVisits.length > 0 && (
-        <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",cursor:"pointer"}} onClick={onViewVisits}>
+        <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",cursor:"pointer"}} onClick={onViewVisitList}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
             <Ico><Building2 size={17} strokeWidth={2.2} color="var(--t1)"/></Ico>
             <span style={{fontSize:14,fontWeight:600,color:"var(--t1)",flex:1}}>{t("today.upcomingVisits")}</span>

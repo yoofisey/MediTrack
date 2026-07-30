@@ -41,12 +41,14 @@ function saveJournal(data) {
 
 export function addJournalEntry(entry) {
   const journal = getJournal();
+  const dateStr = entry.date || new Date().toISOString().split("T")[0];
   const todayStr = new Date().toISOString().split("T")[0];
-  const existing = journal.findIndex(e => e.date === todayStr);
+  if (dateStr > todayStr) return;
+  const existing = journal.findIndex(e => e.date === dateStr);
   if (existing >= 0) {
     journal[existing] = { ...journal[existing], ...entry, updatedAt: new Date().toISOString() };
   } else {
-    journal.push({ id: "j_" + Date.now(), date: todayStr, createdAt: new Date().toISOString(), ...entry });
+    journal.push({ id: "j_" + Date.now(), date: dateStr, createdAt: new Date().toISOString(), ...entry });
   }
   saveJournal(journal);
 }

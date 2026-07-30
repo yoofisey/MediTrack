@@ -8,7 +8,8 @@ import { COUNTRIES, getPricing } from "@/lib/data";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/notifications";
 import { sb } from "@/lib/supabase";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
-import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Cake, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope } from "lucide-react";
+import MedicalID from "@/components/MedicalID";
+import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Cake, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -48,6 +49,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [editCountryPick, setEditCountryPick] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [showMedicalID, setShowMedicalID] = useState(false);
   const [conditionVal, setConditionVal] = useState(profile?.condition || "");
   const [schedVals, setSchedVals] = useState({ wake: profile?.wake_time || "07:00", sleep: profile?.sleep_time || "22:00" });
   const [familyMembers, setFamilyMembers] = useState(() => {
@@ -61,8 +63,15 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
   const LANGUAGES = [
     { code:"en", label:"English" },
+    { code:"es", label:"Español" },
     { code:"fr", label:"Français" },
+    { code:"ha", label:"Hausa" },
+    { code:"ig", label:"Igbo" },
+    { code:"yo", label:"Yoruba" },
     { code:"sw", label:"Kiswahili" },
+    { code:"pt", label:"Português" },
+    { code:"ar", label:"العربية" },
+    { code:"zh", label:"中文" },
   ];
   const currentLang = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0];
   const [showPersonalDetails, setShowPersonalDetails] = useState(false);
@@ -418,19 +427,19 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <div className="upgrade-title" style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>{t("profile.unlockPro")} <Ico><Sparkles size={16} strokeWidth={2.2} color="var(--orange)"/></Ico></div>
           <div className="upgrade-sub">{t("profile.unlimitedMedsAd")}</div>
           <div className="upgrade-features">
-            {["Unlimited medications","Full history","Refill reminders","Adherence reports","Drug interaction check"].map(f => (
+            {[t("profile.unlimitedMeds"),t("profile.fullHistory"),t("profile.refillReminders"),t("profile.adherenceReports"),t("profile.drugCheck")].map(f => (
               <div key={f} className="upgrade-feature"><span>✓</span> {f}</div>
             ))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
             {[{p:"pro",l:"Pro"},{p:"family",l:"Family"}].map(({p,l}) => (
               <div key={p} style={{background:"rgba(255,255,255,.12)",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800}}>{pricing[p].label}</div>
-                <div style={{fontSize:10,opacity:.8}}>{l} / mo</div>
+                <div style={{fontSize:16,fontWeight:800}}>{l}</div>
+                <div style={{fontSize:10,opacity:.8}}>{pricing[p].label} / mo</div>
               </div>
             ))}
           </div>
-          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>See upgrade options →</button>
+          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>{t("profile.seeUpgrade")} →</button>
         </div>
       ) : (
     <div className="section" style={{marginBottom:16}}>
@@ -565,6 +574,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title={t("profile.bloodType")} sub={personalDetails.blood_type || t("profile.notSet")} onClick={()=>setShowPersonalDetails(true)}/>
           <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title={t("profile.allergies")} sub={personalDetails.allergies || t("profile.noneRecorded")} onClick={()=>setShowPersonalDetails(true)}/>
           <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title={t("profile.emergencyContact")} sub={personalDetails.emergency_name || t("profile.notSet")} onClick={()=>setShowPersonalDetails(true)}/>
+          <Row icon={<Ico><Heart size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Medical ID" sub="Emergency medical info" onClick={()=>setShowMedicalID(true)}/>
         </div>
       </div>
 
@@ -665,6 +675,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         {showPersonalDetails && (
           <PersonalDetailsModal details={personalDetails} onSave={savePersonalDetails} onClose={() => setShowPersonalDetails(false)}/>
         )}
+        {showMedicalID && <MedicalID onClose={() => setShowMedicalID(false)}/>}
         {showDeleteAccount && (
           <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
             <div className="sheet" style={{maxHeight:"80vh"}} onClick={e => e.stopPropagation()}>

@@ -1,0 +1,162 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Heart, Phone, AlertTriangle, Droplets, Info } from "lucide-react";
+
+function Ico({ children, ...props }) {
+  return <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}} {...props}>{children}</span>;
+}
+
+const STORAGE_KEY = "mt_medical_id";
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch { return {}; }
+}
+
+function save(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+
+export default function MedicalID({ onClose }) {
+  const [data, setData] = useState(load);
+  const [editing, setEditing] = useState(!data.blood_type && !data.allergies?.length);
+
+  function update(key, val) {
+    const next = { ...data, [key]: val };
+    setData(next);
+    save(next);
+  }
+
+  function addAllergy(a) {
+    const list = data.allergies || [];
+    if (!list.includes(a)) update("allergies", [...list, a]);
+  }
+
+  function removeAllergy(a) {
+    update("allergies", (data.allergies || []).filter(x => x !== a));
+  }
+
+  function addCondition(c) {
+    const list = data.conditions || [];
+    if (!list.includes(c)) update("conditions", [...list, c]);
+  }
+
+  function removeCondition(c) {
+    update("conditions", (data.conditions || []).filter(x => x !== c));
+  }
+
+  const commonAllergies = ["Penicillin", "Sulfa", "Aspirin", "Ibuprofen", "Codeine", "Latex", "Peanuts", "Bee stings"];
+  const commonConditions = ["Diabetes", "Hypertension", "Asthma", "Heart disease", "Epilepsy", "Thyroid disorder", "Anemia", "Sickle cell"];
+
+  return (
+    <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e=>e.stopPropagation()}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{fontSize:20,fontWeight:700}}>Medical ID</div>
+            <button className="btn btn-sm" style={{background:"var(--hover)",border:"none",fontSize:13}} onClick={()=>setEditing(!editing)}>{editing?"Done":"Edit"}</button>
+          </div>
+
+          <div style={{background:"linear-gradient(135deg,#FF3B30,#FF6B3A)",borderRadius:16,padding:18,color:"white",marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+              <Ico><Heart size={20} strokeWidth={2.2} color="white"/></Ico>
+              <span style={{fontSize:16,fontWeight:600}}>Emergency Info</span>
+            </div>
+            <div style={{fontSize:12,opacity:0.85,marginBottom:4,lineHeight:1.4}}>
+              This information is stored on your device and can help first responders in an emergency.
+            </div>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Blood Type</div>
+            {editing ? (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {["A+","A-","B+","B-","AB+","AB-","O+","O-","Unknown"].map(t => (
+                  <button key={t} onClick={()=>update("blood_type",t===data.blood_type?"":t)}
+                    style={{padding:"8px 16px",borderRadius:8,border:data.blood_type===t?"2px solid var(--teal)":"0.5px solid var(--sep)",background:data.blood_type===t?"var(--sel)":"var(--card)",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:"var(--t1)"}}>{t}</button>
+                ))}
+              </div>
+            ) : (
+              <div style={{fontSize:24,fontWeight:700,color:"var(--t1)"}}>{data.blood_type || "—"}</div>
+            )}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <Ico><AlertTriangle size={14} strokeWidth={2.2} color="var(--orange)"/></Ico>
+              <span style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5}}>Allergies</span>
+            </div>
+            {editing ? (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {commonAllergies.map(a => {
+                  const has = (data.allergies||[]).includes(a);
+                  return <button key={a} onClick={()=>has?removeAllergy(a):addAllergy(a)}
+                    style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--orange)":"0.5px solid var(--sep)",background:has?"var(--ib3)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--orange)":"var(--t1)"}}>
+                    {has?"✕ ":""}{a}</button>;
+                })}
+              </div>
+            ) : (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {(data.allergies||[]).length ? (data.allergies||[]).map(a => <span key={a} style={{padding:"4px 10px",borderRadius:99,background:"var(--ib3)",color:"var(--orange)",fontSize:13,fontWeight:500}}>{a}</span>)
+                  : <span style={{color:"var(--t3)",fontSize:14}}>None recorded</span>}
+              </div>
+            )}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <Ico><Info size={14} strokeWidth={2.2} color="var(--teal)"/></Ico>
+              <span style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5}}>Medical Conditions</span>
+            </div>
+            {editing ? (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {commonConditions.map(c => {
+                  const has = (data.conditions||[]).includes(c);
+                  return <button key={c} onClick={()=>has?removeCondition(c):addCondition(c)}
+                    style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--teal)":"0.5px solid var(--sep)",background:has?"var(--ib2)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--teal)":"var(--t1)"}}>
+                    {has?"✕ ":""}{c}</button>;
+                })}
+              </div>
+            ) : (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {(data.conditions||[]).length ? (data.conditions||[]).map(c => <span key={c} style={{padding:"4px 10px",borderRadius:99,background:"var(--ib2)",color:"var(--teal2)",fontSize:13,fontWeight:500}}>{c}</span>)
+                  : <span style={{color:"var(--t3)",fontSize:14}}>None recorded</span>}
+              </div>
+            )}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <Ico><Droplets size={14} strokeWidth={2.2} color="var(--teal)"/></Ico>
+              <span style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5}}>Emergency Contacts</span>
+            </div>
+            {editing ? (
+              <div>
+                <div style={{marginBottom:8}}>
+                  <div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>Name</div>
+                  <input className="sheet-input" type="text" placeholder="Contact name" value={data.emergency_name||""} onChange={e=>update("emergency_name",e.target.value)} style={{fontSize:14}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>Phone</div>
+                  <input className="sheet-input" type="tel" placeholder="+233..." value={data.emergency_phone||""} onChange={e=>update("emergency_phone",e.target.value)} style={{fontSize:14}}/>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {data.emergency_name ? (
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg)",borderRadius:12}}>
+                    <Ico><Phone size={16} strokeWidth={2.2} color="var(--teal)"/></Ico>
+                    <div><div style={{fontSize:14,fontWeight:500}}>{data.emergency_name}</div>{data.emergency_phone&&<div style={{fontSize:12,color:"var(--t3)"}}>{data.emergency_phone}</div>}</div>
+                  </div>
+                ) : <span style={{color:"var(--t3)",fontSize:14}}>No emergency contact set</span>}
+              </div>
+            )}
+          </div>
+
+          <button className="btn btn-ghost" style={{width:"100%"}} onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}

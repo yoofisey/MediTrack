@@ -277,6 +277,7 @@ function HistorySheet({ vitalType, entries, onClose }) {
 }
 
 function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalReminders, onUpdateReminder, onClose }) {
+  const { t } = useLang();
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
@@ -333,7 +334,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
           <div style={{marginTop:20}}>
             <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:6}}>{t("vitals.reminderIntervals")}</div>
             <div style={{fontSize:12,color:"var(--t3)",marginBottom:10}}>{t("vitals.setReminder")}</div>
-            {["blood_pressure","glucose"].map(vtId => {
+            {enabled.map(vtId => {
               const vt = VITAL_TYPES.find(v => v.id === vtId);
               const rem = vitalReminders[vtId] || { intervalId:"off" };
               return (

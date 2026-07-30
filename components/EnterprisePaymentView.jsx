@@ -70,7 +70,7 @@ export default function EnterprisePaymentView({
         </button>
       </div>
       <div style={{marginTop:12,padding:"10px 12px",background:"var(--bg)",borderRadius:8,fontSize:12,color:"var(--t3)",lineHeight:1.5}}>
-        📧 Didn&apos;t receive the code? Check your spam folder, or configure SMTP in Supabase dashboard → Authentication → Settings to ensure reliable email delivery.
+        📧 Didn&apos;t receive the code? Check your spam folder, or contact support for help with email delivery.
       </div>
     </div>
   );
