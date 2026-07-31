@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, Phone, AlertTriangle, Droplets, Info } from "lucide-react";
+import { Heart, Phone, AlertTriangle, Droplets, Info, Pill } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}} {...props}>{children}</span>;
@@ -17,7 +17,7 @@ function save(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
 }
 
-export default function MedicalID({ onClose }) {
+export default function MedicalID({ meds = [], onClose }) {
   const [data, setData] = useState(load);
   const [editing, setEditing] = useState(!data.blood_type && !data.allergies?.length);
   const [customAllergy, setCustomAllergy] = useState("");
@@ -45,6 +45,17 @@ export default function MedicalID({ onClose }) {
   function removeCondition(c) {
     update("conditions", (data.conditions || []).filter(x => x !== c));
   }
+
+  function addMedication(id) {
+    const list = data.medication_ids || [];
+    if (!list.includes(id)) update("medication_ids", [...list, id]);
+  }
+
+  function removeMedication(id) {
+    update("medication_ids", (data.medication_ids || []).filter(x => x !== id));
+  }
+
+  const selectedMeds = (data.medication_ids || []).map(id => meds.find(m => m.id === id)).filter(Boolean);
 
   const commonAllergies = ["Penicillin", "Sulfa", "Aspirin", "Ibuprofen", "Naproxen", "Codeine", "Morphine", "Tramadol", "Amoxicillin", "Erythromycin", "Tetracycline", "Latex", "Peanuts", "Tree nuts", "Soy", "Wheat", "Shellfish", "Fish", "Eggs", "Milk / Dairy", "Bee stings", "Dust mites", "Pollen", "Mold", "Iodine", "Contrast dye"];
   const commonConditions = ["Diabetes", "Hypertension", "Asthma", "Heart disease", "Epilepsy", "Thyroid disorder", "Anemia", "Sickle cell", "High cholesterol", "Kidney disease", "Liver disease", "Arthritis", "Migraine", "Allergic rhinitis", "COPD", "HIV/AIDS", "Tuberculosis", "Malaria"];
@@ -133,6 +144,28 @@ export default function MedicalID({ onClose }) {
             ) : (
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {(data.conditions||[]).length ? (data.conditions||[]).map(c => <span key={c} style={{padding:"4px 10px",borderRadius:99,background:"var(--ib2)",color:"var(--teal2)",fontSize:13,fontWeight:500}}>{c}</span>)
+                  : <span style={{color:"var(--t3)",fontSize:14}}>None recorded</span>}
+              </div>
+            )}
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <Ico><Pill size={14} strokeWidth={2.2} color="var(--teal)"/></Ico>
+              <span style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5}}>Current Medications</span>
+            </div>
+            {editing ? (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {(meds || []).filter(m => m.active !== false).length ? (meds || []).filter(m => m.active !== false).map(m => {
+                  const has = (data.medication_ids||[]).includes(m.id);
+                  return <button key={m.id} onClick={()=>has?removeMedication(m.id):addMedication(m.id)}
+                    style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--teal)":"0.5px solid var(--sep)",background:has?"var(--ib2)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--teal)":"var(--t1)"}}>
+                    {has?"✕ ":""}{m.name}{m.dosage_amount?` · ${m.dosage_amount} ${m.dosage_unit}`:""}</button>;
+                }) : <span style={{color:"var(--t3)",fontSize:14}}>No medications yet — add some in the Medications tab.</span>}
+              </div>
+            ) : (
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {selectedMeds.length ? selectedMeds.map(m => <span key={m.id} style={{padding:"4px 10px",borderRadius:99,background:"var(--ib2)",color:"var(--teal2)",fontSize:13,fontWeight:500}}>{m.name}{m.dosage_amount?` · ${m.dosage_amount} ${m.dosage_unit}`:""}</span>)
                   : <span style={{color:"var(--t3)",fontSize:14}}>None recorded</span>}
               </div>
             )}
