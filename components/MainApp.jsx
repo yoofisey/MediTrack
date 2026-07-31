@@ -7,7 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
-import { getCached, setCache, queueDoseLog, flushQueue } from "@/lib/offline";
+import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
 import TodayTab from "@/components/TodayTab";
 import MedsTab from "@/components/MedsTab";
 import ReportsTab from "@/components/ReportsTab";
@@ -521,7 +521,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
       {(showVisitSheet||showVisitList) && <VisitSheet initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); reload(); }}/>}
       {showSearch && <SearchSheet meds={meds} logs={logs} journalEntries={journalEntries} onClose={()=>setShowSearch(false)} onEditMed={(m) => { setEditMed(m); setShowSearch(false); }}/>}
-      {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
+      {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
     </div>
   );
 }

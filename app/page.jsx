@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { sb, fetchProfile } from "@/lib/supabase";
 import { LanguageProvider } from "@/lib/i18n";
 import TransitionScreen from "@/components/TransitionScreen";
@@ -54,11 +54,21 @@ export default function App() {
     setTimeout(() => setScreen(target), 420);
   }
 
+  const screenRef = useRef("loading");
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+
   useEffect(() => {
     const MIN_LOAD_MS = 4500;
     const MAX_LOAD_MS = 7000;
     let cancelled = false;
     let       dest = "landing";
+
+    function finishInit() {
+      if (cancelled || screenRef.current !== "loading") return;
+      setDestScreen(dest);
+      setScreen("fading");
+      setTimeout(() => { if (!cancelled) setScreen(dest); }, 420);
+    }
 
     async function init() {
       const start = Date.now();
@@ -93,21 +103,11 @@ export default function App() {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, MIN_LOAD_MS - elapsed);
       await new Promise(r => setTimeout(r, remaining));
-      if (!cancelled) {
-        setDestScreen(dest);
-        setScreen("fading");
-        setTimeout(() => { if (!cancelled) setScreen(dest); }, 420);
-      }
+      finishInit();
     }
 
     init();
-    const fallback = setTimeout(() => {
-      if (!cancelled) {
-        setDestScreen(dest);
-        setScreen("fading");
-        setTimeout(() => { if (!cancelled) setScreen(dest); }, 420);
-      }
-    }, MAX_LOAD_MS);
+    const fallback = setTimeout(finishInit, MAX_LOAD_MS);
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 

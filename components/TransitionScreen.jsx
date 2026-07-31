@@ -6,6 +6,7 @@ import { CSS } from "@/lib/constants";
 export default function TransitionScreen({ emoji, message, sub, showMessages = false, fadeOut = false }) {
   const [step, setStep] = useState(0);
   const [fading, setFading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const showDefault = !message && !sub;
   const key = showDefault ? "default" : `${emoji}-${message}-${sub}`;
 
@@ -21,6 +22,8 @@ export default function TransitionScreen({ emoji, message, sub, showMessages = f
       delay: Math.random() * 6,
       opacity: 0.15 + Math.random() * 0.25,
     })), []);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!showDefault || !showMessages) return;
@@ -58,7 +61,7 @@ export default function TransitionScreen({ emoji, message, sub, showMessages = f
         animation: "aurora3 16s ease-in-out infinite",
       }} />
 
-      {particles.map(p => (
+      {mounted && particles.map(p => (
         <div key={p.id} className="trans-particle" style={{
           width: p.size, height: p.size,
           left: `${p.left}%`, bottom: `${p.bottom}%`,
