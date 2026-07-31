@@ -23,9 +23,12 @@ workflows:
         - supabase
       vars:
         CAPACITOR_SERVER_URL: https://useadhera.com
+        # GOOGLE_SERVICES_JSON: content of android/app/google-services.json
+        # (set as a secret in a Codemagic environment group; never commit the file)
     scripts:
       - npm install
       - npm run build
+      - echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
       - npx cap sync android
       - cd android && ./gradlew assembleRelease
     artifacts:
@@ -56,6 +59,5 @@ workflows:
           -exportPath build/
     artifacts:
       - ios/build/*.ipa
-    publishing:
-      app_store_connect:
-        submit_to_testflight: true
+    # Publishing skipped — requires active Apple Developer account.
+    # Build artifact (IPA) will be available for download from Codemagic dashboard.

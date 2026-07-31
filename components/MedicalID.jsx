@@ -20,6 +20,7 @@ function save(data) {
 export default function MedicalID({ onClose }) {
   const [data, setData] = useState(load);
   const [editing, setEditing] = useState(!data.blood_type && !data.allergies?.length);
+  const [customAllergy, setCustomAllergy] = useState("");
 
   function update(key, val) {
     const next = { ...data, [key]: val };
@@ -45,8 +46,8 @@ export default function MedicalID({ onClose }) {
     update("conditions", (data.conditions || []).filter(x => x !== c));
   }
 
-  const commonAllergies = ["Penicillin", "Sulfa", "Aspirin", "Ibuprofen", "Codeine", "Latex", "Peanuts", "Bee stings"];
-  const commonConditions = ["Diabetes", "Hypertension", "Asthma", "Heart disease", "Epilepsy", "Thyroid disorder", "Anemia", "Sickle cell"];
+  const commonAllergies = ["Penicillin", "Sulfa", "Aspirin", "Ibuprofen", "Naproxen", "Codeine", "Morphine", "Tramadol", "Amoxicillin", "Erythromycin", "Tetracycline", "Latex", "Peanuts", "Tree nuts", "Soy", "Wheat", "Shellfish", "Fish", "Eggs", "Milk / Dairy", "Bee stings", "Dust mites", "Pollen", "Mold", "Iodine", "Contrast dye"];
+  const commonConditions = ["Diabetes", "Hypertension", "Asthma", "Heart disease", "Epilepsy", "Thyroid disorder", "Anemia", "Sickle cell", "High cholesterol", "Kidney disease", "Liver disease", "Arthritis", "Migraine", "Allergic rhinitis", "COPD", "HIV/AIDS", "Tuberculosis", "Malaria"];
 
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -88,13 +89,24 @@ export default function MedicalID({ onClose }) {
               <span style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5}}>Allergies</span>
             </div>
             {editing ? (
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {commonAllergies.map(a => {
-                  const has = (data.allergies||[]).includes(a);
-                  return <button key={a} onClick={()=>has?removeAllergy(a):addAllergy(a)}
-                    style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--orange)":"0.5px solid var(--sep)",background:has?"var(--ib3)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--orange)":"var(--t1)"}}>
-                    {has?"✕ ":""}{a}</button>;
-                })}
+              <div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {commonAllergies.map(a => {
+                    const has = (data.allergies||[]).includes(a);
+                    return <button key={a} onClick={()=>has?removeAllergy(a):addAllergy(a)}
+                      style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--orange)":"0.5px solid var(--sep)",background:has?"var(--ib3)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--orange)":"var(--t1)"}}>
+                      {has?"✕ ":""}{a}</button>;
+                  })}
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:10}}>
+                  <input className="sheet-input" type="text" placeholder="Add a custom allergy…" value={customAllergy}
+                    onChange={e=>setCustomAllergy(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&customAllergy.trim()){addAllergy(customAllergy.trim());setCustomAllergy("");}}}
+                    style={{fontSize:14,flex:1}}/>
+                  <button className="btn btn-sm" style={{background:"var(--orange)",color:"white",border:"none",fontSize:13}}
+                    disabled={!customAllergy.trim()}
+                    onClick={()=>{if(customAllergy.trim()){addAllergy(customAllergy.trim());setCustomAllergy("");}}}>+ Add</button>
+                </div>
               </div>
             ) : (
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>

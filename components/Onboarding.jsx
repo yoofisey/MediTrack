@@ -26,7 +26,9 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
 
   async function finish() {
     setSaving(true);
-    await sb.from("profiles").upsert([{ id: user.id, ...data, onboarded: true }]);
+    let tz = "";
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
+    await sb.from("profiles").upsert([{ id: user.id, ...data, timezone: tz, onboarded: true }]);
     onDone(data);
   }
 

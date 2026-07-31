@@ -6,7 +6,7 @@ import { calcStreak, getStockStatus, getUpcomingVisits } from "@/lib/data";
 import { isVitalDue } from "@/lib/notifications";
 import { getJournalEntry } from "@/components/HealthJournal";
 import Ring from "@/components/Ring";
-import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock, Smile } from "lucide-react";
+import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock, Smile, FlaskConical, Ruler, GlassWater } from "lucide-react";
 
 function Ico({ children, size = 18, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -104,8 +104,8 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
         if (vitals && vitalReminders) {
           Object.entries(vitalReminders).forEach(([vitalId, config]) => {
             if (config?.intervalId && config.intervalId !== "off" && isVitalDue(vitalId, vitals, config.intervalId)) {
-              const labels = { blood_pressure:"Blood Pressure", glucose:"Blood Sugar", weight:"Weight", heart_rate:"Heart Rate", temperature:"Temperature", spo2:"Oxygen Level" };
-              const icons = { blood_pressure: <Activity size={15} strokeWidth={2.2}/>, glucose: <Droplet size={15} strokeWidth={2.2}/>, weight: <BarChart3 size={15} strokeWidth={2.2}/>, heart_rate: <HeartPulse size={15} strokeWidth={2.2}/>, temperature: <Thermometer size={15} strokeWidth={2.2}/>, spo2: <Wind size={15} strokeWidth={2.2}/> };
+              const labels = { blood_pressure:"Blood Pressure", glucose:"Blood Sugar", weight:"Weight", heart_rate:"Heart Rate", temperature:"Temperature", spo2:"Oxygen Level", cholesterol:"Total Cholesterol", bmi:"BMI", hba1c:"HbA1c", water_intake:"Water Intake", peak_flow:"Peak Flow" };
+              const icons = { blood_pressure: <Activity size={15} strokeWidth={2.2}/>, glucose: <Droplet size={15} strokeWidth={2.2}/>, weight: <BarChart3 size={15} strokeWidth={2.2}/>, heart_rate: <HeartPulse size={15} strokeWidth={2.2}/>, temperature: <Thermometer size={15} strokeWidth={2.2}/>, spo2: <Wind size={15} strokeWidth={2.2}/>, cholesterol: <FlaskConical size={15} strokeWidth={2.2}/>, bmi: <Ruler size={15} strokeWidth={2.2}/>, hba1c: <Droplet size={15} strokeWidth={2.2}/>, water_intake: <GlassWater size={15} strokeWidth={2.2}/>, peak_flow: <Wind size={15} strokeWidth={2.2}/> };
               dueVitals.push({ id:vitalId, label:labels[vitalId]||vitalId, icon:icons[vitalId]||"📊" });
             }
           });

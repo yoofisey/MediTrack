@@ -9,6 +9,8 @@ export interface Profile {
   plan?: "free" | "pro" | "family" | "enterprise";
   theme?: string;
   country?: string;
+  timezone?: string;
+  last_checkin_date?: string;
   goals?: string[];
   onboarded?: boolean;
   created_at?: string;
@@ -66,7 +68,7 @@ export interface Vital {
   created_at?: string;
 }
 
-export type VitalType = "blood_pressure" | "weight" | "glucose" | "heart_rate" | "temperature" | "spo2";
+export type VitalType = "blood_pressure" | "weight" | "glucose" | "heart_rate" | "temperature" | "spo2" | "cholesterol" | "bmi" | "hba1c" | "water_intake" | "peak_flow";
 
 export interface PushSubscription {
   user_id: string;

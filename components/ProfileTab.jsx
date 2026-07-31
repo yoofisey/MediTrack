@@ -9,7 +9,7 @@ import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/n
 import { sb } from "@/lib/supabase";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
-import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Cake, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart } from "lucide-react";
+import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -77,6 +77,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [showPersonalDetails, setShowPersonalDetails] = useState(false);
   const [personalDetails, setPersonalDetails] = useState(() => {
     try { return JSON.parse(localStorage.getItem("adhera_personal") || "{}"); } catch { return {}; }
+  });
+  const [medicalID, setMedicalID] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mt_medical_id") || "null") || {}; } catch { return {}; }
   });
   const fileInputRef = useRef(null);
 
@@ -209,6 +212,13 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     } catch (e) {
       alert("Error deleting account: " + (e?.message || "Unknown error"));
     }
+  }
+
+  function refreshMedicalID() {
+    try {
+      const raw = localStorage.getItem("mt_medical_id");
+      setMedicalID(raw ? JSON.parse(raw) : {});
+    } catch {}
   }
 
   const plan = profile?.plan || "free";
@@ -567,14 +577,18 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       </div>
 
     <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">{t("profile.personalDetails")}</div>
+      <div className="section-header">Age &amp; Demographics</div>
         <div className="list">
-          <Row icon={<Ico><Cake size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title={t("profile.ageDemo")} sub={personalDetails.age ? t("profile.yearsOld", {n: personalDetails.age}) : t("profile.addAge")} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Ruler size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title={t("profile.heightWeight")} sub={personalDetails.height ? `${personalDetails.height} cm · ${personalDetails.weight || "—"} kg` : t("profile.addMeasurements")} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title={t("profile.bloodType")} sub={personalDetails.blood_type || t("profile.notSet")} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title={t("profile.allergies")} sub={personalDetails.allergies || t("profile.noneRecorded")} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title={t("profile.emergencyContact")} sub={personalDetails.emergency_name || t("profile.notSet")} onClick={()=>setShowPersonalDetails(true)}/>
-          <Row icon={<Ico><Heart size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Medical ID" sub="Emergency medical info" onClick={()=>setShowMedicalID(true)}/>
+          <Row icon={<Ico><ClipboardList size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Age &amp; Demographics" sub={(()=>{const p=personalDetails;const parts=[];if(p.age)parts.push(`${p.age} years`);if(p.height)parts.push(`${p.height} cm`);if(p.weight)parts.push(`${p.weight} kg`);return parts.length?parts.join(" · "):"Add your details";})()} onClick={()=>setShowPersonalDetails(true)}/>
+        </div>
+      </div>
+
+    <div className="section" style={{marginBottom:16}}>
+      <div className="section-header">Medical ID</div>
+        <div className="list">
+          <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Blood type" sub={medicalID.blood_type || "Not set"} onClick={()=>setShowMedicalID(true)}/>
+          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={(medicalID.allergies||[]).length ? medicalID.allergies.join(", ") : "None recorded"} onClick={()=>setShowMedicalID(true)}/>
+          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={medicalID.emergency_name || "Not set"} onClick={()=>setShowMedicalID(true)}/>
         </div>
       </div>
 
@@ -675,7 +689,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         {showPersonalDetails && (
           <PersonalDetailsModal details={personalDetails} onSave={savePersonalDetails} onClose={() => setShowPersonalDetails(false)}/>
         )}
-        {showMedicalID && <MedicalID onClose={() => setShowMedicalID(false)}/>}
+        {showMedicalID && <MedicalID onClose={() => { setShowMedicalID(false); refreshMedicalID(); }}/>}
         {showDeleteAccount && (
           <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
             <div className="sheet" style={{maxHeight:"80vh"}} onClick={e => e.stopPropagation()}>
@@ -709,7 +723,6 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
 function PersonalDetailsModal({ details, onSave, onClose }) {
   const [f, setF] = useState({ ...details });
-  const bloodTypes = ["A+","A-","B+","B-","AB+","AB-","O+","O-","Unknown"];
 
   function set(k, v) { setF(p => ({ ...p, [k]: v })); }
 
@@ -723,7 +736,7 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Personal Details</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Age &amp; Demographics</div>
           <div style={{fontSize:14,color:"var(--t3)",marginBottom:20}}>Help us personalise your health experience.</div>
 
           <div style={{marginBottom:16}}>
@@ -756,62 +769,6 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
             <div style={{flex:1}}>
               <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Weight (kg)</div>
               <input className="sheet-input" type="number" inputMode="decimal" placeholder="e.g. 70" value={f.weight || ""} onChange={e => set("weight", e.target.value)} style={{fontSize:16}}/>
-            </div>
-          </div>
-
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Blood type</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-              {bloodTypes.map(bt => (
-                <div key={bt} onClick={() => set("blood_type", bt)} style={{
-                  padding:"8px 14px",borderRadius:10,cursor:"pointer",fontSize:13,fontWeight:500,
-                  background: f.blood_type === bt ? "var(--teal)" : "var(--input)",
-                  color: f.blood_type === bt ? "white" : "var(--t2)",
-                  border: `1.5px solid ${f.blood_type === bt ? "var(--teal)" : "var(--sep)"}`,
-                  transition:"all .15s",
-                }}>{bt}</div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Known allergies</div>
-            <textarea className="sheet-input" rows={2} placeholder="e.g. Penicillin, Sulfa, Peanuts" value={f.allergies || ""} onChange={e => set("allergies", e.target.value)} style={{resize:"vertical",fontSize:16}}/>
-          </div>
-
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Chronic conditions</div>
-            <textarea className="sheet-input" rows={2} placeholder="e.g. Hypertension, Type 2 Diabetes" value={f.conditions || ""} onChange={e => set("conditions", e.target.value)} style={{resize:"vertical",fontSize:16}}/>
-          </div>
-
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Current medications (list)</div>
-            <textarea className="sheet-input" rows={2} placeholder="e.g. Metformin 500mg, Lisinopril 10mg" value={f.current_meds || ""} onChange={e => set("current_meds", e.target.value)} style={{resize:"vertical",fontSize:16}}/>
-          </div>
-
-          <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:10,marginTop:20}}>Emergency contact</div>
-
-          <div style={{marginBottom:12}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Contact name</div>
-            <input className="sheet-input" type="text" placeholder="e.g. Jane Doe" value={f.emergency_name || ""} onChange={e => set("emergency_name", e.target.value)} style={{fontSize:16}}/>
-          </div>
-
-          <div style={{display:"flex",gap:8,marginBottom:16}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Phone</div>
-              <input className="sheet-input" type="tel" placeholder="+233..." value={f.emergency_phone || ""} onChange={e => set("emergency_phone", e.target.value)} style={{fontSize:16}}/>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Relationship</div>
-              <select className="sheet-input" value={f.emergency_relation || ""} onChange={e => set("emergency_relation", e.target.value)} style={{fontSize:16}}>
-                <option value="">Select</option>
-                <option value="spouse">Spouse</option>
-                <option value="parent">Parent</option>
-                <option value="child">Child</option>
-                <option value="sibling">Sibling</option>
-                <option value="friend">Friend</option>
-                <option value="other">Other</option>
-              </select>
             </div>
           </div>
 

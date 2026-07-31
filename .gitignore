@@ -43,3 +43,13 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# android ide
+android/.idea/
+
+# firebase google services (injected by CI, contains client API key)
+android/app/google-services.json
+
+# local test harness
+/_verify_push.mjs
+/_dbg_push.mjs

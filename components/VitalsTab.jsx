@@ -10,6 +10,11 @@ const VITAL_TYPES = [
   { id:"heart_rate", label:"Heart Rate", icon:"❤️", unit:"bpm", color:"#FF2D55", normal:{min:60,max:100}, placeholderA:"72" },
   { id:"temperature", label:"Temperature", icon:"🌡️", unit:"°F", color:"#AF52DE", normal:{min:97,max:99}, placeholderA:"98.6" },
   { id:"spo2", label:"Oxygen Level", icon:"💨", unit:"%", color:"#30D158", normal:{min:95,max:100}, placeholderA:"98" },
+  { id:"cholesterol", label:"Total Cholesterol", icon:"🧪", unit:"mg/dL", color:"#8E8E93", normal:{min:125,max:200}, placeholderA:"180" },
+  { id:"bmi", label:"BMI", icon:"📏", unit:"kg/m²", color:"#5856D6", normal:{min:18.5,max:24.9}, placeholderA:"23" },
+  { id:"hba1c", label:"HbA1c", icon:"🩸", unit:"%", color:"#FF3B30", normal:{min:4,max:5.6}, placeholderA:"5.4" },
+  { id:"water_intake", label:"Water Intake", icon:"💧", unit:"L", color:"#0A84FF", normal:{min:1.5,max:3.5}, placeholderA:"2" },
+  { id:"peak_flow", label:"Peak Flow", icon:"🫁", unit:"L/min", color:"#FF9F0A", normal:{min:400,max:700}, placeholderA:"550" },
 ];
 
 const FREQUENCIES = [
