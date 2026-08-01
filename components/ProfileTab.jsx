@@ -38,7 +38,7 @@ function Toggle({ on, onChange, disabled }) {
   );
 }
 
-export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs }) {
+export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs, onOpenFamily }) {
   const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
@@ -47,13 +47,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [showAddMember, setShowAddMember] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({ avatar_emoji: "", full_name: "", wake_time: "", sleep_time: "", goals: [], theme: "", country: "" });
-  const [editCondition, setEditCondition] = useState(false);
   const [editSchedule, setEditSchedule] = useState(false);
   const [editCountryPick, setEditCountryPick] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showMedicalID, setShowMedicalID] = useState(false);
-  const [conditionVal, setConditionVal] = useState(profile?.condition || "");
   const [schedVals, setSchedVals] = useState({ wake: profile?.wake_time || "07:00", sleep: profile?.sleep_time || "22:00" });
   const [familyMembers, setFamilyMembers] = useState([]);
 
@@ -456,9 +454,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                [<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Smart refill reminders","Never run out"],
                [<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Drug interaction checker","Stay safe"],
                [<Ico><FileText size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"PDF adherence reports","Share with your doctor"],
-               plan === "family" ? [<Ico><Users size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Family dashboard","5 profiles"] : null,
-             ].filter(Boolean).map(([icon,title,sub]) => (
-              <Row key={title} icon={icon} title={title} sub={sub}/>
+               plan === "family" ? [<Ico><Users size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Family dashboard","5 profiles", onOpenFamily] : null,
+             ].filter(Boolean).map(([icon,title,sub,onClick]) => (
+              <Row key={title} icon={icon} title={title} sub={sub} onClick={onClick}/>
             ))}
           </div>
           <div style={{padding:"10px 4px"}}>
@@ -518,26 +516,6 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
                 <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({wake_time:schedVals.wake,sleep_time:schedVals.sleep}); setEditSchedule(false);}}>Save</button>
                 <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setSchedVals({wake:profile?.wake_time||"07:00",sleep:profile?.sleep_time||"22:00"}); setEditSchedule(false);}}>Cancel</button>
-              </div>
-            </div>
-          ) : null}
-          <Row
-            icon={<Ico><ClipboardList size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)"
-            title={t("profile.healthCondition")}
-            sub={profile?.condition || t("profile.notSet")}
-            onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(true);}}
-          />
-          {editCondition ? (
-            <div className="row" style={{cursor:"default",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
-              <div className="row-icon" style={{background:"var(--ib5)",marginTop:2}}><Ico><ClipboardList size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
-              <div className="row-body" style={{flex:"1",minWidth:200}}>
-                <div className="row-title">Health condition</div>
-                <input className="sheet-input" value={conditionVal} onChange={e=>setConditionVal(e.target.value)}
-                  placeholder="e.g. Hypertension, Diabetes" style={{marginTop:8,fontSize:16}} autoFocus/>
-              </div>
-              <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
-                <button className="btn btn-sm btn-primary" style={{width:"auto"}} onClick={()=>{onSaveProfile({condition:conditionVal.trim()||null}); setEditCondition(false);}}>Save</button>
-                <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>{setConditionVal(profile?.condition||""); setEditCondition(false);}}>Cancel</button>
               </div>
             </div>
           ) : null}
@@ -676,6 +654,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <UpgradeModal
             country={country}
             userEmail={user?.email}
+            currentPlan={plan}
             onClose={() => setShowUpgrade(false)}
             onUpgrade={handleUpgrade}
           />

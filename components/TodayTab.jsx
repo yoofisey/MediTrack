@@ -20,7 +20,7 @@ function milestone(streak) {
   return STREAK_MILESTONES.filter(m => streak >= m).pop() || null;
 }
 
-export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, onViewVisitList, vitals, vitalReminders, onNavigateVitals, onCheckIn }) {
+export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, onViewVisitList, vitals, vitalReminders, onNavigateVitals, onCheckIn, plan, onViewFamily }) {
   const { t, lang } = useLang();
   const today = new Date();
 
@@ -60,6 +60,20 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
           </div>
         </div>
       </div>
+
+      {plan === "family" && onViewFamily && (
+        <div onClick={onViewFamily} style={{margin:"0 20px 14px",borderRadius:26,overflow:"hidden",background:"linear-gradient(135deg,#007AFF,#5856D6 70%,#AF52DE)",padding:20,color:"white",boxShadow:"0 16px 40px rgba(0,122,255,.28)",cursor:"pointer",display:"flex",alignItems:"center",gap:16}}>
+          <div style={{width:56,height:56,borderRadius:18,background:"rgba(255,255,255,.16)",backdropFilter:"blur(8px)",display:"grid",placeItems:"center",flexShrink:0}}>
+            <HeartPulse size={26} strokeWidth={2.2}/>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:.6,opacity:.8,marginBottom:2}}>FAMILY</div>
+            <div style={{fontSize:17,fontWeight:800,letterSpacing:-.3}}>Family dashboard</div>
+            <div style={{fontSize:12.5,opacity:.85,marginTop:2}}>Track adherence &amp; missed doses for your loved ones</div>
+          </div>
+          <span style={{fontSize:22,opacity:.9}}>›</span>
+        </div>
+      )}
 
       {ms && (() => { const MilestoneIcon = STREAK_ICONS[ms]; return (
         <div style={{margin:"0 20px 14px",display:"flex",alignItems:"center",gap:12,background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>

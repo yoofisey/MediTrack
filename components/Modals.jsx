@@ -83,8 +83,8 @@ export function TermsModal({ onClose }) {
   );
 }
 
-export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
-  const [selected, setSelected] = useState("pro");
+export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgrade }) {
+  const [selected, setSelected] = useState(currentPlan === "pro" || currentPlan === "family" ? currentPlan : "pro");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [paystackOpen, setPaystackOpen] = useState(false);
@@ -237,8 +237,17 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
                 border:`2px solid ${selected===p.id ? p.color : "var(--sep)"}`,
                 background: selected===p.id ? `${p.color}10` : "var(--card)",
                 transition:"all .15s",
+                position:"relative",
               }}
             >
+              {p.id === currentPlan && (
+                <div style={{
+                  position:"absolute", top:-8, left:"50%", transform:"translateX(-50%)",
+                  background:p.color, color:"white", fontSize:9, fontWeight:700,
+                  padding:"2px 8px", borderRadius:99, letterSpacing:".3px", whiteSpace:"nowrap",
+                  boxShadow:"0 1px 4px rgba(0,0,0,.15)",
+                }}>CURRENT</div>
+              )}
               <div style={{marginBottom:2,display:"flex",justifyContent:"center"}}>{p.icon}</div>
               <div style={{fontWeight:700,fontSize:13,color:selected===p.id?p.color:"var(--t1)"}}>{p.name}</div>
               <div style={{fontSize:15,fontWeight:800,color:selected===p.id?p.color:"var(--t2)",marginTop:2}}>
@@ -265,15 +274,15 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
         <div style={{padding:"8px 16px",borderTop:"1px solid var(--sep)"}}>
           <button
             className="btn"
-            disabled={busy}
+            disabled={busy || selected === currentPlan}
             style={{
               width:"100%", marginBottom:10,
               background: plan.color, color:"white",
-              fontSize:16, fontWeight:700, opacity: busy ? 0.6 : 1,
+              fontSize:16, fontWeight:700, opacity: (busy || selected === currentPlan) ? 0.5 : 1,
             }}
             onClick={handlePayment}
           >
-            {busy ? "Processing…" : `Unlock ${plan.name} · ${plan.price}/month`}
+            {busy ? "Processing…" : selected === currentPlan ? `You're on ${plan.name}` : `Unlock ${plan.name} · ${plan.price}/month`}
           </button>
           <button className="btn btn-ghost" onClick={onClose}>
             {busy ? "Cancel" : "Maybe later"}

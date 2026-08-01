@@ -8,13 +8,13 @@ import AdherenceChart from "@/components/AdherenceChart";
 import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, Users, User, Bell, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function ReportsTab({ logs, meds, plan, onNavigate, onViewFamily }) {
+export default function ReportsTab({ logs, meds, plan, onNavigate }) {
   const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
@@ -717,39 +717,6 @@ ${limits.reports ? `
                     return `${pct}% complete across ${active.length} active course${active.length>1?"s":""}`;
                   })()}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {plan==="family" && (
-        <div className="section">
-          <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
-            <Ico><Users size={15} strokeWidth={2.2} color="var(--t1)"/></Ico> Caregiver dashboard
-          </div>
-          <div className="list">
-            <div className="row" style={{cursor:"pointer"}} onClick={() => onViewFamily?.()}>
-              <div className="row-icon" style={{background:"var(--ib4)"}}><Ico><User size={18} strokeWidth={2.2} color="var(--t1)"/></Ico></div>
-              <div className="row-body">
-                <div className="row-title">Family members</div>
-                <div className="row-sub">Manage up to {limits.profiles} profiles</div>
-              </div>
-              <span style={{fontSize:14,color:"var(--t3)"}}>›</span>
-            </div>
-            <div className="row" style={{cursor:"pointer"}} onClick={() => onViewFamily?.()}>
-              <div className="row-icon" style={{background:"var(--ib2)"}}><Ico><BarChart3 size={18} strokeWidth={2.2} color="var(--t1)"/></Ico></div>
-              <div className="row-body">
-                <div className="row-title">Shared reports</div>
-                <div className="row-sub">View combined adherence across family members</div>
-              </div>
-              <span style={{fontSize:14,color:"var(--t3)"}}>›</span>
-            </div>
-            <div className="row" style={{cursor:"default"}}>
-              <div className="row-icon" style={{background:"var(--ib3)"}}><Ico><Bell size={18} strokeWidth={2.2} color="var(--t1)"/></Ico></div>
-              <div className="row-body">
-                <div className="row-title">Caregiver alerts</div>
-                <div className="row-sub">Get notified when a loved one misses a dose</div>
               </div>
             </div>
           </div>

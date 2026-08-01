@@ -19,10 +19,8 @@ import MedSheet from "@/components/MedSheet";
 import { DeleteConfirmModal, LogDoseModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
-import SearchSheet from "@/components/SearchSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
-import { Search } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
@@ -45,7 +43,6 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [showVisitSheet, setShowVisitSheet] = useState(false);
   const [showVisitList, setShowVisitList] = useState(false);
   const [editVisit, setEditVisit] = useState(null);
-  const [showSearch, setShowSearch] = useState(false);
   const [journalEntries, setJournalEntries] = useState([]);
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntry, setJournalEntry] = useState(null);
@@ -501,16 +498,14 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
 
-      <button onClick={()=>setShowSearch(true)} style={{position:"fixed",bottom:"calc(72px + var(--safe-bottom))",right:18,zIndex:150,width:56,height:56,borderRadius:18,border:"none",cursor:"pointer",display:"grid",placeItems:"center",background:"var(--card)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",boxShadow:"0 8px 32px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.06)",color:"var(--t1)",transition:"transform .2s, box-shadow .2s",userSelect:"none"}} onMouseDown={e=>{e.currentTarget.style.transform="scale(.92)";e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.12)"}} onMouseUp={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 8px 32px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.06)"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 8px 32px rgba(0,0,0,.12), 0 0 0 0.5px rgba(0,0,0,.06)"}}><Search size={22} strokeWidth={2}/></button>
-
       <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
         <div className="content-reveal">
-        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} onViewVisitList={()=>setShowVisitList(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")} onCheckIn={(date)=>{setJournalDate(date);setJournalEntry(getJournalEntry(date));}}/>}
+        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} onViewVisitList={()=>setShowVisitList(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")} onCheckIn={(date)=>{setJournalDate(date);setJournalEntry(getJournalEntry(date));}} onViewFamily={() => { setViewFamily(true); setTab("reports"); }}/>}
         {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan||"free"} medCount={meds.length}/>}
         {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
-        {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab} onViewFamily={() => setViewFamily(true)}/>}
-        {tab==="reports" && viewFamily && <FamilyTab user={user} plan={profile?.plan||"free"} onSaveProfile={saveProfile}/>}
-        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length} meds={meds} logs={logs}/>}
+        {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab}/>}
+        {tab==="reports" && viewFamily && <FamilyTab user={user} plan={profile?.plan||"free"} onSaveProfile={saveProfile} onBack={() => setViewFamily(false)}/>}
+        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length} meds={meds} logs={logs} onOpenFamily={() => { setViewFamily(true); setTab("reports"); }}/>}
         </div>
       </div>
 
@@ -551,7 +546,6 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       )}
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
       {(showVisitSheet||showVisitList) && <VisitSheet initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); reload(); }}/>}
-      {showSearch && <SearchSheet meds={meds} logs={logs} journalEntries={journalEntries} onClose={()=>setShowSearch(false)} onEditMed={(m) => { setEditMed(m); setShowSearch(false); }}/>}
       {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
       {showInviteSheet && pendingInvites.length > 0 && (
         <FamilyInviteSheet invites={pendingInvites} onAccept={handleAcceptInvite} onDismiss={() => setShowInviteSheet(false)}/>
