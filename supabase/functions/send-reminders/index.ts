@@ -125,13 +125,13 @@ function calcStreakForMed(medLogs: any[], startDate: string, timezone: string): 
 }
 
 const DAILY_MSGS = [
-  { min: 0,  title: "☀️ Good morning!", body: "Start your day right — take your medication and log how you feel." },
-  { min: 4,  title: "🌟 4-day streak!", body: "You're building a great habit. Keep the momentum going!" },
-  { min: 7,  title: "💪 One week strong!", body: "Seven days of consistency! You're proving your dedication." },
-  { min: 14, title: "🏅 Two-week warrior!", body: "14 days in a row! Your body thanks you for the commitment." },
-  { min: 30, title: "🔥 Month champion!", body: "30 days of adherence! This is the kind of dedication that changes lives." },
-  { min: 60, title: "🏆 Unstoppable!", body: "60 days! You're in the top tier of medication adherence worldwide." },
-  { min: 90, title: "👑 Legendary!", body: "90 days! You've made health a non-negotiable part of your life." },
+  { min: 0,  title: "Good morning!", body: "Start your day right — take your medication and log how you feel." },
+  { min: 4,  title: "4-day streak!", body: "You're building a great habit. Keep the momentum going!" },
+  { min: 7,  title: "One week strong!", body: "Seven days of consistency! You're proving your dedication." },
+  { min: 14, title: "Two-week warrior!", body: "14 days in a row! Your body thanks you for the commitment." },
+  { min: 30, title: "Month champion!", body: "30 days of adherence! This is the kind of dedication that changes lives." },
+  { min: 60, title: "Unstoppable!", body: "60 days! You're in the top tier of medication adherence worldwide." },
+  { min: 90, title: "Legendary!", body: "90 days! You've made health a non-negotiable part of your life." },
 ];
 
 serve(async (req) => {
@@ -242,12 +242,12 @@ serve(async (req) => {
 
         let title: string, body: string, tag: string;
         if (isReminderTime) {
-          title = `⏰ Reminder: ${med.name}`;
-          body = `${doseInfo} · ${day}${streak > 0 ? `\n🔥 Streak: ${streak} days` : ""}`;
+          title = `Reminder: ${med.name}`;
+          body = `${doseInfo} · ${day}${streak > 0 ? `\nStreak: ${streak} days` : ""}`;
           tag = `mt-rem-${med.id}-${doseMs}`;
         } else {
-          title = `💊 ${med.name}`;
-          body = `Take ${doseInfo}${med.notes ? `\n\n${med.notes}` : ""}\n${day}${streak > 0 ? `\n🔥 ${streak} day streak` : ""}`;
+          title = `${med.name}`;
+          body = `Take ${doseInfo}${med.notes ? `\n\n${med.notes}` : ""}\n${day}${streak > 0 ? `\n${streak} day streak` : ""}`;
           tag = `mt-dose-${med.id}-${doseMs}`;
         }
 
@@ -280,8 +280,8 @@ serve(async (req) => {
       const userMeds = meds.filter((m: any) => m.user_id === userId);
       const streak = userMeds.length ? calcStreakForMed(allLogs.filter((l: any) => l.user_id === userId), userMeds[0].start_date, tz) : 0;
       const payload = JSON.stringify({
-        title: "🌙 How was your day?",
-        body: `Take a moment to log how you're feeling today.${streak > 0 ? `\n🔥 Current streak: ${streak} days` : ""}\nTap to check in.`,
+        title: "How was your day?",
+        body: `Take a moment to log how you're feeling today.${streak > 0 ? `\nCurrent streak: ${streak} days` : ""}\nTap to check in.`,
         tag: `mt-checkin-${todayStr}`,
       });
       for (const sub of userSubs) {
@@ -302,7 +302,7 @@ serve(async (req) => {
       const streak = calcStreakForMed(userLogs, med.start_date, tz);
       const msg = [...DAILY_MSGS].reverse().find(m => streak >= m.min) || DAILY_MSGS[0];
       const todayStr = getLocalTodayStr(tz);
-      const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\n🔥 Current streak: ${streak} days`, tag: `mt-daily-${todayStr}` });
+      const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\nCurrent streak: ${streak} days`, tag: `mt-daily-${todayStr}` });
 
       for (const sub of userSubs) {
         try {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
-import { Crown, Users, Sparkles, Trash2, Pill } from "lucide-react";
+import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -223,7 +223,7 @@ export function UpgradeModal({ country, userEmail, onClose, onUpgrade }) {
           <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Upgrade Adhera</div>
           <div style={{fontSize:14,color:"var(--t3)"}}>
-            {selCountry.flag} {selCountry.name} · Paystack ✓
+            <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={13}/> {selCountry.name} · Paystack <Check size={11} strokeWidth={3}/></span>
           </div>
         </div>
 
@@ -329,7 +329,7 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
             <input className="sheet-input" type="email" placeholder="family@example.com" value={email} onChange={e => setEmail(e.target.value)}
               style={{flex:1}} onKeyDown={e => e.key === "Enter" && handleSend()}/>
             <button className="btn btn-primary btn-sm" style={{width:"auto"}} onClick={handleSend} disabled={!email.trim()}>
-              {sent ? "Sent! ✓" : "Send invite"}
+              {sent ? <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Check size={14}/> Sent!</span> : "Send invite"}
             </button>
           </div>
           <div style={{fontSize:12,color:"var(--t3)",marginTop:8}}>They&apos;ll receive an email to join your family group.</div>

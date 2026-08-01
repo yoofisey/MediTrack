@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Heart, Phone, AlertTriangle, Droplets, Info, Pill } from "lucide-react";
+import { Heart, Phone, AlertTriangle, Droplets, Info, Pill, X } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}} {...props}>{children}</span>;
@@ -106,7 +106,7 @@ export default function MedicalID({ meds = [], onClose }) {
                     const has = (data.allergies||[]).includes(a);
                     return <button key={a} onClick={()=>has?removeAllergy(a):addAllergy(a)}
                       style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--orange)":"0.5px solid var(--sep)",background:has?"var(--ib3)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--orange)":"var(--t1)"}}>
-                      {has?"✕ ":""}{a}</button>;
+                      {has?<X size={12} style={{display:"inline",verticalAlign:"-2px",marginRight:2}}/>:""}{a}</button>;
                   })}
                 </div>
                 <div style={{display:"flex",gap:8,marginTop:10}}>
@@ -138,7 +138,7 @@ export default function MedicalID({ meds = [], onClose }) {
                   const has = (data.conditions||[]).includes(c);
                   return <button key={c} onClick={()=>has?removeCondition(c):addCondition(c)}
                     style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--teal)":"0.5px solid var(--sep)",background:has?"var(--ib2)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--teal)":"var(--t1)"}}>
-                    {has?"✕ ":""}{c}</button>;
+                    {has?<X size={12} style={{display:"inline",verticalAlign:"-2px",marginRight:2}}/>:""}{c}</button>;
                 })}
               </div>
             ) : (
@@ -160,7 +160,7 @@ export default function MedicalID({ meds = [], onClose }) {
                   const has = (data.medication_ids||[]).includes(m.id);
                   return <button key={m.id} onClick={()=>has?removeMedication(m.id):addMedication(m.id)}
                     style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--teal)":"0.5px solid var(--sep)",background:has?"var(--ib2)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--teal)":"var(--t1)"}}>
-                    {has?"✕ ":""}{m.name}{m.dosage_amount?` · ${m.dosage_amount} ${m.dosage_unit}`:""}</button>;
+                    {has?<X size={12} style={{display:"inline",verticalAlign:"-2px",marginRight:2}}/>:""}{m.name}{m.dosage_amount?` · ${m.dosage_amount} ${m.dosage_unit}`:""}</button>;
                 }) : <span style={{color:"var(--t3)",fontSize:14}}>No medications yet — add some in the Medications tab.</span>}
               </div>
             ) : (

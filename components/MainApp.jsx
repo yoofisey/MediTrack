@@ -301,7 +301,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const takenClosest = logsToday.map(l => new Date(l.taken_at)).sort((a,b) => b - a);
         const takenSet = new Set(takenClosest.map(d => d.getHours() * 60 + d.getMinutes()));
         const remaining = times.filter(dt => !takenSet.has(dt.getHours() * 60 + dt.getMinutes()) && dt > new Date());
-        if (remaining.length === 0) { alert("✅ All doses taken today!"); return; }
+        if (remaining.length === 0) { alert("All doses taken today!"); return; }
         nextDoseTime = remaining[0];
       } else {
         const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;

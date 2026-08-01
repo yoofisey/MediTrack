@@ -16,13 +16,13 @@ for (const size of sizes) {
     .resize(size, size)
     .png()
     .toFile(join(publicDir, `icon-${size}.png`));
-  console.log(`  ✓ icon-${size}.png`);
+  console.log(`  OK icon-${size}.png`);
 }
 
 await sharp(Buffer.from(svg))
   .resize(180, 180)
   .png()
   .toFile(join(publicDir, "apple-touch-icon.png"));
-console.log("  ✓ apple-touch-icon.png");
+console.log("  OK apple-touch-icon.png");
 
 console.log("\nDone!");

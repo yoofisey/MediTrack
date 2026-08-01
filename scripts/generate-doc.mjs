@@ -326,4 +326,4 @@ const doc = new Document({
 
 const buffer = await Packer.toBuffer(doc);
 writeFileSync(outPath, buffer);
-console.log(`✓ Word document generated: ${outPath}`);
+console.log(`OK Word document generated: ${outPath}`);

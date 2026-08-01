@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Target, Zap, Sparkles } from "lucide-react";
 
 function BarChart({ data, height = 120, barColor = "var(--teal)" }) {
   if (!data.length) return null;
@@ -128,9 +129,9 @@ export default function AdherenceChart({ logs, meds }) {
         </div>
         <div style={{flex:1}}>
           <div style={{fontSize:13,color:"var(--t3)",marginBottom:2}}>Average adherence</div>
-          <div style={{fontSize:13,color:"var(--t2)",marginBottom:2}}>🎯 Best: {bestDay?.label} ({bestDay?.value}%)</div>
-          <div style={{fontSize:13,color:"var(--t2)",marginBottom:2}}>⚡ Worst: {worstDay?.label} ({worstDay?.value}%)</div>
-          <div style={{fontSize:13,color:"var(--teal)",fontWeight:600}}>✨ {daysWithPerfect}/{days} perfect days</div>
+          <div style={{fontSize:13,color:"var(--t2)",marginBottom:2}}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Target size={13} style={{color:"var(--t3)"}}/> Best: {bestDay?.label} ({bestDay?.value}%)</span></div>
+          <div style={{fontSize:13,color:"var(--t2)",marginBottom:2}}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Zap size={13} style={{color:"var(--t3)"}}/> Worst: {worstDay?.label} ({worstDay?.value}%)</span></div>
+          <div style={{fontSize:13,color:"var(--teal)",fontWeight:600}}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Sparkles size={13}/> {daysWithPerfect}/{days} perfect days</span></div>
         </div>
       </div>
 

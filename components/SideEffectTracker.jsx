@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Biohazard, CircleAlert, Waves, Moon, MoonStar, TriangleAlert, Zap, Droplets, CircleDot, Utensils, Droplet, Dumbbell, Meh, HelpCircle, CheckCircle2 } from "lucide-react";
 
 const SIDE_EFFECT_TYPES = [
-  { id:"nausea", label:"Nausea", icon:"🤢" },
-  { id:"headache", label:"Headache", icon:"🤕" },
-  { id:"dizziness", label:"Dizziness", icon:"😵" },
-  { id:"fatigue", label:"Fatigue", icon:"😴" },
-  { id:"insomnia", label:"Insomnia", icon:"😫" },
-  { id:"rash", label:"Rash", icon:"🔴" },
-  { id:"stomach", label:"Stomach pain", icon:"😣" },
-  { id:"diarrhea", label:"Diarrhea", icon:"💧" },
-  { id:"constipation", label:"Constipation", icon:"😖" },
-  { id:"appetite_loss", label:"Appetite loss", icon:"🍽️" },
-  { id:"dry_mouth", label:"Dry mouth", icon:"👄" },
-  { id:"muscle_pain", label:"Muscle pain", icon:"💪" },
-  { id:"mood_change", label:"Mood change", icon:"😐" },
-  { id:"other", label:"Other", icon:"❓" },
+  { id:"nausea", label:"Nausea", icon:Biohazard },
+  { id:"headache", label:"Headache", icon:CircleAlert },
+  { id:"dizziness", label:"Dizziness", icon:Waves },
+  { id:"fatigue", label:"Fatigue", icon:Moon },
+  { id:"insomnia", label:"Insomnia", icon:MoonStar },
+  { id:"rash", label:"Rash", icon:TriangleAlert },
+  { id:"stomach", label:"Stomach pain", icon:Zap },
+  { id:"diarrhea", label:"Diarrhea", icon:Droplets },
+  { id:"constipation", label:"Constipation", icon:CircleDot },
+  { id:"appetite_loss", label:"Appetite loss", icon:Utensils },
+  { id:"dry_mouth", label:"Dry mouth", icon:Droplet },
+  { id:"muscle_pain", label:"Muscle pain", icon:Dumbbell },
+  { id:"mood_change", label:"Mood change", icon:Meh },
+  { id:"other", label:"Other", icon:HelpCircle },
 ];
 
 const SEVERITY_LEVELS = [
@@ -84,7 +85,7 @@ export function SideEffectLogSheet({ medId, medName, onClose }) {
       <div className="sheet-overlay" onClick={onClose}>
         <div className="sheet" style={{maxHeight:"60vh"}} onClick={e => e.stopPropagation()}>
           <div style={{padding:32,textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:12}}>✅</div>
+            <div style={{display:"grid",placeItems:"center",marginBottom:12}}><CheckCircle2 size={48} strokeWidth={1.5}/></div>
             <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Side effects logged</div>
             <div style={{fontSize:14,color:"var(--t3)"}}>Thank you for tracking this.</div>
           </div>
@@ -112,7 +113,7 @@ export function SideEffectLogSheet({ medId, medName, onClose }) {
                   color: types.includes(se.id) ? "var(--teal)" : "var(--t2)",
                   transition:"all .15s",
                 }}>
-                  {se.icon} {se.label}
+                  <span style={{display:"inline-flex",alignItems:"center",gap:4}}><se.icon size={14}/> {se.label}</span>
                 </div>
               ))}
             </div>
@@ -177,7 +178,7 @@ export function SideEffectSummary({ meds, logs }) {
               const se = SIDE_EFFECT_TYPES.find(s => s.id === typeId);
               return (
                 <div key={typeId} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14}}>{se?.icon || "❓"}</span>
+                  <span style={{fontSize:14,display:"inline-flex",alignItems:"center",justifyContent:"center",width:18}}>{se ? <se.icon size={14}/> : <HelpCircle size={14}/>}</span>
                   <span style={{fontSize:13,flex:1}}>{se?.label || typeId}</span>
                   <span style={{fontSize:12,fontWeight:600,color:"var(--t2)"}}>{count}×</span>
                 </div>

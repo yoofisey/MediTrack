@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CircleAlert, TriangleAlert, CheckCircle2 } from "lucide-react";
 
 const INTERACTIONS_DB = [
   { a: "warfarin", b: "aspirin", severity: "major", msg: "Increased bleeding risk. Monitor closely or use alternative." },
@@ -88,7 +89,7 @@ export function InteractionBadge({ interactions }) {
           lineHeight:1.5,
         }}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-            <span style={{fontSize:14}}>{inter.severity === "major" ? "🚨" : "⚠️"}</span>
+            <span style={{fontSize:14,display:"inline-flex"}}>{inter.severity === "major" ? <CircleAlert size={14} color="#dc2626"/> : <TriangleAlert size={14} color="#d97706"/>}</span>
             <span style={{fontWeight:600,color:inter.severity === "major" ? "#dc2626" : "#d97706",fontSize:12,textTransform:"uppercase",letterSpacing:0.5}}>
               {inter.severity} interaction
             </span>
@@ -132,14 +133,14 @@ export default function InteractionChecker({ meds, currentName, onClose }) {
 
           {results.length === 0 ? (
             <div className="empty-state" style={{marginBottom:16}}>
-              <div className="empty-state-icon">✅</div>
+              <div className="empty-state-icon"><CheckCircle2 size={52} strokeWidth={1.5} color="var(--teal)"/></div>
               <div className="empty-state-title">No interactions found</div>
               <div className="empty-state-sub">{currentName ? "This medication appears safe with your current prescriptions" : "No known interactions between your medications"}</div>
             </div>
           ) : (
             <>
               <div style={{marginBottom:12,padding:"10px 14px",borderRadius:10,background:"rgba(217,119,6,0.08)",border:"1px solid rgba(217,119,6,0.2)",fontSize:13,color:"var(--t2)"}}>
-                ⚠️ Found <strong>{results.length}</strong> potential interaction{results.length !== 1 ? "s" : ""}. Always consult your pharmacist or doctor before making changes.
+                <span style={{display:"inline-flex",alignItems:"center",gap:6}}><TriangleAlert size={14} color="#d97706"/> Found <strong>{results.length}</strong> potential interaction{results.length !== 1 ? "s" : ""}. Always consult your pharmacist or doctor before making changes.</span>
               </div>
               <InteractionBadge interactions={results}/>
             </>

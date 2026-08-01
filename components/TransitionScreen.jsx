@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { CSS } from "@/lib/constants";
 
-export default function TransitionScreen({ emoji, message, sub, showMessages = false, fadeOut = false }) {
+export default function TransitionScreen({ icon, message, sub, showMessages = false, fadeOut = false }) {
   const [step, setStep] = useState(0);
   const [fading, setFading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const showDefault = !message && !sub;
-  const key = showDefault ? "default" : `${emoji}-${message}-${sub}`;
+  const key = showDefault ? "default" : `${message}-${sub}`;
 
   const msgs = ["Verifying your session", "Syncing your data", "Almost ready"];
 
@@ -107,10 +107,10 @@ export default function TransitionScreen({ emoji, message, sub, showMessages = f
             </>
           ) : (
             <>
-              {emoji && emoji !== "💊" && (
-                <div style={{ marginTop: 24, marginBottom: 4, fontSize: 52, lineHeight: 1, animation: "fadeUp .5s cubic-bezier(.175,.885,.32,1.275) both" }}>{emoji}</div>
+              {icon && (
+                <div style={{ marginTop: 24, marginBottom: 4, lineHeight: 1, animation: "fadeUp .5s cubic-bezier(.175,.885,.32,1.275) both", display:"inline-flex", justifyContent:"center" }}>{icon}</div>
               )}
-              <div style={{ marginTop: emoji && emoji !== "💊" ? 4 : 0, marginBottom: 4, fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.95)", textAlign: "center", letterSpacing: "-.3px" }}>{message || "Loading…"}</div>
+              <div style={{ marginTop: icon ? 4 : 0, marginBottom: 4, fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.95)", textAlign: "center", letterSpacing: "-.3px" }}>{message || "Loading…"}</div>
               {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,.65)", textAlign: "center", padding: "0 20px", lineHeight: 1.5, marginTop: 6, fontWeight: 400 }}>{sub}</div>}
             </>
           )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pill, BarChart3, FileText, Users } from "lucide-react";
 
 export default function LandingPage({ onGetStarted }) {
   const [fading, setFading] = useState(false);
@@ -49,13 +50,13 @@ export default function LandingPage({ onGetStarted }) {
       <div style={{maxWidth:480,margin:"0 auto",padding:"0 24px"}}>
         <div style={{display:"flex",flexDirection:"column",gap:16,marginBottom:48}}>
           {[
-            { icon:"💊", title:"Medication reminders", desc:"Smart alerts that adapt to your schedule so you never miss a dose." },
-            { icon:"📊", title:"Adherence tracking", desc:"See your consistency at a glance with daily streaks and progress charts." },
-            { icon:"📋", title:"Doctor reports", desc:"Generate clinical summaries to share with your healthcare provider." },
-            { icon:"👨‍👩‍👧", title:"Family sharing", desc:"Manage medications for your whole household from one account." },
+            { icon:<Pill size={22} color="#2563eb"/>, title:"Medication reminders", desc:"Smart alerts that adapt to your schedule so you never miss a dose." },
+            { icon:<BarChart3 size={22} color="#2563eb"/>, title:"Adherence tracking", desc:"See your consistency at a glance with daily streaks and progress charts." },
+            { icon:<FileText size={22} color="#2563eb"/>, title:"Doctor reports", desc:"Generate clinical summaries to share with your healthcare provider." },
+            { icon:<Users size={22} color="#2563eb"/>, title:"Family sharing", desc:"Manage medications for your whole household from one account." },
           ].map((f, i) => (
             <div key={f.title} style={{display:"flex",gap:16,alignItems:"flex-start",background:"white",borderRadius:16,padding:20,boxShadow:"0 1px 8px rgba(0,0,0,.04)",border:"1px solid #f1f5f9",animation:`fadeUp .6s ${.5 + i * .08}s ease both`}}>
-              <div style={{width:44,height:44,borderRadius:12,background:"#f0f7ff",display:"grid",placeItems:"center",fontSize:22,flexShrink:0}}>{f.icon}</div>
+              <div style={{width:44,height:44,borderRadius:12,background:"#f0f7ff",display:"grid",placeItems:"center",flexShrink:0}}>{f.icon}</div>
               <div>
                 <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>{f.title}</div>
                 <div style={{fontSize:13,color:"#64748b",lineHeight:1.5}}>{f.desc}</div>

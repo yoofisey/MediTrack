@@ -6,14 +6,14 @@ import { calcStreak, getStockStatus, getUpcomingVisits } from "@/lib/data";
 import { isVitalDue } from "@/lib/notifications";
 import { getJournalEntry } from "@/components/HealthJournal";
 import Ring from "@/components/Ring";
-import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock, Smile, FlaskConical, Ruler, GlassWater } from "lucide-react";
+import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock, Smile, FlaskConical, Ruler, GlassWater, Medal, Trophy, Crown, Award, Dumbbell, Star } from "lucide-react";
 
 function Ico({ children, size = 18, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180];
-const STREAK_EMOJIS = { 3:"🥉", 7:"🥈", 14:"🥇", 30:"🔥", 60:"💪", 90:"🏆", 180:"👑" };
+const STREAK_ICONS = { 3: Medal, 7: Trophy, 14: Crown, 30: Flame, 60: Dumbbell, 90: Award, 180: Star };
 const STREAK_LABELS = { 3:"3-Day Streak!", 7:"One Week!", 14:"Two Weeks!", 30:"30-Day Club!", 60:"60 Days Strong!", 90:"90-Day Warrior!", 180:"Half Year Legend!" };
 
 function milestone(streak) {
@@ -55,21 +55,21 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
           </div>
           <div className="hero-row">
             <div className="hero-stat"><div className="hero-stat-val">{activeMeds.length}</div><div className="hero-stat-lbl">{t("today.activeMeds")}</div></div>
-            <div className="hero-stat"><div className="hero-stat-val">🔥 {streak}</div><div className="hero-stat-lbl">{streak===1?t("day"):t("days")} {t("today.streak")}</div></div>
+            <div className="hero-stat"><div className="hero-stat-val"><Flame size={16} style={{verticalAlign:"-2px"}}/> {streak}</div><div className="hero-stat-lbl">{streak===1?t("day"):t("days")} {t("today.streak")}</div></div>
             <div className="hero-stat"><div className="hero-stat-val">{Math.max(0,total-taken)}</div><div className="hero-stat-lbl">{t("today.remaining")}</div></div>
           </div>
         </div>
       </div>
 
-      {ms && (
+      {ms && (() => { const MilestoneIcon = STREAK_ICONS[ms]; return (
         <div style={{margin:"0 20px 14px",display:"flex",alignItems:"center",gap:12,background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
-          <span style={{fontSize:28}}>{STREAK_EMOJIS[ms]}</span>
+          <span style={{display:"inline-flex"}}><MilestoneIcon size={28}/></span>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{t(`streak.${ms}`)}</div>
             <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{t("today.keepGoing")}</div>
           </div>
         </div>
-      )}
+      ); })()}
 
       {notifPerm==="default" && (
         <div className="notif-banner" onClick={onEnableNotif}>
@@ -106,7 +106,7 @@ export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnable
             if (config?.intervalId && config.intervalId !== "off" && isVitalDue(vitalId, vitals, config.intervalId)) {
               const labels = { blood_pressure:"Blood Pressure", glucose:"Blood Sugar", weight:"Weight", heart_rate:"Heart Rate", temperature:"Temperature", spo2:"Oxygen Level", cholesterol:"Total Cholesterol", bmi:"BMI", hba1c:"HbA1c", water_intake:"Water Intake", peak_flow:"Peak Flow" };
               const icons = { blood_pressure: <Activity size={15} strokeWidth={2.2}/>, glucose: <Droplet size={15} strokeWidth={2.2}/>, weight: <BarChart3 size={15} strokeWidth={2.2}/>, heart_rate: <HeartPulse size={15} strokeWidth={2.2}/>, temperature: <Thermometer size={15} strokeWidth={2.2}/>, spo2: <Wind size={15} strokeWidth={2.2}/>, cholesterol: <FlaskConical size={15} strokeWidth={2.2}/>, bmi: <Ruler size={15} strokeWidth={2.2}/>, hba1c: <Droplet size={15} strokeWidth={2.2}/>, water_intake: <GlassWater size={15} strokeWidth={2.2}/>, peak_flow: <Wind size={15} strokeWidth={2.2}/> };
-              dueVitals.push({ id:vitalId, label:labels[vitalId]||vitalId, icon:icons[vitalId]||"📊" });
+              dueVitals.push({ id:vitalId, label:labels[vitalId]||vitalId, icon:icons[vitalId]||<BarChart3 size={15} strokeWidth={2.2}/> });
             }
           });
         }

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { AVATAR_CHOICES } from "@/lib/avatars";
+import { Hand, Target, Check, Clock, AlarmClock, Moon, Sparkles, Gift, Star, Users, Palette, Pill, HeartPulse, Leaf, Microscope, Bell, BarChart3, Stethoscope, Globe } from "lucide-react";
 
 const OB_STEPS = 5;
 
@@ -11,7 +13,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     full_name: initProfile?.full_name || user?.user_metadata?.full_name || "",
-    avatar_emoji: initProfile?.avatar_emoji || "😊",
+    avatar_emoji: initProfile?.avatar_emoji || "Smile",
     condition: initProfile?.condition || "",
     wake_time: initProfile?.wake_time || "07:00",
     sleep_time: initProfile?.sleep_time || "22:00",
@@ -36,11 +38,11 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
   const back = () => setStep(s => s - 1);
 
   const conditions = [
-    { icon: "💊", title: "Managing a prescription course", sub: "Antibiotics, steroids, short-term meds", value: "prescription" },
-    { icon: "🫀", title: "Chronic condition", sub: "Diabetes, hypertension, asthma, HIV", value: "chronic" },
-    { icon: "🌿", title: "Vitamins & supplements", sub: "Daily wellness, iron, omega-3", value: "supplements" },
-    { icon: "👨‍👩‍👧", title: "Managing for family", sub: "Tracking meds for a child or parent", value: "family" },
-    { icon: "🔬", title: "Clinical / research use", sub: "Trial, hospital, or clinical setting", value: "clinical" },
+    { icon: <Pill size={24} style={{verticalAlign:"middle"}}/>, title: "Managing a prescription course", sub: "Antibiotics, steroids, short-term meds", value: "prescription" },
+    { icon: <HeartPulse size={24} style={{verticalAlign:"middle"}}/>, title: "Chronic condition", sub: "Diabetes, hypertension, asthma, HIV", value: "chronic" },
+    { icon: <Leaf size={24} style={{verticalAlign:"middle"}}/>, title: "Vitamins & supplements", sub: "Daily wellness, iron, omega-3", value: "supplements" },
+    { icon: <Users size={24} style={{verticalAlign:"middle"}}/>, title: "Managing for family", sub: "Tracking meds for a child or parent", value: "family" },
+    { icon: <Microscope size={24} style={{verticalAlign:"middle"}}/>, title: "Clinical / research use", sub: "Trial, hospital, or clinical setting", value: "clinical" },
   ];
   const reminders = [
     { value: 0, label: "At dose time", sub: "Exact moment" },
@@ -49,11 +51,11 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
     { value: 60, label: "1 hour early", sub: "Plan ahead" },
     { value: 120, label: "2 hours early", sub: "Never forget" },
   ];
-  const emojis = ["😊","🧑","👩","👨","🧓","👴","👵","🧒","👦","👧","🙂","😄","💪","🌟","❤️","🌸","🐻","🦁","🐼","🌴"];
+  const emojis = AVATAR_CHOICES;
 
   const steps = [
     <div key="0" className="ob-body">
-      <div className="ob-emoji">👋</div>
+      <div className="ob-emoji"><Hand size={56} strokeWidth={1.5}/></div>
       <div className="ob-title">What should we call you?</div>
       <div className="ob-sub">Pick a name and avatar for your account.</div>
       <div style={{marginBottom:16}}>
@@ -61,15 +63,15 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
         <input className="sheet-input" placeholder="Full name" value={data.full_name} onChange={e=>set("full_name",e.target.value)} style={{marginBottom:16}}/>
         <div style={{fontSize:13,color:"var(--t3)",marginBottom:10,fontWeight:500}}>CHOOSE AN AVATAR</div>
         <div className="emoji-grid">
-          {emojis.map(em => (
-            <div key={em} className={`emoji-opt${data.avatar_emoji===em?" sel":""}`} onClick={()=>set("avatar_emoji",em)}>{em}</div>
+          {emojis.map(({key,Icon}) => (
+            <div key={key} className={`emoji-opt${data.avatar_emoji===key?" sel":""}`} onClick={()=>set("avatar_emoji",key)}><Icon size={26}/></div>
           ))}
         </div>
       </div>
     </div>,
 
     <div key="1" className="ob-body">
-      <div className="ob-emoji">🎯</div>
+      <div className="ob-emoji"><Target size={56} strokeWidth={1.5}/></div>
       <div className="ob-title">How are you using Adhera?</div>
       <div className="ob-sub">We&apos;ll personalise your experience based on your needs.</div>
       <div className="ob-options">
@@ -77,20 +79,20 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
           <div key={c.value} className={`ob-option${data.condition===c.value?" sel":""}`} onClick={()=>set("condition",c.value)}>
             <div className="ob-option-icon">{c.icon}</div>
             <div className="ob-option-text"><div className="ob-option-title">{c.title}</div><div className="ob-option-sub">{c.sub}</div></div>
-            <div className={`ob-check${data.condition===c.value?" on":""}`}>{data.condition===c.value&&<span style={{color:"white",fontSize:13}}>✓</span>}</div>
+            <div className={`ob-check${data.condition===c.value?" on":""}`}></div>
           </div>
         ))}
       </div>
     </div>,
 
     <div key="2" className="ob-body">
-      <div className="ob-emoji">🕗</div>
+      <div className="ob-emoji"><Clock size={56} strokeWidth={1.5}/></div>
       <div className="ob-title">What&apos;s your daily schedule?</div>
       <div className="ob-sub">We&apos;ll time your dose reminders around your sleep and wake times.</div>
       <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:20}}>
-        {[{label:"⏰ Wake up time",key:"wake_time"},{label:"🌙 Bedtime",key:"sleep_time"}].map(({label,key})=>(
+        {[{icon:<AlarmClock size={15} style={{verticalAlign:"-2px"}}/>,label:"Wake up time",key:"wake_time"},{icon:<Moon size={15} style={{verticalAlign:"-2px"}}/>,label:"Bedtime",key:"sleep_time"}].map(({icon,label,key})=>(
           <div key={key} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 16px"}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:8,fontWeight:500}}>{label}</div>
+            <div style={{fontSize:13,color:"var(--t3)",marginBottom:8,fontWeight:500}}>{icon} {label}</div>
             <input type="time" value={data[key]} onChange={e=>set(key,e.target.value)} style={{fontSize:18,fontWeight:600,border:"none",background:"none",color:"var(--t1)",fontFamily:"inherit",width:"100%",outline:"none"}}/>
           </div>
         ))}
@@ -100,7 +102,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
         {reminders.map(r=>(
           <div key={r.value} className={`ob-option${data.reminder_lead===r.value?" sel":""}`} style={{padding:"12px 16px"}} onClick={()=>set("reminder_lead",r.value)}>
             <div className="ob-option-text"><div className="ob-option-title">{r.label}</div><div className="ob-option-sub">{r.sub}</div></div>
-            <div className={`ob-check${data.reminder_lead===r.value?" on":""}`}>{data.reminder_lead===r.value&&<span style={{color:"white",fontSize:13}}>✓</span>}</div>
+            <div className={`ob-check${data.reminder_lead===r.value?" on":""}`}></div>
           </div>
         ))}
       </div>
@@ -112,19 +114,19 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
       const selC = COUNTRIES.find(c => c.code === userCountry) || COUNTRIES[0];
       return (
     <div key="3" className="ob-body">
-      <div className="ob-emoji">✨</div>
+      <div className="ob-emoji"><Sparkles size={56} strokeWidth={1.5}/></div>
       <div className="ob-title">Choose your plan</div>
       <div className="ob-sub">
         Start free. Upgrade anytime.{" "}
         <span style={{fontSize:13,color:"var(--teal)"}}>
-          {selC.flag} {selC.name} pricing
+          <Globe size={13} style={{verticalAlign:"-2px"}}/> {selC.name} pricing
         </span>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {[
-          { value:"free", icon:"🆓", title:"Free", sub:"Up to 2 medications, basic reminders", price:"Free forever", features:["2 medications","Daily reminders","7-day history"] },
-          { value:"pro", icon:"⭐", title:"Pro", sub:"Everything you need for full adherence", price:`${obPricing.pro.label}/mo`, features:["Unlimited medications","Full history & analytics","Caregiver sharing","Refill reminders","Adherence PDF reports"] },
-          { value:"family", icon:"👨‍👩‍👧", title:"Family", sub:"One account for the whole household", price:`${obPricing.family.label}/mo`, features:["5 family profiles","All Pro features","Shared family dashboard","Doctor-friendly summaries"] },
+          { value:"free", icon:<Gift size={24} style={{verticalAlign:"middle"}}/>, title:"Free", sub:"Up to 2 medications, basic reminders", price:"Free forever", features:["2 medications","Daily reminders","7-day history"] },
+          { value:"pro", icon:<Star size={24} style={{verticalAlign:"middle"}}/>, title:"Pro", sub:"Everything you need for full adherence", price:`${obPricing.pro.label}/mo`, features:["Unlimited medications","Full history & analytics","Caregiver sharing","Refill reminders","Adherence PDF reports"] },
+          { value:"family", icon:<Users size={24} style={{verticalAlign:"middle"}}/>, title:"Family", sub:"One account for the whole household", price:`${obPricing.family.label}/mo`, features:["5 family profiles","All Pro features","Shared family dashboard","Doctor-friendly summaries"] },
         ].map(p=>(
           <div key={p.value} className={`ob-option${data.plan===p.value?" sel":""}`} style={{alignItems:"flex-start",padding:"16px"}} onClick={()=>set("plan",p.value)}>
             <div className="ob-option-icon" style={{marginTop:2}}>{p.icon}</div>
@@ -136,7 +138,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
               <div className="ob-option-sub" style={{marginBottom:8}}>{p.sub}</div>
               {p.features.map(f=><div key={f} style={{fontSize:12,color:"var(--t3)",marginTop:3}}>— {f}</div>)}
             </div>
-            <div className={`ob-check${data.plan===p.value?" on":""}`} style={{marginTop:2}}>{data.plan===p.value&&<span style={{color:"white",fontSize:13}}>✓</span>}</div>
+            <div className={`ob-check${data.plan===p.value?" on":""}`} style={{marginTop:2}}></div>
           </div>
         ))}
       </div>
@@ -145,18 +147,18 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
     })(),
 
     <div key="4" className="ob-body">
-      <div className="ob-emoji">🎨</div>
+      <div className="ob-emoji"><Palette size={56} strokeWidth={1.5}/></div>
       <div className="ob-title">Final touches</div>
       <div className="ob-sub">Set your health goals and pick an app theme colour.</div>
       <div style={{fontSize:13,color:"var(--t3)",fontWeight:500,textTransform:"uppercase",letterSpacing:".3px",marginBottom:10}}>HEALTH GOALS (pick any)</div>
       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:24}}>
         {[
-          {icon:"💊",label:"Never miss a dose"},
-          {icon:"📊",label:"Track adherence over time"},
-          {icon:"👨‍⚕️",label:"Share reports with my doctor"},
-          {icon:"👨‍👩‍👧",label:"Manage family medications"},
-          {icon:"🔔",label:"Build a medication habit"},
-          {icon:"💊",label:"Complete my full course"},
+          {icon:<Pill size={22} style={{verticalAlign:"middle"}}/>,label:"Never miss a dose"},
+          {icon:<BarChart3 size={22} style={{verticalAlign:"middle"}}/>,label:"Track adherence over time"},
+          {icon:<Stethoscope size={22} style={{verticalAlign:"middle"}}/>,label:"Share reports with my doctor"},
+          {icon:<Users size={22} style={{verticalAlign:"middle"}}/>,label:"Manage family medications"},
+          {icon:<Bell size={22} style={{verticalAlign:"middle"}}/>,label:"Build a medication habit"},
+          {icon:<Pill size={22} style={{verticalAlign:"middle"}}/>,label:"Complete my full course"},
         ].map(g => {
           const sel = data.goals.includes(g.label);
           return (
@@ -164,7 +166,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
               onClick={()=>set("goals", sel ? data.goals.filter(x=>x!==g.label) : [...data.goals,g.label])}>
               <div className="goal-chip-icon">{g.icon}</div>
               <div className="goal-chip-label">{g.label}</div>
-              <div className={`goal-chip-check${sel?" on":""}`}>{sel&&<span style={{color:"white",fontSize:11}}>✓</span>}</div>
+              <div className={`goal-chip-check${sel?" on":""}`}>{sel&&<Check size={11} color="white" strokeWidth={3}/>}</div>
             </div>
           );
         })}
@@ -184,7 +186,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
           <div key={th.id} className={`theme-swatch${data.theme===th.id?" sel":""}`}
             style={{background:`linear-gradient(135deg,${th.colors[0]},${th.colors[1]})`}}
             onClick={()=>set("theme",th.id)}>
-            {data.theme===th.id && <div className="theme-swatch-check">✓</div>}
+            {data.theme===th.id && <div className="theme-swatch-check"><Check size={18} color="white" strokeWidth={3}/></div>}
           </div>
         ))}
       </div>

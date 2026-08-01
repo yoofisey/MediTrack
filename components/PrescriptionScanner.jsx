@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Camera, Image as ImageIcon, Pencil, X } from "lucide-react";
 
 export default function PrescriptionScanner({ onUseResult, onClose }) {
   const [step, setStep] = useState("capture");
@@ -79,20 +80,20 @@ export default function PrescriptionScanner({ onUseResult, onClose }) {
         <div className="sheet" style={{maxHeight:"85vh"}} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle"/>
           <div style={{padding:"0 20px 20px",textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:12}}>📸</div>
+            <div style={{fontSize:48,marginBottom:12}}><Camera size={48} strokeWidth={1.5} color="var(--teal)"/></div>
             <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Scan Prescription</div>
             <div style={{fontSize:14,color:"var(--t3)",marginBottom:20,lineHeight:1.5}}>
               Take a photo of your prescription label. You&apos;ll then enter the details manually.
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <button className="btn btn-primary" style={{width:"100%"}} onClick={startCamera}>
-                📷 Open Camera
+                <span style={{display:"inline-flex",alignItems:"center",gap:8}}><Camera size={16}/> Open Camera</span>
               </button>
               <button className="btn" style={{width:"100%",background:"var(--ib2)"}} onClick={() => fileInputRef.current?.click()}>
-                🖼️ Upload Photo
+                <span style={{display:"inline-flex",alignItems:"center",gap:8}}><ImageIcon size={16}/> Upload Photo</span>
               </button>
               <button className="btn btn-ghost" style={{width:"100%"}} onClick={() => { setStep("manual"); setResult({ name:"", dosage:"", unit:"tablet(s)", times:"1" }); }}>
-                ✏️ Enter manually
+                <span style={{display:"inline-flex",alignItems:"center",gap:8}}><Pencil size={16}/> Enter manually</span>
               </button>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFileUpload}/>
@@ -114,7 +115,7 @@ export default function PrescriptionScanner({ onUseResult, onClose }) {
                 <div style={{width:52,height:52,borderRadius:"50%",background:"white"}}/>
               </button>
             </div>
-            <button onClick={() => { stopCamera(); onClose(); }} style={{position:"absolute",top:12,right:12,background:"rgba(0,0,0,0.5)",border:"none",color:"white",width:32,height:32,borderRadius:"50%",cursor:"pointer",fontSize:16,display:"grid",placeItems:"center"}}>✕</button>
+            <button onClick={() => { stopCamera(); onClose(); }} style={{position:"absolute",top:12,right:12,background:"rgba(0,0,0,0.5)",border:"none",color:"white",width:32,height:32,borderRadius:"50%",cursor:"pointer",fontSize:16,display:"grid",placeItems:"center"}}><X size={16}/></button>
           </div>
           <div style={{padding:16,textAlign:"center",fontSize:13,color:"var(--t3)"}}>Point camera at the prescription label, then tap the capture button</div>
         </div>

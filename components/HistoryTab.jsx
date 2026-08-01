@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
+import { ClipboardList, Pill, NotebookPen, ChevronDown } from "lucide-react";
 
 export default function HistoryTab({ logs, meds, plan }) {
   const [expanded, setExpanded] = useState(null);
@@ -26,7 +27,7 @@ export default function HistoryTab({ logs, meds, plan }) {
       </div>
 
       {days.length===0?(
-        <div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-title">No history yet</div><div className="empty-state-sub">Your dose logs will appear here</div></div>
+        <div className="empty-state"><div className="empty-state-icon"><ClipboardList size={52} strokeWidth={1.5}/></div><div className="empty-state-title">No history yet</div><div className="empty-state-sub">Your dose logs will appear here</div></div>
       ):days.map(d=>{
         const dayLogs = grouped[d];
         const totalExpected = meds.reduce((s,m)=>s+(m.times_per_day||1),0);
@@ -46,19 +47,19 @@ export default function HistoryTab({ logs, meds, plan }) {
                 <div key={log.id}>
                   <div className="row" style={{cursor:hasJournal?"pointer":"default",borderTop:i>0?"0.5px solid var(--sep)":"none"}}
                     onClick={() => hasJournal ? setExpanded(isExpanded ? null : log.id) : null}>
-                    <div style={{width:32,height:32,borderRadius:8,background:"var(--ib1)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}>💊</div>
+                    <div style={{width:32,height:32,borderRadius:8,background:"var(--ib1)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}><Pill size={16}/></div>
                     <div className="row-body">
                       <div className="row-title" style={{fontSize:15}}>{log.medications?.name||"Medication"}</div>
-                      {hasJournal && <div className="row-sub" style={{fontSize:12}}>📝 Has journal note</div>}
+                      {hasJournal && <div className="row-sub" style={{fontSize:12}}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><NotebookPen size={12}/> Has journal note</span></div>}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <span style={{fontSize:13,fontWeight:500,color:"var(--t2)",background:"var(--bg)",padding:"3px 10px",borderRadius:99}}>{fmtTime(log.taken_at)}</span>
-                      {hasJournal && <span style={{fontSize:12,color:"var(--t3)",transition:"transform .2s",transform:isExpanded?"rotate(180deg)":"rotate(0deg)"}}>▼</span>}
+                      {hasJournal && <ChevronDown size={16} style={{color:"var(--t3)",transition:"transform .2s",transform:isExpanded?"rotate(180deg)":"rotate(0deg)"}}/>}
                     </div>
                   </div>
                   {hasJournal && isExpanded && (
                     <div style={{margin:"0 16px 12px 60px",padding:"12px 14px",background:"var(--bg)",borderRadius:10,fontSize:13,color:"var(--t2)",lineHeight:1.6,whiteSpace:"pre-wrap",border:"0.5px solid var(--sep)"}}>
-                      <span style={{fontWeight:500}}>📝</span> {log.journal}
+                      <span style={{fontWeight:500}}><NotebookPen size={14} style={{verticalAlign:"-2px"}}/></span> {log.journal}
                     </div>
                   )}
                 </div>

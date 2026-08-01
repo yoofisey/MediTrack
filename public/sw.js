@@ -33,8 +33,8 @@ self.addEventListener("message", e => {
       doseDB[timerId] = {
         timer: setTimeout(() => {
           const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
-          self.registration.showNotification(`💊 ${item.name}`, {
-            body: `Take ${item.dosageAmount} ${item.dosageUnit}${item.notes ? `\n\n${item.notes}` : ""}\nDay ${daysSince}/${item.courseDays}${item.streak > 0 ? `\n🔥 ${item.streak} day streak` : ""}`,
+          self.registration.showNotification(`${item.name}`, {
+            body: `Take ${item.dosageAmount} ${item.dosageUnit}${item.notes ? `\n\n${item.notes}` : ""}\nDay ${daysSince}/${item.courseDays}${item.streak > 0 ? `\n${item.streak} day streak` : ""}`,
             icon: "/icon.svg",
             tag: `mt-dose-${item.medId}-${item.doseAt}`,
             vibrate: [500, 200, 500, 200, 500],

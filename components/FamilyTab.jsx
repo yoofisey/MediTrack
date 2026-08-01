@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, fmtDateLong } from "@/lib/constants";
 import { getStockStatus, getUpcomingVisits } from "@/lib/data";
+import { User, Pill, AlertTriangle, TrendingDown, Package, Hospital, Users } from "lucide-react";
 
 export default function FamilyTab({ user, plan }) {
   const [members, setMembers] = useState([]);
@@ -154,7 +155,7 @@ export default function FamilyTab({ user, plan }) {
 
         {memberMeds.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">👤</div>
+            <div className="empty-state-icon"><User size={52} strokeWidth={1.5}/></div>
             <div className="empty-state-title">No data yet</div>
             <div className="empty-state-sub">This member hasn&apos;t added any medications</div>
           </div>
@@ -169,7 +170,7 @@ export default function FamilyTab({ user, plan }) {
                   const pct = expected > 0 ? Math.min(Math.round((medLogs.length / expected) * 100), 100) : 0;
                   return (
                     <div key={med.id} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:12}}>
-                      <div style={{width:30,height:30,borderRadius:8,background:"var(--ib4)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}>💊</div>
+                      <div style={{width:30,height:30,borderRadius:8,background:"var(--ib4)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0}}><Pill size={16}/></div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{med.name}</div>
                         <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{med.dosage_amount} {med.dosage_unit} · {medLogs.length}/{expected} doses</div>
@@ -192,7 +193,7 @@ export default function FamilyTab({ user, plan }) {
                     return (
                       <div key={med.id} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:12,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:10}}>
                         <div style={{width:28,height:28,borderRadius:7,background:s.status==="empty"?"var(--ib6)":s.status==="low"?"var(--ib3)":"var(--ib5)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}>
-                          {s.status==="empty"?"⚠️":s.status==="low"?"📉":"📦"}
+                          {s.status==="empty"?<AlertTriangle size={15} style={{color:"var(--red)"}}/>:s.status==="low"?<TrendingDown size={15} style={{color:"var(--orange)"}}/>:<Package size={15} style={{color:"var(--teal)"}}/>}
                         </div>
                         <div style={{flex:1}}>
                           <div style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{med.name}</div>
@@ -219,7 +220,7 @@ export default function FamilyTab({ user, plan }) {
                   <div style={{background:"var(--card)",borderRadius:"var(--rl)",overflow:"hidden",boxShadow:"var(--card-shadow)"}}>
                     {visits.slice(0, 3).map((v, i) => (
                       <div key={v.id} className="row" style={{borderTop:i>0?"0.5px solid var(--sep)":"none",cursor:"default"}}>
-                        <div style={{width:28,height:28,borderRadius:7,background:"var(--ib5)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}>🏥</div>
+                        <div style={{width:28,height:28,borderRadius:7,background:"var(--ib5)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}><Hospital size={15}/></div>
                         <div className="row-body">
                           <div className="row-title" style={{fontSize:14}}>{v.reason || "Hospital visit"}</div>
                           <div className="row-sub">{v.facility || v.doctor || ""} · {v.date}</div>
@@ -237,7 +238,7 @@ export default function FamilyTab({ user, plan }) {
                 <div style={{background:"var(--card)",borderRadius:"var(--rl)",overflow:"hidden",boxShadow:"var(--card-shadow)"}}>
                   {memberLogs.slice(0, 10).map((log, i) => (
                     <div key={log.id} className="row" style={{borderTop: i > 0 ? "0.5px solid var(--sep)" : "none", cursor: "default"}}>
-                      <div style={{width:28,height:28,borderRadius:7,background:"var(--ib1)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}>💊</div>
+                      <div style={{width:28,height:28,borderRadius:7,background:"var(--ib1)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}><Pill size={15}/></div>
                       <div className="row-body">
                         <div className="row-title" style={{fontSize:14}}>{log.medications?.name || "Medication"}</div>
                       </div>
@@ -278,7 +279,7 @@ export default function FamilyTab({ user, plan }) {
 
           {members.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">👨‍👩‍👧</div>
+              <div className="empty-state-icon"><Users size={52} strokeWidth={1.5}/></div>
               <div className="empty-state-title">No family members yet</div>
               <div className="empty-state-sub">Invite family members to track their medications together</div>
               <button className="btn btn-primary" style={{marginTop:12}} onClick={() => setShowInvite(true)}>+ Invite first member</button>

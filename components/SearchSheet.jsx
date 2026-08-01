@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Pill, FileText, Activity, Search } from "lucide-react";
+import { Pill, FileText, Activity, Search, X } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}} {...props}>{children}</span>;
@@ -31,7 +31,7 @@ export default function SearchSheet({ meds, logs, journalEntries, onClose, onLog
             <Ico><Search size={18} strokeWidth={2.2} color="var(--t3)"/></Ico>
             <input autoFocus type="text" placeholder="Search medications, doses, journal..." value={q} onChange={e=>setQ(e.target.value)}
               style={{flex:1,padding:"12px 0",border:"none",background:"none",fontSize:16,fontFamily:"inherit",color:"var(--t1)",outline:"none"}}/>
-            {q && <button onClick={()=>setQ("")} style={{background:"none",border:"none",color:"var(--t3)",cursor:"pointer",fontSize:14}}>✕</button>}
+            {q && <button onClick={()=>setQ("")} style={{background:"none",border:"none",color:"var(--t3)",cursor:"pointer",display:"grid",placeItems:"center",padding:4}}><X size={16}/></button>}
           </div>
 
           {q.trim() && (

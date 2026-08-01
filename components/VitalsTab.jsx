@@ -2,19 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useLang } from "@/lib/i18n";
+import { Stethoscope, Scale, Droplets, Heart, Thermometer, Wind, FlaskConical, Ruler, Droplet, Gauge, BarChart3 } from "lucide-react";
 
 const VITAL_TYPES = [
-  { id:"blood_pressure", label:"Blood Pressure", icon:"🩺", unit:"mmHg", secondaryLabel:"Systolic / Diastolic", color:"#FF3B30", normal:{min:90,max:120}, normalDiastolic:{min:60,max:80}, hasSecondary:true, placeholderA:"120", placeholderB:"80" },
-  { id:"weight", label:"Weight", icon:"⚖️", unit:"kg", color:"#007AFF", normal:{min:45,max:100}, placeholderA:"70" },
-  { id:"glucose", label:"Blood Sugar", icon:"🩸", unit:"mg/dL", color:"#FF9500", normal:{min:70,max:140}, placeholderA:"100" },
-  { id:"heart_rate", label:"Heart Rate", icon:"❤️", unit:"bpm", color:"#FF2D55", normal:{min:60,max:100}, placeholderA:"72" },
-  { id:"temperature", label:"Temperature", icon:"🌡️", unit:"°F", color:"#AF52DE", normal:{min:97,max:99}, placeholderA:"98.6" },
-  { id:"spo2", label:"Oxygen Level", icon:"💨", unit:"%", color:"#30D158", normal:{min:95,max:100}, placeholderA:"98" },
-  { id:"cholesterol", label:"Total Cholesterol", icon:"🧪", unit:"mg/dL", color:"#8E8E93", normal:{min:125,max:200}, placeholderA:"180" },
-  { id:"bmi", label:"BMI", icon:"📏", unit:"kg/m²", color:"#5856D6", normal:{min:18.5,max:24.9}, placeholderA:"23" },
-  { id:"hba1c", label:"HbA1c", icon:"🩸", unit:"%", color:"#FF3B30", normal:{min:4,max:5.6}, placeholderA:"5.4" },
-  { id:"water_intake", label:"Water Intake", icon:"💧", unit:"L", color:"#0A84FF", normal:{min:1.5,max:3.5}, placeholderA:"2" },
-  { id:"peak_flow", label:"Peak Flow", icon:"🫁", unit:"L/min", color:"#FF9F0A", normal:{min:400,max:700}, placeholderA:"550" },
+  { id:"blood_pressure", label:"Blood Pressure", icon:Stethoscope, unit:"mmHg", secondaryLabel:"Systolic / Diastolic", color:"#FF3B30", normal:{min:90,max:120}, normalDiastolic:{min:60,max:80}, hasSecondary:true, placeholderA:"120", placeholderB:"80" },
+  { id:"weight", label:"Weight", icon:Scale, unit:"kg", color:"#007AFF", normal:{min:45,max:100}, placeholderA:"70" },
+  { id:"glucose", label:"Blood Sugar", icon:Droplets, unit:"mg/dL", color:"#FF9500", normal:{min:70,max:140}, placeholderA:"100" },
+  { id:"heart_rate", label:"Heart Rate", icon:Heart, unit:"bpm", color:"#FF2D55", normal:{min:60,max:100}, placeholderA:"72" },
+  { id:"temperature", label:"Temperature", icon:Thermometer, unit:"°F", color:"#AF52DE", normal:{min:97,max:99}, placeholderA:"98.6" },
+  { id:"spo2", label:"Oxygen Level", icon:Wind, unit:"%", color:"#30D158", normal:{min:95,max:100}, placeholderA:"98" },
+  { id:"cholesterol", label:"Total Cholesterol", icon:FlaskConical, unit:"mg/dL", color:"#8E8E93", normal:{min:125,max:200}, placeholderA:"180" },
+  { id:"bmi", label:"BMI", icon:Ruler, unit:"kg/m²", color:"#5856D6", normal:{min:18.5,max:24.9}, placeholderA:"23" },
+  { id:"hba1c", label:"HbA1c", icon:Droplets, unit:"%", color:"#FF3B30", normal:{min:4,max:5.6}, placeholderA:"5.4" },
+  { id:"water_intake", label:"Water Intake", icon:Droplet, unit:"L", color:"#0A84FF", normal:{min:1.5,max:3.5}, placeholderA:"2" },
+  { id:"peak_flow", label:"Peak Flow", icon:Gauge, unit:"L/min", color:"#FF9F0A", normal:{min:400,max:700}, placeholderA:"550" },
 ];
 
 const FREQUENCIES = [
@@ -98,8 +99,8 @@ function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
       <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:vitalType.color,opacity:0.8}}/>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:38,height:38,borderRadius:10,background:`${vitalType.color}12`,display:"grid",placeItems:"center",fontSize:20}}>
-            {vitalType.icon}
+          <div style={{width:38,height:38,borderRadius:10,background:`${vitalType.color}12`,display:"grid",placeItems:"center"}}>
+            <vitalType.icon size={20}/>
           </div>
           <div>
             <div style={{fontSize:15,fontWeight:600,color:"var(--t1)"}}>{vitalType.label}</div>
@@ -184,8 +185,8 @@ function LogSheet({ vitalType, onSave, onClose }) {
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-            <div style={{width:42,height:42,borderRadius:12,background:`${vitalType.color}12`,display:"grid",placeItems:"center",fontSize:22}}>
-              {vitalType.icon}
+            <div style={{width:42,height:42,borderRadius:12,background:`${vitalType.color}12`,display:"grid",placeItems:"center"}}>
+              <vitalType.icon size={22}/>
             </div>
             <div>
               <div style={{fontSize:18,fontWeight:700,color:"var(--t1)"}}>{t("btn.log")} {vitalType.label}</div>
@@ -242,8 +243,8 @@ function HistorySheet({ vitalType, entries, onClose }) {
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:36,height:36,borderRadius:10,background:`${vitalType.color}12`,display:"grid",placeItems:"center",fontSize:18}}>
-              {vitalType.icon}
+            <div style={{width:36,height:36,borderRadius:10,background:`${vitalType.color}12`,display:"grid",placeItems:"center"}}>
+              <vitalType.icon size={18}/>
             </div>
             <div style={{fontSize:18,fontWeight:700,color:"var(--t1)"}}>{vitalType.label} {t("vitals.historyTitle")}</div>
           </div>
@@ -302,7 +303,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
                   border:`1.5px solid ${isOn ? `${vt.color}30` : "transparent"}`,
                   transition:"all .15s",
                 }}>
-                  <div style={{width:32,height:32,borderRadius:8,background:`${vt.color}12`,display:"grid",placeItems:"center",fontSize:16}}>{vt.icon}</div>
+                  <div style={{width:32,height:32,borderRadius:8,background:`${vt.color}12`,display:"grid",placeItems:"center"}}><vt.icon size={16}/></div>
                   <div style={{flex:1,fontSize:14,fontWeight:500,color:"var(--t1)"}}>{vt.label}</div>
                   <div style={{
                     width:44,height:26,borderRadius:13,position:"relative",cursor:"pointer",
@@ -345,7 +346,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
               return (
                 <div key={vtId} style={{marginBottom:14}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:16}}>{vt.icon}</span>
+                    <span style={{display:"inline-flex"}}><vt.icon size={16}/></span>
                     <span style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{vt.label}</span>
                   </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
@@ -449,7 +450,7 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
       <div style={{padding:"0 16px"}}>
         {enabled.length === 0 ? (
           <div style={{textAlign:"center",padding:"48px 24px",color:"var(--t3)"}}>
-            <div style={{fontSize:48,marginBottom:12}}>📊</div>
+            <div style={{display:"grid",placeItems:"center",marginBottom:12}}><BarChart3 size={48} strokeWidth={1.5}/></div>
             <div style={{fontSize:17,fontWeight:600,color:"var(--t2)",marginBottom:6}}>{t("vitals.noConfigured")}</div>
             <div style={{fontSize:14,marginBottom:20}}>{t("vitals.tapConfigure")}</div>
             <button className="btn btn-primary" style={{width:"auto",padding:"12px 24px"}} onClick={() => setShowConfig(true)}>{t("vitals.configureVitals")}</button>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
+import { X, Camera } from "lucide-react";
 
 const COMMON_MEDICATIONS = {
   "5000000000000": { name: "Paracetamol 500mg", dosage_unit: "tablet(s)" },
@@ -89,7 +90,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
             <div style={{fontSize:20,fontWeight:700}}>Scan Barcode</div>
-            <button className="btn btn-sm" style={{background:"var(--hover)",border:"none",fontSize:13}} onClick={onClose}>✕</button>
+            <button className="btn btn-sm" style={{background:"var(--hover)",border:"none",fontSize:13,display:"grid",placeItems:"center"}} onClick={onClose}><X size={14}/></button>
           </div>
 
           {scanning && (
@@ -140,7 +141,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
 
           {!scanning && !result && !error && (
             <button className="btn btn-primary" style={{width:"100%",marginBottom:8}} onClick={startCamera}>
-              📷 Start camera
+              <span style={{display:"inline-flex",alignItems:"center",gap:8}}><Camera size={16}/> Start camera</span>
             </button>
           )}
 

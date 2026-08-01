@@ -1,5 +1,7 @@
 "use client";
 
+import { Hospital, Check, Mail } from "lucide-react";
+
 export default function EnterprisePaymentView({
   orgName, email, otp, onOtpChange, onOtpVerify,
   onResend, onBack, busy, cooldown, err,
@@ -8,7 +10,7 @@ export default function EnterprisePaymentView({
 }) {
   return (
     <div>
-      <div style={{fontSize:36,marginBottom:8}}>🏥</div>
+      <div style={{fontSize:36,marginBottom:8}}><Hospital size={36} color="var(--teal)"/></div>
       <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Enterprise plan — {orgName}</div>
       <div style={{fontSize:14,color:"var(--t3)"}}>Verify your email to continue. A verification code was sent to <strong>{email}</strong>.</div>
 
@@ -17,8 +19,10 @@ export default function EnterprisePaymentView({
           <span style={{fontSize:14,fontWeight:600}}>{selectedEntTier.label} — {selectedEntTier.range}</span>
           <span style={{fontSize:18,fontWeight:800}}>{selCountry.code === "GH" ? selectedEntTier.annualLabel : selectedEntTier.annualUsdLabel}<span style={{fontSize:12,fontWeight:400}}>/yr</span></span>
         </div>
-        <div style={{fontSize:13,opacity:.9,lineHeight:1.5}}>
-          ✓ Unlimited patients · ✓ HIPAA compliance · ✓ API access · ✓ Custom branding · ✓ Dedicated manager · ✓ 24/7 support
+        <div style={{fontSize:13,opacity:.9,lineHeight:1.5,display:"flex",flexWrap:"wrap",gap:"4px 12px"}}>
+          {["Unlimited patients","HIPAA compliance","API access","Custom branding","Dedicated manager","24/7 support"].map(f=>(
+            <span key={f} style={{display:"inline-flex",alignItems:"center",gap:5}}><Check size={12} strokeWidth={3}/>{f}</span>
+          ))}
         </div>
       </div>
 
@@ -70,7 +74,7 @@ export default function EnterprisePaymentView({
         </button>
       </div>
       <div style={{marginTop:12,padding:"10px 12px",background:"var(--bg)",borderRadius:8,fontSize:12,color:"var(--t3)",lineHeight:1.5}}>
-        📧 Didn&apos;t receive the code? Check your spam folder, or contact support for help with email delivery.
+        <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Mail size={13}/> Didn&apos;t receive the code? Check your spam folder, or contact support for help with email delivery.</span>
       </div>
     </div>
   );

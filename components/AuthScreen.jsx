@@ -5,6 +5,7 @@ import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
 import { COUNTRIES, getPricing, TIER_LIMITS } from "@/lib/data";
 import SentOtpView from "./SentOtpView";
+import { CheckCircle2, Bell, Flame, BarChart3, Check, Circle, Globe } from "lucide-react";
 
 export default function AuthScreen({ onAuth }) {
   const [view, setView]     = useState("welcome");
@@ -152,13 +153,13 @@ export default function AuthScreen({ onAuth }) {
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",animation:"fadeUp .6s .4s cubic-bezier(.22,1,.36,1) both"}}>
           {[
-            {icon:"✅",label:"Dose tracking"},
-            {icon:"🔔",label:"Smart reminders"},
-            {icon:"🔥",label:"Streak rewards"},
-            {icon:"📊",label:"Adherence reports"},
+            {icon:<CheckCircle2 size={14} color="white"/>,label:"Dose tracking"},
+            {icon:<Bell size={14} color="white"/>,label:"Smart reminders"},
+            {icon:<Flame size={14} color="white"/>,label:"Streak rewards"},
+            {icon:<BarChart3 size={14} color="white"/>,label:"Adherence reports"},
           ].map(f=>(
             <div key={f.label} className="auth-feature-pill">
-              <span style={{fontSize:14}}>{f.icon}</span>
+              <span style={{display:"inline-flex"}}>{f.icon}</span>
               <span>{f.label}</span>
             </div>
           ))}
@@ -246,14 +247,14 @@ export default function AuthScreen({ onAuth }) {
             <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
             <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} pwColors={pwColors} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
             <div style={{position:"relative"}}>
-              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontSize:20,pointerEvents:"none",zIndex:1}}>{selCountry.flag}</div>
+              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",zIndex:1,display:"inline-flex",color:"rgba(255,255,255,.5)"}}><Globe size={18}/></div>
               <select className="auth-select" style={{paddingLeft:40}} value={country} onChange={e=>setCountry(e.target.value)}>
                 {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
               </select>
             </div>
             <div style={{border:"1px solid rgba(255,255,255,.1)",borderRadius:16,padding:"14px 16px",background:"rgba(255,255,255,.04)"}}>
               <div style={{fontSize:11,color:"rgba(255,255,255,.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",marginBottom:10}}>
-                {selCountry.flag} {selCountry.name} — Choose plan
+                <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={12}/> {selCountry.name} — Choose plan</span>
               </div>
               <div className="auth-plan-grid">
                 <div className={`auth-plan${tier==="free"?" selected":""}`} onClick={()=>setTier("free")}>
@@ -323,7 +324,7 @@ function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, pwColors, RE_HA
               { label:"Symbol", ok:Boolean(RE_HAS_SYMBOL.test(pw)) },
             ].map(r=>(
               <div key={r.label} className="auth-pw-check" style={{color:r.ok?"#34C759":"rgba(255,255,255,.3)"}}>
-                <span style={{fontWeight:700}}>{r.ok?"✓":"○"}</span>
+                <span style={{fontWeight:700,display:"inline-flex"}}>{r.ok ? <Check size={12}/> : <Circle size={12}/>}</span>
                 <span>{r.label}</span>
               </div>
             ))}

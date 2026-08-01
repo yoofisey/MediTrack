@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Flame, Check } from "lucide-react";
 
 export default function AlarmOverlay({ alarm, onDismiss, onLogDose }) {
   const [shake, setShake] = useState(false);
@@ -75,7 +76,7 @@ export default function AlarmOverlay({ alarm, onDismiss, onLogDose }) {
       )}
 
       <div style={{fontSize:13,color:"rgba(255,255,255,.3)",marginBottom:36}}>
-        {day}{streak > 0 ? `  ·  🔥 ${streak} day streak` : ""}
+        {day}{streak > 0 ? <span style={{display:"inline-flex",alignItems:"center",gap:4}}>  ·  <Flame size={13}/> {streak} day streak</span> : ""}
       </div>
 
       {onLogDose && (
@@ -91,7 +92,7 @@ export default function AlarmOverlay({ alarm, onDismiss, onLogDose }) {
           onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.04)"; }}
           onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
         >
-          ✓ Log Dose
+          <span style={{display:"inline-flex",alignItems:"center",gap:8}}><Check size={18} strokeWidth={3}/> Log Dose</span>
         </button>
       )}
 

@@ -1,34 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Laugh, Smile, Meh, Frown, CloudRain, MoonStar, CircleAlert, Zap, Moon, Waves, Biohazard, Wind, Droplets, Thermometer, AlertTriangle, Utensils, NotebookPen } from "lucide-react";
 
 const MOODS = [
-  { id:"great", label:"Great", icon:"😄", color:"#30D158" },
-  { id:"good", label:"Good", icon:"🙂", color:"#007AFF" },
-  { id:"okay", label:"Okay", icon:"😐", color:"#FF9500" },
-  { id:"bad", label:"Bad", icon:"😔", color:"#FF6B00" },
-  { id:"terrible", label:"Terrible", icon:"😢", color:"#FF3B30" },
+  { id:"great", label:"Great", icon:Laugh, color:"#30D158" },
+  { id:"good", label:"Good", icon:Smile, color:"#007AFF" },
+  { id:"okay", label:"Okay", icon:Meh, color:"#FF9500" },
+  { id:"bad", label:"Bad", icon:Frown, color:"#FF6B00" },
+  { id:"terrible", label:"Terrible", icon:CloudRain, color:"#FF3B30" },
 ];
 
 const SLEEP_QUALITY = [
-  { id:"excellent", label:"Excellent", icon:"😴", score:5 },
-  { id:"good", label:"Good", icon:"😊", score:4 },
-  { id:"fair", label:"Fair", icon:"😐", score:3 },
-  { id:"poor", label:"Poor", icon:"😫", score:2 },
-  { id:"terrible", label:"Terrible", icon:"😵", score:1 },
+  { id:"excellent", label:"Excellent", icon:MoonStar, score:5 },
+  { id:"good", label:"Good", icon:Smile, score:4 },
+  { id:"fair", label:"Fair", icon:Meh, score:3 },
+  { id:"poor", label:"Poor", icon:Frown, score:2 },
+  { id:"terrible", label:"Terrible", icon:CircleAlert, score:1 },
 ];
 
 const SYMPTOMS = [
-  { id:"pain", label:"Pain", icon:"😣" },
-  { id:"fatigue", label:"Fatigue", icon:"😴" },
-  { id:"anxiety", label:"Anxiety", icon:"😰" },
-  { id:"nausea", label:"Nausea", icon:"🤢" },
-  { id:"headache", label:"Headache", icon:"🤕" },
-  { id:"breathlessness", label:"Breathlessness", icon:"😮‍💨" },
-  { id:"swelling", label:"Swelling", icon:"🫧" },
-  { id:"fever", label:"Fever", icon:"🌡️" },
-  { id:"cough", label:"Cough", icon:"😷" },
-  { id:"appetite_change", label:"Appetite change", icon:"🍽️" },
+  { id:"pain", label:"Pain", icon:Zap },
+  { id:"fatigue", label:"Fatigue", icon:Moon },
+  { id:"anxiety", label:"Anxiety", icon:Waves },
+  { id:"nausea", label:"Nausea", icon:Biohazard },
+  { id:"headache", label:"Headache", icon:CircleAlert },
+  { id:"breathlessness", label:"Breathlessness", icon:Wind },
+  { id:"swelling", label:"Swelling", icon:Droplets },
+  { id:"fever", label:"Fever", icon:Thermometer },
+  { id:"cough", label:"Cough", icon:AlertTriangle },
+  { id:"appetite_change", label:"Appetite change", icon:Utensils },
 ];
 
 function getJournal() {
@@ -97,7 +98,7 @@ export function JournalMiniCalendar({ entries, selectedDate, onSelect }) {
               color: isSelected ? "white" : isToday ? "var(--teal)" : "var(--t1)",
               position:"relative",
             }}>
-              {mood && !isSelected ? <span style={{fontSize:10}}>{mood.icon}</span> : d}
+              {mood && !isSelected ? <span style={{display:"inline-flex"}}><mood.icon size={10}/></span> : d}
               {hasEntry && !mood && <div style={{width:5,height:5,borderRadius:"50%",background:isSelected?"white":"var(--teal)",position:"absolute",bottom:2}}/>}
             </div>
           );
@@ -131,7 +132,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
       <div className="sheet-overlay" onClick={onClose}>
         <div className="sheet" style={{maxHeight:"50vh"}} onClick={e => e.stopPropagation()}>
           <div style={{padding:32,textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:12}}>📝</div>
+            <div style={{display:"grid",placeItems:"center",marginBottom:12}}><NotebookPen size={48} strokeWidth={1.5}/></div>
             <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Journal saved</div>
             <div style={{fontSize:14,color:"var(--t3)"}}>{date}</div>
           </div>
@@ -158,7 +159,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
                   border:`1.5px solid ${mood === m.id ? `${m.color}40` : "transparent"}`,
                   transition:"all .15s",
                 }}>
-                  <div style={{fontSize:24,marginBottom:2}}>{m.icon}</div>
+                  <div style={{display:"grid",placeItems:"center",marginBottom:2}}><m.icon size={24}/></div>
                   <div style={{fontSize:11,fontWeight:500,color:mood === m.id ? m.color : "var(--t3)"}}>{m.label}</div>
                 </div>
               ))}
@@ -176,7 +177,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
                   color: sleep === sq.id ? "var(--teal)" : "var(--t3)",
                   transition:"all .15s",
                 }}>
-                  <div style={{fontSize:18,marginBottom:2}}>{sq.icon}</div>
+                  <div style={{display:"grid",placeItems:"center",marginBottom:2}}><sq.icon size={18}/></div>
                   {sq.label}
                 </div>
               ))}
@@ -194,7 +195,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
                   color: symptoms.includes(s.id) ? "var(--teal)" : "var(--t2)",
                   transition:"all .15s",
                 }}>
-                  {s.icon} {s.label}
+                  <span style={{display:"inline-flex",alignItems:"center",gap:4}}><s.icon size={14}/> {s.label}</span>
                 </div>
               ))}
             </div>
@@ -229,15 +230,15 @@ export function JournalTimeline({ entries }) {
         return (
           <div key={entry.id || entry.date} style={{padding:"12px 0",borderTop:"0.5px solid var(--sep)"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-              <span style={{fontSize:18}}>{mood?.icon || "📝"}</span>
+              <span style={{fontSize:18}}>{mood ? <mood.icon size={18}/> : <NotebookPen size={18}/>}</span>
               <span style={{fontSize:13,fontWeight:600,color:"var(--t1)"}}>{entry.date}</span>
-              {sleep && <span style={{fontSize:12,color:"var(--t3)"}}>😴 {sleep.label}</span>}
+              {sleep && <span style={{fontSize:12,color:"var(--t3)",display:"inline-flex",alignItems:"center",gap:4}}><Moon size={13}/> {sleep.label}</span>}
             </div>
             {entry.symptoms?.length > 0 && (
               <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>
                 {entry.symptoms.map(s => {
                   const sym = SYMPTOMS.find(x => x.id === s);
-                  return <span key={s} style={{fontSize:11,background:"var(--hover)",borderRadius:6,padding:"2px 8px",color:"var(--t2)"}}>{sym?.icon} {sym?.label || s}</span>;
+                  return <span key={s} style={{fontSize:11,background:"var(--hover)",borderRadius:6,padding:"2px 8px",color:"var(--t2)",display:"inline-flex",alignItems:"center",gap:4}}>{sym ? <sym.icon size={12}/> : null} {sym?.label || s}</span>;
                 })}
               </div>
             )}

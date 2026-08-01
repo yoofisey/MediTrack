@@ -9,7 +9,8 @@ import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/n
 import { sb } from "@/lib/supabase";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
-import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart } from "lucide-react";
+import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart, Check } from "lucide-react";
+import { AVATAR_CHOICES, avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -233,11 +234,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
   };
   const pm = planMeta[plan] || planMeta.free;
-  const profileEmojis = ["😊","🧑","👩","👨","🧓","👴","👵","🧒","👦","👧","🙂","😄","💪","🌟","❤️","🌸","🐻","🦁","🐼","🌴"];
+  const profileEmojis = AVATAR_CHOICES;
 
   function startEdit() {
     setEditData({
-      avatar_emoji: profile?.avatar_emoji || "😊",
+      avatar_emoji: profile?.avatar_emoji || "Smile",
       avatar_url: profile?.avatar_url || "",
       full_name: profile?.full_name || "",
       wake_time: profile?.wake_time || "07:00",
@@ -269,7 +270,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         <div style={{padding:"0 16px",marginBottom:14}}>
           <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:editData.avatar_url?10:0}}>
             <div style={{width:72,height:72,borderRadius:"50%",background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:34,flexShrink:0,overflow:"hidden",boxShadow:"0 4px 16px rgba(0,0,0,.1)",border:"3px solid var(--card)",transition:"transform .2s"}}>
-              {editData.avatar_url ? <img src={editData.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : editData.avatar_emoji}
+              {editData.avatar_url ? <img src={editData.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (() => { const A = avatarIcon(editData.avatar_emoji); return <A size={34}/>; })()}
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,justifyContent:"flex-start",display:"flex",alignItems:"center",gap:4}} onClick={() => fileInputRef.current?.click()}>
@@ -290,8 +291,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           )}
         </div>
         <div className="emoji-grid" style={{margin:"0 16px"}}>
-          {profileEmojis.map(em => (
-            <div key={em} className={`emoji-opt${editData.avatar_emoji===em?" sel":""}`} onClick={()=>setEditData(p=>({...p,avatar_emoji:em}))}>{em}</div>
+          {profileEmojis.map(({key,Icon}) => (
+            <div key={key} className={`emoji-opt${editData.avatar_emoji===key?" sel":""}`} onClick={()=>setEditData(p=>({...p,avatar_emoji:key}))}><Icon size={26}/></div>
           ))}
         </div>
       </div>
@@ -319,7 +320,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         <div className="section-header">{t("profile.country")}</div>
         <div style={{padding:"0 16px"}}>
           <select className="sheet-input" value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))} style={{width:"100%"}}>
-            {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+            {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
           </select>
         </div>
       </div>
@@ -341,7 +342,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                 onClick={()=>setEditData(p=>({...p,goals: s ? p.goals.filter(x=>x!==g.label) : [...p.goals,g.label]}))}>
                 <div className="goal-chip-icon">{g.icon}</div>
                 <div className="goal-chip-label">{g.label}</div>
-                <div className={`goal-chip-check${s?" on":""}`}>{s&&<span style={{color:"white",fontSize:11}}>✓</span>}</div>
+                <div className={`goal-chip-check${s?" on":""}`}>{s&&<Check size={11} color="white" strokeWidth={3}/>}</div>
               </div>
             );
           })}
@@ -364,7 +365,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             <div key={th.id} className={`theme-swatch${editData.theme===th.id?" sel":""}`}
               style={{background:`linear-gradient(135deg,${th.colors[0]},${th.colors[1]})`}}
               onClick={()=>setEditData(p=>({...p,theme:th.id}))}>
-              {editData.theme===th.id && <div className="theme-swatch-check">✓</div>}
+              {editData.theme===th.id && <div className="theme-swatch-check"><Check size={18} color="white" strokeWidth={3}/></div>}
             </div>
           ))}
         </div>
@@ -388,7 +389,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             {profile?.avatar_url ? (
               <img src={profile.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>
             ) : (
-              profile?.avatar_emoji || "😊"
+              (() => { const A = avatarIcon(profile?.avatar_emoji); return <A size={34}/>; })()
             )}
             {uploading && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",display:"grid",placeItems:"center",color:"white",fontSize:13,borderRadius:"50%"}}>{t("profile.uploading")}</div>}
           </div>
@@ -402,7 +403,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         <div className="profile-name">{profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0]}</div>
         <div style={{display:"flex",gap:8,alignItems:"center",marginTop:-4}}>
           <span style={{fontSize:13,fontWeight:600,color:pm.color,background:`${pm.color}14`,padding:"3px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:4}}>{pm.icon} {pm.label}</span>
-          <span style={{fontSize:13,color:"var(--t3)"}}>{selCountry.flag} {selCountry.name}</span>
+          <span style={{fontSize:13,color:"var(--t3)",display:"inline-flex",alignItems:"center",gap:4}}><Globe size={12}/> {selCountry.name}</span>
         </div>
         <div style={{display:"flex",gap:8,marginTop:6}}>
           <button className="btn btn-ghost btn-sm" style={{width:"auto",display:"flex",alignItems:"center",gap:4}} onClick={startEdit}><Ico><Pencil size={13} strokeWidth={2.2}/></Ico> {t("profile.editProfile")}</button>
@@ -438,7 +439,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <div className="upgrade-sub">{t("profile.unlimitedMedsAd")}</div>
           <div className="upgrade-features">
             {[t("profile.unlimitedMeds"),t("profile.fullHistory"),t("profile.refillReminders"),t("profile.adherenceReports"),t("profile.drugCheck")].map(f => (
-              <div key={f} className="upgrade-feature"><span>✓</span> {f}</div>
+              <div key={f} className="upgrade-feature"><Check size={13} color="var(--teal)" strokeWidth={3} style={{verticalAlign:"-2px"}}/> {f}</div>
             ))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
@@ -605,7 +606,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                 <div className="row-title">Country</div>
                 <select className="sheet-input" value={country} onChange={e=>{const v=e.target.value; setEditCountryPick(false); onSaveProfile({country:v});}}
                   style={{marginTop:8,fontSize:14}} autoFocus>
-                  {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+            {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
               </div>
               <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
@@ -613,7 +614,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               </div>
             </div>
           ) : (
-            <Row icon={<Ico><Globe size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib4)" title="Country" sub={`${selCountry.flag} ${selCountry.name}`} onClick={()=>setEditCountryPick(true)}/>
+            <Row icon={<Ico><Globe size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib4)" title="Country" sub={<span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={12}/> {selCountry.name}</span>} onClick={()=>setEditCountryPick(true)}/>
           )}
 
           {editLang ? (
