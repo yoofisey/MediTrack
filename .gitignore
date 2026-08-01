@@ -53,3 +53,5 @@ android/app/google-services.json
 # local test harness
 /_verify_push.mjs
 /_dbg_push.mjs
+/_verify_medid.mjs
+/_verify_push_live.mjs

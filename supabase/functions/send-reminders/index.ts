@@ -157,6 +157,10 @@ serve(async (req) => {
       supabase.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds),
     ]);
 
+    if (subsRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `push_subscriptions query failed: ${subsRes.error.message}` }), { status: 200 });
+    }
+
     const profiles = profilesRes.data || [];
     const allLogs = logsRes.data || [];
     const subs = subsRes.data || [];
