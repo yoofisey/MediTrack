@@ -86,6 +86,11 @@ export interface FamilyMember {
   member_user_id?: string;
   role: string;
   status: string;
+  relationship?: string;
+  age?: number;
+  phone?: string;
+  care_note?: string;
+  managed?: boolean;
   created_at?: string;
 }
 

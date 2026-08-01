@@ -1,255 +1,187 @@
 "use client";
 
-import { CSS, fmtTime } from "@/lib/constants";
+import { useState } from "react";
+import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { calcStreak, getStockStatus, getUpcomingVisits } from "@/lib/data";
-import { isVitalDue } from "@/lib/notifications";
-import { getJournalEntry } from "@/components/HealthJournal";
-import Ring from "@/components/Ring";
-import { Pill, CheckCircle2, Lock, Bell, Package, AlertTriangle, TrendingDown, Activity, Droplet, HeartPulse, Thermometer, Wind, BarChart3, Building2, Flame, CalendarClock, Smile, FlaskConical, Ruler, GlassWater, Medal, Trophy, Crown, Award, Dumbbell, Star } from "lucide-react";
+import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials } from "@/lib/household";
+import { Bell, Check, Phone, Plus, User } from "lucide-react";
 
-function Ico({ children, size = 18, ...props }) {
-  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
+function CareRing({ member, size = 58, stroke = 4, active }) {
+  const pct = member.pending ? 0 : ringPct(member);
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const color = member.pending ? "var(--t4)" : pct >= 1 ? "#34C759" : pct > 0 ? "var(--teal)" : "#FF3B30";
+  return (
+    <div style={{ width: size + 10, height: size + 10, borderRadius: "50%", background: active ? "var(--sel)" : "transparent", display: "grid", placeItems: "center", transition: "background .2s" }}>
+      <div style={{ width: size, height: size, position: "relative" }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--sep)" strokeWidth={stroke} />
+          {!member.pending && (
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+              strokeDasharray={`${pct * c} ${c}`} strokeLinecap="round" />
+          )}
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: size - stroke * 3, height: size - stroke * 3, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: size * 0.34, fontWeight: 800, color: "var(--t1)" }}>
+            {member.avatarUrl ? <img src={member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(member)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-const STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180];
-const STREAK_ICONS = { 3: Medal, 7: Trophy, 14: Crown, 30: Flame, 60: Dumbbell, 90: Award, 180: Star };
-const STREAK_LABELS = { 3:"3-Day Streak!", 7:"One Week!", 14:"Two Weeks!", 30:"30-Day Club!", 60:"60 Days Strong!", 90:"90-Day Warrior!", 180:"Half Year Legend!" };
+export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif }) {
+  const { t } = useLang();
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const firstName = profile?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
+  const people = household.filter(m => !m.pending && (m.meds?.length || m.kind === "self" && m.meds?.length));
+  const summaryPeople = household.filter(m => !m.pending && m.meds?.length).length;
+  const summaryDoses = totalExpectedToday(household, now);
 
-function milestone(streak) {
-  return STREAK_MILESTONES.filter(m => streak >= m).pop() || null;
-}
+  const [focusKey, setFocusKey] = useState(null);
+  const focus = focusMember(household, now);
+  const selected = household.find(m => m.key === focusKey) || focus?.member || household[0];
+  const selMissed = selected ? missedDoses(selected, now) : [];
+  const selRemaining = selected ? remainingDoses(selected, now) : [];
+  const mostUrgent = selMissed[0] || selRemaining[0];
+  const selPhone = selected ? callHref(selected) : null;
 
-export default function TodayTab({ meds, logs, onLog, onAdd, notifPerm, onEnableNotif, onViewVisits, onViewVisitList, vitals, vitalReminders, onNavigateVitals, onCheckIn, plan, onViewFamily }) {
-  const { t, lang } = useLang();
-  const today = new Date();
-
-  const todayStr = today.toISOString().split("T")[0];
-  const todayLogs = logs.filter(l => l.taken_at?.startsWith(todayStr));
-  const activeMeds = meds.filter(m => { if (!m.active) return false; const e=new Date(m.start_date); e.setDate(e.getDate()+m.course_duration_days); return e>=today; });
-  function exp(med) { return med.times_per_day||Math.max(1,Math.floor(24/med.dose_interval_hours)); }
-  const total = activeMeds.reduce((s,m)=>s+exp(m),0);
-  const taken = todayLogs.length;
-  const pct = total > 0 ? taken/total : 0;
-  const streak = calcStreak(logs, meds);
-  const ms = milestone(streak);
-
-  const lowStockMeds = activeMeds.filter(m => {
-    const s = getStockStatus(m, logs);
-    return s && (s.status === "low" || s.status === "empty");
+  const slots = [];
+  household.filter(m => !m.pending).forEach(m => {
+    expectedDosesToday(m, now).forEach(s => {
+      slots.push({ member: m, med: s.med, time: s.time, dueMs: s.dueMs, logged: s.logged, overdue: !s.logged && now.getTime() - s.dueMs > 20 * 60000 });
+    });
   });
+  slots.sort((a, b) => a.dueMs - b.dueMs);
 
-  const upcomingVisits = getUpcomingVisits(14);
+  const overdueTotal = household.reduce((s, m) => s + missedDoses(m, now).length, 0);
 
   return (
-    <div className="scroll" style={{paddingTop:0}}>
-      <div className="hero-card" style={{margin:"16px 20px 14px"}}>
-        <div style={{position:"relative",zIndex:1}}>
-          <div className="hero-label">{today.toLocaleDateString(lang==="fr"?"fr-FR":lang==="sw"?"sw-KE":"en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div>
-              <div className="hero-big">{taken}<span style={{fontSize:28,fontWeight:500,opacity:.7}}>/{total}</span></div>
-              <div className="hero-sub">{t("today.dosesTaken")}</div>
+    <div className="scroll" style={{ paddingTop: 0 }}>
+      <style>{CSS}</style>
+
+      <div style={{ padding: "20px 20px 4px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div className="hero-label" style={{ marginBottom: 2 }}>{greeting}{firstName ? `, ${firstName}` : ""}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -.4, color: "var(--t1)" }}>
+              {summaryPeople > 1 ? `${summaryPeople} people` : summaryPeople === 1 ? "1 person" : "No one yet"}, {summaryDoses} {summaryDoses === 1 ? "dose" : "doses"} today
             </div>
-            <Ring pct={pct} size={84} color="rgba(255,255,255,.9)" stroke={7}/>
           </div>
-          <div className="hero-row">
-            <div className="hero-stat"><div className="hero-stat-val">{activeMeds.length}</div><div className="hero-stat-lbl">{t("today.activeMeds")}</div></div>
-            <div className="hero-stat"><div className="hero-stat-val"><Flame size={16} style={{verticalAlign:"-2px"}}/> {streak}</div><div className="hero-stat-lbl">{streak===1?t("day"):t("days")} {t("today.streak")}</div></div>
-            <div className="hero-stat"><div className="hero-stat-val">{Math.max(0,total-taken)}</div><div className="hero-stat-lbl">{t("today.remaining")}</div></div>
+          <div onClick={onGoMe} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", cursor: "pointer", fontSize: 17, fontWeight: 800, color: "var(--t1)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)" }}>
+            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={22} />}
           </div>
         </div>
       </div>
 
-      {plan === "family" && onViewFamily && (
-        <div onClick={onViewFamily} style={{margin:"0 20px 14px",borderRadius:26,overflow:"hidden",background:"linear-gradient(135deg,#007AFF,#5856D6 70%,#AF52DE)",padding:20,color:"white",boxShadow:"0 16px 40px rgba(0,122,255,.28)",cursor:"pointer",display:"flex",alignItems:"center",gap:16}}>
-          <div style={{width:56,height:56,borderRadius:18,background:"rgba(255,255,255,.16)",backdropFilter:"blur(8px)",display:"grid",placeItems:"center",flexShrink:0}}>
-            <HeartPulse size={26} strokeWidth={2.2}/>
+      <div style={{ padding: "14px 14px 4px" }}>
+        <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
+          {household.map(m => (
+            <div key={m.key} onClick={() => setFocusKey(m.key === selected?.key ? null : m.key)}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 78, cursor: "pointer", userSelect: "none" }}>
+              <CareRing member={m} active={m.key === selected?.key} />
+              <span style={{ fontSize: 12, fontWeight: m.key === selected?.key ? 700 : 500, color: "var(--t1)", maxWidth: 76, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name.split(" ")[0]}</span>
+            </div>
+          ))}
+          {household.length === 1 && (
+            <div onClick={onGoFamily} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 78, cursor: "pointer" }}>
+              <div style={{ width: 68, height: 68, borderRadius: "50%", border: "2px dashed var(--t4)", display: "grid", placeItems: "center", color: "var(--t3)" }}><Plus size={22} /></div>
+              <span style={{ fontSize: 12, color: "var(--t3)" }}>Add people</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selected ? (
+        <div style={{ margin: "10px 20px 14px", borderRadius: 26, overflow: "hidden", background: "var(--card)", boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
+          <div style={{ padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 20, fontWeight: 800, color: "var(--t1)", flexShrink: 0 }}>
+              {selected.avatarUrl ? <img src={selected.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(selected)}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "var(--t1)", letterSpacing: -.3 }}>{selected.name}</div>
+              <div style={{ fontSize: 13, color: selMissed.length ? "var(--red)" : "var(--t3)", marginTop: 2 }}>
+                {selected.pending ? "Invite accepted once they sign in" : selMissed.length ? `${selMissed.length} missed dose${selMissed.length > 1 ? "s" : ""} — needs attention` : selRemaining.length ? `On track · ${selRemaining.length} dose${selRemaining.length > 1 ? "s" : ""} left today` : "All doses done for today"}
+              </div>
+            </div>
           </div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:.6,opacity:.8,marginBottom:2}}>FAMILY</div>
-            <div style={{fontSize:17,fontWeight:800,letterSpacing:-.3}}>Family dashboard</div>
-            <div style={{fontSize:12.5,opacity:.85,marginTop:2}}>Track adherence &amp; missed doses for your loved ones</div>
+          {mostUrgent && (
+            <div style={{ margin: "0 16px 16px", borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, background: selMissed.length ? "linear-gradient(135deg,#FF3B30,#FF6B3A)" : "var(--ib1)" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: .4, opacity: .8 }}>{selMissed.length ? "MISSED DOSE" : "UP NEXT"}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--t1)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {mostUrgent.time} · {mostUrgent.med.name} {mostUrgent.med.dosage_amount}{mostUrgent.med.dosage_unit}
+                </div>
+              </div>
+              {selMissed.length > 0 && (
+                <a href={selPhone || undefined} onClick={(e) => { if (!selPhone) { e.preventDefault(); alert(`No phone number on file for ${selected.name}.`); } }}
+                  style={{ width: 48, height: 48, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,.2)" }}>
+                  <Phone size={22} color="#FF3B30" />
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="empty-state" style={{ paddingTop: 60 }}>
+          <div className="empty-state-icon" style={{ fontSize: 44 }}>👋</div>
+          <div className="empty-state-title">Nothing to track yet</div>
+          <div className="empty-state-sub">Add a medication or invite a family member to get started.</div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+            <button className="btn btn-primary" style={{ width: "auto", padding: "12px 22px" }} onClick={onGoMe}>Go to Me</button>
           </div>
-          <span style={{fontSize:22,opacity:.9}}>›</span>
         </div>
       )}
 
-      {ms && (() => { const MilestoneIcon = STREAK_ICONS[ms]; return (
-        <div style={{margin:"0 20px 14px",display:"flex",alignItems:"center",gap:12,background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
-          <span style={{display:"inline-flex"}}><MilestoneIcon size={28}/></span>
-          <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{t(`streak.${ms}`)}</div>
-            <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{t("today.keepGoing")}</div>
+      {overdueTotal > 0 && (
+        <div style={{ margin: "0 20px 14px", background: "linear-gradient(135deg,#FF3B30,#FF6B3A)", borderRadius: 20, padding: "16px 18px", color: "white", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 24px rgba(255,59,48,.25)" }}>
+          <Bell size={20} strokeWidth={2.2} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{overdueTotal} dose{overdueTotal > 1 ? "s" : ""} missed today</div>
+            <div style={{ fontSize: 12, opacity: .85 }}>Check on them — a call beats a notification</div>
           </div>
         </div>
-      ); })()}
+      )}
 
-      {notifPerm==="default" && (
+      {notifPerm === "default" && (
         <div className="notif-banner" onClick={onEnableNotif}>
-          <div className="notif-banner-text" style={{display:"flex",alignItems:"center",gap:6}}>
-            <Ico><Bell size={16} color="white" strokeWidth={2.2}/></Ico>
+          <div className="notif-banner-text" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Bell size={16} color="white" strokeWidth={2.2} />
             {t("today.enableReminders")}
           </div>
           <button className="notif-banner-btn">{t("today.enable")}</button>
         </div>
       )}
 
-      {lowStockMeds.length > 0 && (
-        <div style={{margin:"0 20px 14px",background:"linear-gradient(135deg,#FF3B30,#FF6B3A)",borderRadius:16,padding:"16px 18px",color:"white"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <Ico><Package size={17} color="white" strokeWidth={2.2}/></Ico>
-            <span style={{fontSize:14,fontWeight:600}}>{t("today.lowStock")}</span>
-          </div>
-          {lowStockMeds.map(m => {
-            const s = getStockStatus(m, logs);
-            return (
-              <div key={m.id} style={{fontSize:13,opacity:.95,marginBottom:2}}>
-                <Ico><span style={{display:"inline-flex",marginRight:4}}>{s.status==="empty" ? <AlertTriangle size={13} strokeWidth={2.2}/> : <TrendingDown size={13} strokeWidth={2.2}/>}</span></Ico>{m.name} — {s.remaining} {m.dosage_unit} left
-              </div>
-            );
-          })}
-          <div style={{fontSize:11,opacity:.7,marginTop:4}}>{t("today.refillSoon")}</div>
+      <div className="section" style={{ paddingTop: 4 }}>
+        <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Up next</span>
+          {slots.length > 0 && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 500 }}>{slots.filter(s => s.logged).length}/{slots.length} done</span>}
         </div>
-      )}
-
-      {(() => {
-        const dueVitals = [];
-        if (vitals && vitalReminders) {
-          Object.entries(vitalReminders).forEach(([vitalId, config]) => {
-            if (config?.intervalId && config.intervalId !== "off" && isVitalDue(vitalId, vitals, config.intervalId)) {
-              const labels = { blood_pressure:"Blood Pressure", glucose:"Blood Sugar", weight:"Weight", heart_rate:"Heart Rate", temperature:"Temperature", spo2:"Oxygen Level", cholesterol:"Total Cholesterol", bmi:"BMI", hba1c:"HbA1c", water_intake:"Water Intake", peak_flow:"Peak Flow" };
-              const icons = { blood_pressure: <Activity size={15} strokeWidth={2.2}/>, glucose: <Droplet size={15} strokeWidth={2.2}/>, weight: <BarChart3 size={15} strokeWidth={2.2}/>, heart_rate: <HeartPulse size={15} strokeWidth={2.2}/>, temperature: <Thermometer size={15} strokeWidth={2.2}/>, spo2: <Wind size={15} strokeWidth={2.2}/>, cholesterol: <FlaskConical size={15} strokeWidth={2.2}/>, bmi: <Ruler size={15} strokeWidth={2.2}/>, hba1c: <Droplet size={15} strokeWidth={2.2}/>, water_intake: <GlassWater size={15} strokeWidth={2.2}/>, peak_flow: <Wind size={15} strokeWidth={2.2}/> };
-              dueVitals.push({ id:vitalId, label:labels[vitalId]||vitalId, icon:icons[vitalId]||<BarChart3 size={15} strokeWidth={2.2}/> });
-            }
-          });
-        }
-        if (!dueVitals.length) return null;
-        return (
-          <div style={{margin:"0 20px 14px",background:"linear-gradient(135deg,#FF9500,#FF6B00)",borderRadius:16,padding:"16px 18px",color:"white",cursor:"pointer"}} onClick={onNavigateVitals}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-            <Ico><BarChart3 size={17} color="white" strokeWidth={2.2}/></Ico>
-            <span style={{fontSize:14,fontWeight:600}}>{t("today.vitalCheck")}</span>
-          </div>
-            {dueVitals.map(v => (
-              <div key={v.id} style={{fontSize:13,opacity:.95,marginBottom:2,display:"flex",alignItems:"center",gap:6}}>
-                <Ico>{v.icon}</Ico> Time to check your {v.label}
-              </div>
-            ))}
-            <div style={{fontSize:11,opacity:.7,marginTop:4}}>{t("today.tapToLog")}</div>
-          </div>
-        );
-      })()}
-
-      {(() => {
-        const todayEntry = getJournalEntry(todayStr);
-        if (todayEntry) return null;
-        return (
-          <div style={{margin:"0 20px 14px",background:"linear-gradient(135deg,#5AC8FA,#007AFF)",borderRadius:16,padding:"16px 18px",color:"white",cursor:"pointer"}} onClick={() => onCheckIn?.(todayStr)}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-              <Ico><Smile size={20} color="white" strokeWidth={2.2}/></Ico>
-              <span style={{fontSize:15,fontWeight:600}}>Daily check-in</span>
-            </div>
-            <div style={{fontSize:13,opacity:.9,marginBottom:6}}>How are you feeling today? Tap to log your mood, sleep, and any symptoms.</div>
-            <div style={{fontSize:11,opacity:.7}}>Takes 10 seconds</div>
-          </div>
-        );
-      })()}
-
-      {upcomingVisits.length > 0 && (
-        <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"16px 18px",boxShadow:"var(--card-shadow)",cursor:"pointer"}} onClick={onViewVisitList}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-            <Ico><Building2 size={17} strokeWidth={2.2} color="var(--t1)"/></Ico>
-            <span style={{fontSize:14,fontWeight:600,color:"var(--t1)",flex:1}}>{t("today.upcomingVisits")}</span>
-            <span style={{fontSize:12,color:"var(--teal)",fontWeight:500}}>{t("today.seeAll")}</span>
-          </div>
-          {upcomingVisits.slice(0, 3).map(v => {
-            const d = new Date(v.date + "T" + (v.time || "09:00"));
-            const daysUntil = Math.ceil((d - today) / 86400000);
-            const label = daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `In ${daysUntil} days`;
-            return (
-              <div key={v.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderTop:"0.5px solid var(--sep)"}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:500,color:"var(--t1)"}}>{v.reason || "Hospital visit"}</div>
-                  <div style={{fontSize:12,color:"var(--t3)"}}>{v.facility || v.doctor || ""} · {v.time}</div>
-                </div>
-                <span style={{fontSize:12,fontWeight:600,color:daysUntil <= 1 ? "var(--orange)" : "var(--teal)"}}>{label}</span>
-              </div>
-            );
-          })}
-          {upcomingVisits.length > 3 && <div style={{fontSize:12,color:"var(--t3)",textAlign:"center",marginTop:4}}>+{upcomingVisits.length - 3} more</div>}
-        </div>
-      )}
-
-      <div style={{padding:"0 20px",marginBottom:14}}>
-        <button className="btn" style={{width:"100%",background:"var(--ib5)",color:"var(--t1)",fontWeight:500,fontSize:13,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={onViewVisits}>
-          <Ico><Building2 size={16} strokeWidth={2.2}/></Ico> {t("today.scheduleVisit")}
-        </button>
-      </div>
-
-      <div className="section">
-        <div className="section-header">{t("today.medsTitle")}</div>
-        {activeMeds.length===0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon"><Ico size={52}><Pill size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div>
-            <div className="empty-state-title">{t("today.noMeds")}</div>
-            <div className="empty-state-sub">{t("today.noMedsSub")}</div>
-            <button className="btn btn-primary" style={{width:"auto",padding:"12px 24px"}} onClick={onAdd}>{t("today.addMed")}</button>
+        {slots.length === 0 ? (
+          <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
+            <div className="empty-state-title" style={{ fontSize: 15 }}>All caught up</div>
+            <div className="empty-state-sub" style={{ marginBottom: 0 }}>No doses scheduled for today.</div>
           </div>
         ) : (
           <div className="list">
-            {activeMeds.map(med => {
-              const taken = todayLogs.filter(l=>l.medication_id===med.id).length;
-              const e = exp(med);
-              const done = taken>=e;
-              const lastLog = logs.filter(l=>l.medication_id===med.id).sort((a,b)=>b.taken_at.localeCompare(a.taken_at))[0];
-              const interval = med.dose_interval_hours || 24/med.times_per_day;
-              let locked = false;
-              let lockMsg = "";
-              if (lastLog && !done) {
-                const elapsed = (today - new Date(lastLog.taken_at)) / 3600000;
-                if (elapsed < interval) {
-                  locked = true;
-                  const remaining = interval - elapsed;
-                  if (remaining < 1) lockMsg = `in ${Math.round(remaining*60)}m`;
-                  else lockMsg = `in ${remaining.toFixed(1)}h`;
-                }
-              }
-              return (
-                <div key={med.id} className="row" style={{cursor:"default"}}>
-                  <div className="row-icon" style={{background:done?"var(--ib2)":locked?"var(--ib6)":"var(--ib1)"}}>
-                    <Ico>{done ? <CheckCircle2 size={20} strokeWidth={2} color="var(--teal)"/> : locked ? <Lock size={20} strokeWidth={2} color="var(--t2)"/> : <Pill size={20} strokeWidth={2} color="var(--t1)"/>}</Ico>
-                  </div>
-                  <div className="row-body">
-                    <div className="row-title" style={{fontWeight:500}}>{med.name}</div>
-                    <div className="row-sub">{med.dosage_amount} {med.dosage_unit} · {e}× {t("meds.daily")}</div>
-                    <div className="prog"><div className="prog-fill" style={{width:`${Math.min(taken/e,1)*100}%`,background:done?"var(--teal2)":"var(--teal)"}}/></div>
-                    <div style={{fontSize:12,color:"var(--t3)",marginTop:4}}>{taken} {t("today.of")} {e} {t("today.dosesTaken2")}</div>
-                  </div>
-                  <button className={`btn btn-green btn-sm${done?" btn-disabled":""}`} style={{flexShrink:0,opacity:locked?0.6:1}} onClick={()=>onLog(med)} disabled={done||locked}>
-                    {done?t("btn.done_"):locked?<span style={{display:"flex",alignItems:"center",gap:4}}><Lock size={12} strokeWidth={2.2}/> {lockMsg}</span>:t("btn.log")}
-                  </button>
+            {slots.map((s, i) => (
+              <div key={i} className="row" style={{ cursor: "default" }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent" }}>
+                  {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {todayLogs.length>0 && (
-        <div className="section">
-          <div className="section-header">{t("today.loggedToday")}</div>
-          <div className="list">
-            {todayLogs.slice(0,5).map(log=>(
-              <div key={log.id} className="row" style={{cursor:"default"}}>
-                <div className="row-icon" style={{background:"var(--ib2)"}}><Ico><CheckCircle2 size={18} strokeWidth={2} color="var(--teal)"/></Ico></div>
-                <div className="row-body"><div className="row-title">{log.medications?.name||"Med"}</div></div>
-                <div className="row-value">{fmtTime(log.taken_at)}</div>
+                <div className="row-body">
+                  <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
+                  <div className="row-sub">{s.member.name.split(" ")[0]} · {s.time}</div>
+                </div>
+                {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF3B30", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
@@ -8,19 +8,22 @@ import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
-import { fetchPendingFamilyInvites, acceptFamilyInvite } from "@/lib/db";
+import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember } from "@/lib/db";
+import { makeSelfMember, buildMemberFromRow, pushManagedLog } from "@/lib/household";
 import TodayTab from "@/components/TodayTab";
-import MedsTab from "@/components/MedsTab";
 import ReportsTab from "@/components/ReportsTab";
-import FamilyTab from "@/components/FamilyTab";
-import ProfileTab from "@/components/ProfileTab";
 import VitalsTab from "@/components/VitalsTab";
+import FamilyTab from "@/components/FamilyTab";
+import AlertsTab from "@/components/AlertsTab";
+import MeTab from "@/components/MeTab";
+import MemberDetail from "@/components/MemberDetail";
 import MedSheet from "@/components/MedSheet";
 import { DeleteConfirmModal, LogDoseModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
+import { Home, Users, Bell, User } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
@@ -28,9 +31,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [meds, setMeds] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
   useEffect(() => { const t = setTimeout(() => setLoading(false), 5000); return () => clearTimeout(t); }, []);
-  const [editMed, setEditMed] = useState(null);
   const [profile, setProfile] = useState(initProfile);
   const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
   const [loadKey, setLoadKey] = useState(0);
@@ -39,7 +40,6 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [alarmData, setAlarmData] = useState(null);
   const [alarmQueue, setAlarmQueue] = useState([]);
   const [vitals, setVitals] = useState([]);
-  const [viewFamily, setViewFamily] = useState(false);
   const [showVisitSheet, setShowVisitSheet] = useState(false);
   const [showVisitList, setShowVisitList] = useState(false);
   const [editVisit, setEditVisit] = useState(null);
@@ -48,6 +48,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [journalEntry, setJournalEntry] = useState(null);
   const [pendingInvites, setPendingInvites] = useState([]);
   const [showInviteSheet, setShowInviteSheet] = useState(false);
+  const [familyRows, setFamilyRows] = useState([]);
+  const [linkedData, setLinkedData] = useState({});
+  const [memberView, setMemberView] = useState(null);
+  const [overlayTab, setOverlayTab] = useState(null);
+  const [medSheetFor, setMedSheetFor] = useState(null);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -117,6 +122,133 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     })();
     return () => { cancelled = true; };
   }, [user?.id, loadKey]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: rows } = await fetchFamilyMembers(user.id);
+        if (cancelled) return;
+        const rowsArr = Array.isArray(rows) ? rows : [];
+        setFamilyRows(rowsArr);
+        const linked = rowsArr.filter(r => r.member_user_id && r.status === "active");
+        const map = {};
+        await Promise.all(linked.map(async m => {
+          try {
+            const [medsRes, logsRes, profRes] = await Promise.all([
+              sb.from("medications").select("*").eq("user_id", m.member_user_id).order("created_at", { ascending: false }),
+              sb.from("dose_logs").select("*, medications(name)").eq("user_id", m.member_user_id).order("taken_at", { ascending: false }).limit(120),
+              sb.from("profiles").select("full_name, avatar_url, wake_time, reminder_lead").eq("id", m.member_user_id).maybeSingle(),
+            ]);
+            map[m.id] = { meds: medsRes.data || [], logs: logsRes.data || [], profile: profRes.data || null };
+          } catch (e) { console.error("linked load:", e); }
+        }));
+        if (!cancelled) setLinkedData(map);
+      } catch (e) { console.error("family load:", e); }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, loadKey]);
+
+  const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs }), [user, profile, meds, logs]);
+  const household = useMemo(() => [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))], [selfMember, familyRows, linkedData]);
+
+  function openMember(m) { setMemberView(m); }
+  function closeMember() { setMemberView(null); }
+
+  async function markDose(member, slot) {
+    if (!member || !slot) return;
+    const takenAt = new Date().toISOString();
+    if (member.kind === "managed") {
+      pushManagedLog(member.rowId, { id: "ml_" + Date.now() + Math.random().toString(36).slice(2, 6), medication_id: slot.med.id, taken_at: takenAt });
+      reload();
+      return;
+    }
+    try {
+      const { error } = await sb.from("dose_logs").insert([{ user_id: member.userId || user?.id, medication_id: slot.med.id, taken_at: takenAt }]);
+      if (error) console.error("markDose:", error?.message || error);
+      else if (member.kind === "self") decrementStock(slot.med.id, 1);
+      reload();
+    } catch (e) { console.error("markDose exception:", e); }
+  }
+
+  async function saveCareNote(member, note) {
+    if (member.kind === "self") {
+      try { localStorage.setItem("mt_self_care_note", note || ""); } catch {}
+      reload();
+      return;
+    }
+    try {
+      const { error } = await updateFamilyMember(member.rowId, { care_note: note || null });
+      if (!error) reload();
+      else console.error("careNote:", error?.message || error);
+    } catch (e) { console.error("careNote exception:", e); }
+  }
+
+  function openMedSheet(member, med) { setMedSheetFor({ member, med }); }
+
+  async function memberRefill(member, med) {
+    if (!med) return;
+    try {
+      if (member.kind !== "managed") await sb.from("medications").eq("id", med.id).update({ last_refill_date: new Date().toISOString() });
+      if (med.pills_per_package) refillStock(med.id, med.pills_per_package);
+      reload();
+    } catch (e) { console.error("memberRefill:", e); }
+  }
+
+  async function generateFamilyReport() {
+    const active = household.filter(m => m.kind !== "self" && m.kind !== "pending" && m.meds?.length);
+    if (!active.length) { alert("No family members with medications yet."); return; }
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageW = 210, ml = 20, mr = 20;
+      let y = 20;
+      const checkPage = () => { if (y > 265) { doc.addPage(); y = 20; } };
+      doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(0, 122, 255);
+      doc.text("Adhera", ml, y);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(140, 140, 140);
+      doc.text("Family Medication Adherence Report", ml, y + 5);
+      doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, ml, y + 10);
+      y += 18;
+      doc.setDrawColor(0, 122, 255); doc.setLineWidth(0.6); doc.line(ml, y, pageW - mr, y); y += 10;
+      active.forEach(m => {
+        checkPage();
+        const medsArr = m.meds || [];
+        const logsArr = m.logs || [];
+        const grouped = {};
+        logsArr.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d] = []; grouped[d].push(l); } });
+        const days = Object.keys(grouped).length;
+        const totalExpected = days * medsArr.reduce((s, x) => s + (x.times_per_day || 1), 0);
+        const adherence = totalExpected > 0 ? Math.min(Math.round((logsArr.length / totalExpected) * 100), 100) : 0;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
+        doc.text(m.name, ml, y); y += 6;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+        doc.text(`Overall adherence: ${adherence}%  |  Medications: ${medsArr.length}`, ml, y); y += 6;
+        if (medsArr.length === 0) {
+          doc.setFont("helvetica", "italic"); doc.setFontSize(9); doc.setTextColor(150, 150, 150);
+          doc.text("No medications on record.", ml + 2, y); y += 5;
+        } else {
+          medsArr.forEach(x => {
+            checkPage();
+            const medLogs = logsArr.filter(l => l.medication_id === x.id);
+            const exp = x.course_duration_days * (x.times_per_day || 1);
+            const pct = exp > 0 ? Math.min(Math.round((medLogs.length / exp) * 100), 100) : 0;
+            const status = pct >= 80 ? "Good" : pct >= 50 ? "Fair" : "Poor";
+            doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(30, 30, 30);
+            doc.text(`- ${x.name}: ${pct}% (${status})`, ml + 2, y); y += 4;
+            doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+            doc.text(`  ${medLogs.length}/${exp} doses taken  (${x.dosage_amount} ${x.dosage_unit})`, ml + 4, y); y += 4;
+          });
+        }
+        y += 6;
+      });
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(180, 180, 180);
+      doc.text("Generated by Adhera · adhera.app · Confidential", ml, 287);
+      doc.save(`adhera_family_report_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (e) { console.error("family report:", e); alert("Could not generate the report. Please try again."); }
+  }
+
   useEffect(() => { if (notifOn() && (meds.length || logs.length)) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30); return () => { clearAllTimers(); }; }, [meds, profile?.reminder_lead, profile?.wake_time, logs]);
   useEffect(() => {
     try {
@@ -181,7 +313,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       const { medId, doseTimeMs } = e.detail || {};
       if (!medId) return;
       const med = meds.find(m => m.id === medId);
-      if (med) { setEditMed(med); setTab("meds"); setShowAdd(true); }
+      if (med) setMedSheetFor({ member: selfMember, med });
     }
     window.addEventListener("mt-deeplink", onDeeplink);
     return () => window.removeEventListener("mt-deeplink", onDeeplink);
@@ -439,11 +571,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }
 
   const tabs = [
-    { id:"today", label:t("nav.today"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 18a8 8 0 110-16 8 8 0 010 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> },
-    { id:"medications", label:t("nav.meds"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M6.5 10h-2v5h2v-5zm4 0h-2v5h2v-5zm8.5 7H4v2h15v-2zm-4.5-7h-2v5h2v-5zM11.5 1L2 6v2h19V6l-9.5-5z"/></svg> },
-    { id:"vitals", label:t("nav.vitals"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M17 3H7C4.79 3 3 4.79 3 7v10c0 2.21 1.79 4 4 4h10c2.21 0 4-1.79 4-4V7c0-2.21-1.79-4-4-4zm0 2c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h10zm-1 7h-3v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H8c-.55 0-1 .45-1 1s.45 1 1 1h3v3c0 .55.45 1 1 1s1-.45 1-1v-3h3c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg> },
-    { id:"reports", label:t("nav.reports"), icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg> },
-    { id:"profile", label:"", icon:<svg viewBox="0 0 24 24" fill="currentColor" style={{width:24,height:24}}><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.6 3.6 0 0112 15.6z"/></svg> },
+    { id: "today", label: t("nav.today"), icon: <Home size={23} strokeWidth={1.9} /> },
+    { id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> },
+    { id: "alerts", label: t("nav.alerts"), icon: <Bell size={23} strokeWidth={1.9} /> },
+    { id: "me", label: "", icon: <User size={23} strokeWidth={1.9} /> },
   ];
 
   if (loading) return (
@@ -498,36 +629,48 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
 
-      <div style={{paddingBottom:"calc(49px + env(safe-area-inset-bottom,0px))"}}>
-        <div className="content-reveal">
-        {tab==="today" && <TodayTab meds={meds} logs={logs} onLog={(med)=>setLogDoseMed(med)} onAdd={()=>setShowAdd(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} plan={profile?.plan||"free"} medCount={meds.length} onViewVisits={()=>setShowVisitSheet(true)} onViewVisitList={()=>setShowVisitList(true)} vitals={vitals} vitalReminders={(() => { try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}"); } catch { return {}; } })()} onNavigateVitals={()=>setTab("vitals")} onCheckIn={(date)=>{setJournalDate(date);setJournalEntry(getJournalEntry(date));}} onViewFamily={() => { setViewFamily(true); setTab("reports"); }}/>}
-        {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan||"free"} medCount={meds.length}/>}
-        {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
-        {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab}/>}
-        {tab==="reports" && viewFamily && <FamilyTab user={user} plan={profile?.plan||"free"} onSaveProfile={saveProfile} onBack={() => setViewFamily(false)}/>}
-        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length} meds={meds} logs={logs}/>}
-        </div>
-      </div>
-
-      <div className="tabbar">
-        {tabs.map(t=>(
-          <div key={t.id} className={`tbi${tab===t.id?" on":""}`} onClick={()=>{setTab(t.id);if(t.id!=="reports")setViewFamily(false);}}>
-            {t.icon}
-            {t.label && <span>{t.label}</span>}
+      {memberView ? (
+        <MemberDetail member={memberView} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} />
+      ) : overlayTab ? (
+        <div className="scroll">
+          {overlayTab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") { setOverlayTab(null); setTab("me"); } }} />}
+          {overlayTab === "vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user} />}
+          <div style={{ padding: "4px 20px 24px" }}>
+            <button className="btn btn-ghost" onClick={() => setOverlayTab(null)}>Back</button>
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
+            <div className="content-reveal">
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} />}
+              {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} />}
+              {tab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
+              {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setOverlayTab("reports")} onOpenVitals={() => setOverlayTab("vitals")} />}
+            </div>
+          </div>
 
-      {(showAdd||editMed) && (
+          <div className="tabbar">
+            {tabs.map(t => (
+              <div key={t.id} className={`tbi${tab === t.id ? " on" : ""}`} onClick={() => { setTab(t.id); setOverlayTab(null); }}>
+                {t.icon}
+                {t.label && <span>{t.label}</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {medSheetFor && (
         <MedSheet
-          med={editMed}
-          userId={user.id}
-          reminderLead={profile?.reminder_lead||30}
-          plan={profile?.plan||"free"}
-          medCount={meds.length}
-          onSave={()=>{setShowAdd(false);setEditMed(null);reload();}}
-          onClose={()=>{setShowAdd(false);setEditMed(null);}}
-          allMeds={meds}
+          med={medSheetFor.med}
+          userId={medSheetFor.member?.kind === "linked" && medSheetFor.member.userId ? medSheetFor.member.userId : user.id}
+          reminderLead={profile?.reminder_lead || 30}
+          plan={profile?.plan || "free"}
+          medCount={medSheetFor.member?.meds?.length ?? meds.length}
+          onSave={() => { setMedSheetFor(null); reload(); }}
+          onClose={() => setMedSheetFor(null)}
+          allMeds={medSheetFor.member?.meds?.length ? medSheetFor.member.meds : meds}
         />
       )}
       {deleteMedId && (
