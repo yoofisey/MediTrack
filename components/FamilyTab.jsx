@@ -3,18 +3,20 @@
 import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, fmtDateLong } from "@/lib/constants";
-import { getStockStatus, getUpcomingVisits } from "@/lib/data";
-import { User, Pill, AlertTriangle, TrendingDown, Package, Hospital, Users } from "lucide-react";
+import { getStockStatus, getUpcomingVisits, computeMissedDoses } from "@/lib/data";
+import { UpgradeModal } from "@/components/Modals";
+import { User, Pill, AlertTriangle, TrendingDown, Package, Hospital, Users, Bell, FileText, Sparkles, Crown } from "lucide-react";
 
-export default function FamilyTab({ user, plan }) {
+export default function FamilyTab({ user, plan, onSaveProfile }) {
   const [members, setMembers] = useState([]);
+  const [memberData, setMemberData] = useState({});
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
-  const [memberLogs, setMemberLogs] = useState([]);
-  const [memberMeds, setMemberMeds] = useState([]);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const limits = { free: { profiles: 0 }, pro: { profiles: 0 }, family: { profiles: 5 } };
   const maxMembers = (limits[plan] || limits.free).profiles;
@@ -22,7 +24,7 @@ export default function FamilyTab({ user, plan }) {
   useEffect(() => {
     if (!user?.id) return;
     loadMembers();
-  }, [user?.id]);
+  }, [user?.id, plan]);
 
   async function loadMembers() {
     try {
@@ -30,12 +32,41 @@ export default function FamilyTab({ user, plan }) {
         .select("*")
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
-      if (!error && Array.isArray(data)) setMembers(data);
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      setMembers(rows);
+
+      const linked = rows.filter(m => m.member_user_id && m.status === "active");
+      if (linked.length) {
+        const entries = await Promise.all(linked.map(async m => {
+          const [medsRes, logsRes, profRes] = await Promise.all([
+            sb.from("medications").select("*").eq("user_id", m.member_user_id).order("created_at", { ascending: false }),
+            sb.from("dose_logs").select("*, medications(name)").eq("user_id", m.member_user_id).order("taken_at", { ascending: false }).limit(120),
+            sb.from("profiles").select("full_name, avatar_url, wake_time, reminder_lead").eq("id", m.member_user_id).maybeSingle(),
+          ]);
+          return { id: m.id, meds: medsRes.data || [], logs: logsRes.data || [], profile: profRes.data || null };
+        }));
+        const map = {};
+        entries.forEach(e => { map[e.id] = e; });
+        setMemberData(map);
+      } else {
+        setMemberData({});
+      }
     } catch (e) {
       console.error("loadMembers:", e);
     } finally {
       setLoading(false);
     }
+  }
+
+  function displayName(m) {
+    return m.member_name || memberData[m.id]?.profile?.full_name || m.member_email;
+  }
+
+  function missedFor(m) {
+    const d = memberData[m.id];
+    if (!d) return [];
+    return computeMissedDoses(d.meds, d.logs, d.profile || {});
   }
 
   async function handleInvite() {
@@ -66,8 +97,6 @@ export default function FamilyTab({ user, plan }) {
       await sb.from("family_members").eq("id", id).delete();
       if (selectedMember?.id === id) {
         setSelectedMember(null);
-        setMemberLogs([]);
-        setMemberMeds([]);
       }
       loadMembers();
     } catch (e) {
@@ -77,16 +106,15 @@ export default function FamilyTab({ user, plan }) {
 
   async function viewMember(member) {
     setSelectedMember(member);
-    setMemberLogs([]);
-    setMemberMeds([]);
+    if (memberData[member.id]) return;
     if (!member.member_user_id) return;
     try {
-      const [medsRes, logsRes] = await Promise.all([
+      const [medsRes, logsRes, profRes] = await Promise.all([
         sb.from("medications").select("*").eq("user_id", member.member_user_id).order("created_at", { ascending: false }),
-        sb.from("dose_logs").select("*, medications(name)").eq("user_id", member.member_user_id).order("taken_at", { ascending: false }).limit(100),
+        sb.from("dose_logs").select("*, medications(name)").eq("user_id", member.member_user_id).order("taken_at", { ascending: false }).limit(120),
+        sb.from("profiles").select("full_name, avatar_url, wake_time, reminder_lead").eq("id", member.member_user_id).maybeSingle(),
       ]);
-      if (Array.isArray(medsRes.data)) setMemberMeds(medsRes.data);
-      if (Array.isArray(logsRes.data)) setMemberLogs(logsRes.data);
+      setMemberData(prev => ({ ...prev, [member.id]: { meds: medsRes.data || [], logs: logsRes.data || [], profile: profRes.data || null } }));
     } catch (e) {
       console.error("viewMember:", e);
     }
@@ -94,7 +122,6 @@ export default function FamilyTab({ user, plan }) {
 
   function calcAdherence(meds, logs) {
     if (!meds.length) return 0;
-    const now = new Date();
     const grouped = {};
     logs.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d] = []; grouped[d].push(l); } });
     const daysTracked = Object.keys(grouped).length;
@@ -119,7 +146,86 @@ export default function FamilyTab({ user, plan }) {
     return streak;
   }
 
-  const isOwner = true;
+  async function generateFamilyReport() {
+    const active = members.filter(m => m.member_user_id && m.status === "active");
+    if (!active.length) { alert("No linked family members yet. Ask a member to accept your invite first."); return; }
+    setReporting(true);
+    try {
+      const data = await Promise.all(active.map(async m => {
+        const [medsRes, logsRes] = await Promise.all([
+          sb.from("medications").select("*").eq("user_id", m.member_user_id),
+          sb.from("dose_logs").select("*").eq("user_id", m.member_user_id),
+        ]);
+        return { member: m, meds: medsRes.data || [], logs: logsRes.data || [] };
+      }));
+
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageW = 210, ml = 20, mr = 20;
+      let y = 20;
+
+      const checkPage = () => { if (y > 265) { doc.addPage(); y = 20; } };
+
+      doc.setFont("helvetica", "bold"); doc.setFontSize(22);
+      doc.setTextColor(0, 122, 255);
+      doc.text("Adhera", ml, y);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(11);
+      doc.setTextColor(140, 140, 140);
+      doc.text("Family Medication Adherence Report", ml, y + 5);
+      doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, ml, y + 10);
+      y += 18;
+      doc.setDrawColor(0, 122, 255); doc.setLineWidth(0.6);
+      doc.line(ml, y, pageW - mr, y); y += 10;
+
+      data.forEach(({ member, meds, logs }) => {
+        checkPage();
+        const name = member.member_name || member.member_email;
+        const adherence = calcAdherence(meds, logs);
+        const streak = calcStreak(meds, logs);
+        const pm = meds.map(med => {
+          const medLogs = logs.filter(l => l.medication_id === med.id);
+          const expected = med.course_duration_days * (med.times_per_day || 1);
+          const pct = expected > 0 ? Math.min(Math.round((medLogs.length / expected) * 100), 100) : 0;
+          return { ...med, taken: medLogs.length, expected, pct };
+        });
+
+        doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+        doc.setTextColor(20, 20, 20);
+        doc.text(name, ml, y); y += 6;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Overall adherence: ${adherence}%  |  Streak: ${streak} days  |  Medications: ${meds.length}`, ml, y); y += 6;
+
+        if (pm.length === 0) {
+          doc.setFont("helvetica", "italic"); doc.setFontSize(9);
+          doc.setTextColor(150, 150, 150);
+          doc.text("No medications on record.", ml + 2, y); y += 5;
+        } else {
+          pm.forEach(m => {
+            checkPage();
+            const status = m.pct >= 80 ? "Good" : m.pct >= 50 ? "Fair" : "Poor";
+            doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+            doc.setTextColor(30, 30, 30);
+            doc.text(`- ${m.name}: ${m.pct}% (${status})`, ml + 2, y); y += 4;
+            doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`  ${m.taken}/${m.expected} doses taken  (${m.dosage_amount} ${m.dosage_unit})`, ml + 4, y); y += 4;
+          });
+        }
+        y += 6;
+      });
+
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+      doc.setTextColor(180, 180, 180);
+      doc.text("Generated by Adhera · adhera.app · Confidential", ml, 287);
+      doc.save(`adhera_family_report_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (e) {
+      console.error("family report:", e);
+      alert("Could not generate the report. Please try again.");
+    } finally {
+      setReporting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -131,20 +237,27 @@ export default function FamilyTab({ user, plan }) {
   }
 
   if (selectedMember) {
+    const d = memberData[selectedMember.id] || { meds: [], logs: [], profile: null };
+    const memberMeds = d.meds || [];
+    const memberLogs = d.logs || [];
+    const memberProfile = d.profile || {};
+    const name = displayName(selectedMember);
     const adherence = calcAdherence(memberMeds, memberLogs);
     const streak = calcStreak(memberMeds, memberLogs);
     const activeMeds = memberMeds.filter(m => m.active);
+    const missed = computeMissedDoses(memberMeds, memberLogs, memberProfile);
 
     return (
       <div className="scroll">
         <div style={{padding:"16px 16px 0",display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={() => { setSelectedMember(null); setMemberLogs([]); setMemberMeds([]); }}
+          <button onClick={() => { setSelectedMember(null); }}
             style={{background:"none",border:"none",cursor:"pointer",padding:4,color:"var(--t2)"}}>
             <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
           </button>
-          <div style={{fontSize:20,fontWeight:700,color:"var(--t1)"}}>
-            {selectedMember.member_name || selectedMember.member_email}
+          <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",background:"var(--ib4)",display:"grid",placeItems:"center",fontSize:15,fontWeight:700,color:"var(--t1)",flexShrink:0}}>
+            {memberProfile.avatar_url ? <img src={memberProfile.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (name || "?").charAt(0).toUpperCase()}
           </div>
+          <div style={{fontSize:20,fontWeight:700,color:"var(--t1)"}}>{name}</div>
         </div>
 
         <div className="chips" style={{marginTop:12}}>
@@ -152,6 +265,25 @@ export default function FamilyTab({ user, plan }) {
           <div className="chip green"><div className="chip-val">{adherence}%</div><div className="chip-lbl">Adherence</div></div>
           <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">Streak</div></div>
         </div>
+
+        {missed.length > 0 && (
+          <div className="section">
+            <div className="section-header" style={{display:"flex",alignItems:"center",gap:8,color:"var(--red)"}}>
+              <Bell size={15} strokeWidth={2.2}/> Missed doses today
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {missed.map((m, i) => (
+                <div key={i} style={{background:"var(--ib6)",borderRadius:"var(--rl)",padding:12,display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:28,height:28,borderRadius:7,background:"var(--card)",display:"grid",placeItems:"center",flexShrink:0}}><AlertTriangle size={15} color="var(--red)"/></div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{m.med.name}</div>
+                    <div style={{fontSize:12,color:"var(--red)"}}>Missed the {m.time} dose — remind them to take it</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {memberMeds.length === 0 ? (
           <div className="empty-state">
@@ -211,27 +343,6 @@ export default function FamilyTab({ user, plan }) {
               </div>
             )}
 
-            {(() => {
-              const visits = getUpcomingVisits(60);
-              if (!visits.length) return null;
-              return (
-                <div className="section">
-                  <div className="section-header">Upcoming visits</div>
-                  <div style={{background:"var(--card)",borderRadius:"var(--rl)",overflow:"hidden",boxShadow:"var(--card-shadow)"}}>
-                    {visits.slice(0, 3).map((v, i) => (
-                      <div key={v.id} className="row" style={{borderTop:i>0?"0.5px solid var(--sep)":"none",cursor:"default"}}>
-                        <div style={{width:28,height:28,borderRadius:7,background:"var(--ib5)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}><Hospital size={15}/></div>
-                        <div className="row-body">
-                          <div className="row-title" style={{fontSize:14}}>{v.reason || "Hospital visit"}</div>
-                          <div className="row-sub">{v.facility || v.doctor || ""} · {v.date}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
             {memberLogs.length > 0 && (
               <div className="section">
                 <div className="section-header">Recent doses</div>
@@ -252,7 +363,7 @@ export default function FamilyTab({ user, plan }) {
         )}
 
         <div style={{padding:"16px"}}>
-          <button className="btn btn-ghost" style={{width:"100%"}} onClick={() => { setSelectedMember(null); setMemberLogs([]); setMemberMeds([]); }}>← Back to family</button>
+          <button className="btn btn-ghost" style={{width:"100%"}} onClick={() => setSelectedMember(null)}>← Back to family</button>
         </div>
       </div>
     );
@@ -266,15 +377,13 @@ export default function FamilyTab({ user, plan }) {
         <div className="upgrade-card" style={{margin:"0 16px 16px"}}>
           <div className="upgrade-title">Family dashboard</div>
           <div className="upgrade-sub">Track your loved ones&apos; medication adherence from one place. Upgrade to Family to add up to 5 profiles.</div>
-          <button className="upgrade-btn" onClick={() => {}}>Upgrade to Family →</button>
+          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>Upgrade to Family →</button>
         </div>
       ) : (
         <>
           <div style={{padding:"0 16px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{fontSize:13,color:"var(--t3)"}}>{members.length}/{maxMembers} members</div>
-            {members.length < maxMembers && (
-              <button className="btn btn-primary btn-sm" style={{width:"auto",fontSize:13}} onClick={() => setShowInvite(true)}>+ Invite</button>
-            )}
+            <button className="btn btn-primary btn-sm" style={{width:"auto",fontSize:13}} onClick={() => setShowInvite(true)}>+ Invite</button>
           </div>
 
           {members.length === 0 ? (
@@ -287,28 +396,37 @@ export default function FamilyTab({ user, plan }) {
           ) : (
             <div className="section" style={{padding:"0 16px"}}>
               <div style={{background:"var(--card)",borderRadius:"var(--rl)",overflow:"hidden",boxShadow:"var(--card-shadow)"}}>
-                {members.map((m, i) => (
-                  <div key={m.id} className="row" style={{borderTop: i > 0 ? "0.5px solid var(--sep)" : "none", cursor: "pointer"}} onClick={() => viewMember(m)}>
-                    <div style={{width:36,height:36,borderRadius:"50%",background:"var(--ib4)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0,color:"var(--t1)",fontWeight:600}}>
-                      {m.member_name ? m.member_name.charAt(0).toUpperCase() : m.member_email?.charAt(0).toUpperCase() || "?"}
-                    </div>
-                    <div className="row-body">
-                      <div className="row-title">{m.member_name || m.member_email}</div>
-                      <div className="row-sub">
-                        {m.status === "pending" ? "Invitation pending" : m.role === "admin" ? "Admin" : "Member"}
+                {members.map((m, i) => {
+                  const missed = missedFor(m);
+                  return (
+                    <div key={m.id} className="row" style={{borderTop: i > 0 ? "0.5px solid var(--sep)" : "none", cursor: m.member_user_id ? "pointer" : "default"}} onClick={() => m.member_user_id && viewMember(m)}>
+                      <div style={{width:36,height:36,borderRadius:"50%",overflow:"hidden",background:"var(--ib4)",display:"grid",placeItems:"center",fontSize:16,flexShrink:0,color:"var(--t1)",fontWeight:600}}>
+                        {memberData[m.id]?.profile?.avatar_url ? <img src={memberData[m.id].profile.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (displayName(m) || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="row-body">
+                        <div className="row-title">{displayName(m)}</div>
+                        <div className="row-sub">
+                          {m.status === "pending" ? "Invitation pending — they'll accept when they sign in" : missed.length > 0 ? `${missed.length} missed dose${missed.length>1?"s":""} today` : m.role === "admin" ? "Admin" : "Linked · up to date"}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        {m.status === "pending" && <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"var(--ib5)",color:"var(--t2)",fontWeight:500}}>Pending</span>}
+                        {m.member_user_id && missed.length > 0 && <AlertTriangle size={15} color="var(--red)" style={{flexShrink:0}}/>}
+                        <span style={{fontSize:14,color:"var(--t3)"}}>›</span>
                       </div>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {m.status === "pending" && (
-                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"var(--ib5)",color:"var(--t2)",fontWeight:500}}>Pending</span>
-                      )}
-                      <span style={{fontSize:14,color:"var(--t3)"}}>›</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
+
+          <div style={{padding:"0 16px",marginBottom:12,marginTop:16}}>
+            <button className="btn" style={{width:"100%",background:"var(--card)",color:"var(--t1)",fontWeight:600,border:"0.5px solid var(--sep)",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
+              onClick={generateFamilyReport} disabled={reporting}>
+              <FileText size={15} strokeWidth={2.2}/> {reporting ? "Generating…" : "Family report for the doctor"}
+            </button>
+          </div>
 
           <div className="section" style={{padding:"0 16px",marginTop:16}}>
             <div className="section-header" style={{fontSize:14}}>How it works</div>
@@ -324,14 +442,14 @@ export default function FamilyTab({ user, plan }) {
                 <div style={{width:28,height:28,borderRadius:7,background:"var(--ib2)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}>2</div>
                 <div>
                   <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>They accept & sign up</div>
-                  <div style={{fontSize:12,color:"var(--t3)"}}>They create an account or log in to link profiles</div>
+                  <div style={{fontSize:12,color:"var(--t3)"}}>They log in with the invited email and accept the invite</div>
                 </div>
               </div>
               <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",gap:12}}>
                 <div style={{width:28,height:28,borderRadius:7,background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:14,flexShrink:0}}>3</div>
                 <div>
                   <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>Track together</div>
-                  <div style={{fontSize:12,color:"var(--t3)"}}>View their medications, adherence, and dose history from your account</div>
+                  <div style={{fontSize:12,color:"var(--t3)"}}>View their medications, adherence, and missed doses — and get caregiver alerts</div>
                 </div>
               </div>
             </div>
@@ -361,6 +479,15 @@ export default function FamilyTab({ user, plan }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showUpgrade && (
+        <UpgradeModal
+          country={user?.user_metadata?.country}
+          userEmail={user?.email}
+          onClose={() => setShowUpgrade(false)}
+          onUpgrade={p => { onSaveProfile({ plan: p }); setShowUpgrade(false); }}
+        />
       )}
     </div>
   );

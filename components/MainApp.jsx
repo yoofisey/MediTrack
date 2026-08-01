@@ -8,6 +8,7 @@ import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
+import { fetchPendingFamilyInvites, acceptFamilyInvite } from "@/lib/db";
 import TodayTab from "@/components/TodayTab";
 import MedsTab from "@/components/MedsTab";
 import ReportsTab from "@/components/ReportsTab";
@@ -20,6 +21,7 @@ import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import SearchSheet from "@/components/SearchSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
+import FamilyInviteSheet from "@/components/FamilyInviteSheet";
 import { Search } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
@@ -47,9 +49,38 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [journalEntries, setJournalEntries] = useState([]);
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntry, setJournalEntry] = useState(null);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [showInviteSheet, setShowInviteSheet] = useState(false);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
+
+  useEffect(() => {
+    if (!user?.id || !user?.email) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await fetchPendingFamilyInvites(user.email);
+        if (!cancelled && Array.isArray(data) && data.length) {
+          setPendingInvites(data);
+          setShowInviteSheet(true);
+        }
+      } catch (e) { console.error("pending invites:", e); }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  async function handleAcceptInvite(id) {
+    try {
+      const name = profile?.full_name || user?.user_metadata?.full_name || user?.email;
+      await acceptFamilyInvite(id, user.id, name);
+      setPendingInvites(prev => {
+        const rest = prev.filter(p => p.id !== id);
+        if (!rest.length) setShowInviteSheet(false);
+        return rest;
+      });
+    } catch (e) { console.error("accept invite:", e); }
+  }
 
   useEffect(() => {
     if (!user?.id) return;
@@ -478,7 +509,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         {tab==="medications" && <MedsTab meds={meds} logs={logs} onAdd={()=>setShowAdd(true)} onEdit={setEditMed} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan||"free"} medCount={meds.length}/>}
         {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
         {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab} onViewFamily={() => setViewFamily(true)}/>}
-        {tab==="reports" && viewFamily && <FamilyTab user={user} plan={profile?.plan||"free"}/>}
+        {tab==="reports" && viewFamily && <FamilyTab user={user} plan={profile?.plan||"free"} onSaveProfile={saveProfile}/>}
         {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length} meds={meds} logs={logs}/>}
         </div>
       </div>
@@ -522,6 +553,9 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       {(showVisitSheet||showVisitList) && <VisitSheet initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); reload(); }}/>}
       {showSearch && <SearchSheet meds={meds} logs={logs} journalEntries={journalEntries} onClose={()=>setShowSearch(false)} onEditMed={(m) => { setEditMed(m); setShowSearch(false); }}/>}
       {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
+      {showInviteSheet && pendingInvites.length > 0 && (
+        <FamilyInviteSheet invites={pendingInvites} onAccept={handleAcceptInvite} onDismiss={() => setShowInviteSheet(false)}/>
+      )}
     </div>
   );
 }

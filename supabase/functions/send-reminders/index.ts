@@ -316,6 +316,90 @@ serve(async (req) => {
       }
     }
 
+    // Caregiver missed-dose alerts (Family tier)
+    const { data: familyLinks } = await supabase
+      .from("family_members")
+      .select("id, owner_id, member_user_id, member_name, member_email")
+      .eq("status", "active")
+      .not("member_user_id", "is", null);
+
+    if (familyLinks?.length) {
+      const ownerIds = [...new Set(familyLinks.map((l: any) => l.owner_id))];
+      const ownerSubsRes = await supabase
+        .from("push_subscriptions")
+        .select("user_id, endpoint, p256dh, auth")
+        .in("user_id", ownerIds);
+      const ownerSubMap = new Map<string, any[]>();
+      (ownerSubsRes.data || []).forEach((s: any) => {
+        if (!ownerSubMap.has(s.user_id)) ownerSubMap.set(s.user_id, []);
+        ownerSubMap.get(s.user_id)!.push({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth });
+      });
+
+      for (const link of familyLinks) {
+        const memberMeds = meds.filter((m: any) => m.user_id === link.member_user_id);
+        if (!memberMeds.length) continue;
+        const ownerSubs = ownerSubMap.get(link.owner_id) || [];
+        if (!ownerSubs.length) continue;
+
+        const tz = profileTz.get(link.member_user_id) || "UTC";
+        const memberProf = profiles.find((p: any) => p.id === link.member_user_id);
+        const wakeTime = memberProf?.wake_time || "08:00";
+        const wakeParts = wakeTime.split(":");
+        const wakeMin = (parseInt(wakeParts[0] || "8", 10) * 60) + (parseInt(wakeParts[1] || "0", 10));
+        const todayStr = getLocalTodayStr(tz);
+
+        const missed: { name: string; time: string }[] = [];
+        for (const med of memberMeds) {
+          const end = new Date(med.start_date);
+          end.setDate(end.getDate() + med.course_duration_days);
+          if (end < now || new Date(med.start_date) > now) continue;
+
+          const dayLogs = allLogs.filter((l: any) =>
+            l.user_id === med.user_id && l.medication_id === med.id && l.taken_at?.startsWith(todayStr));
+
+          const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
+          const times: string[] = [];
+          if (med.reminder_times && String(med.reminder_times).trim()) {
+            String(med.reminder_times).split(",").forEach((t: string) => {
+              const [h, m] = t.trim().split(":");
+              times.push(`${String(parseInt(h, 10) || 0).padStart(2, "0")}:${String(parseInt(m, 10) || 0).padStart(2, "0")}`);
+            });
+          } else {
+            for (let i = 0; i < (med.times_per_day || 1); i++) {
+              const mins = wakeMin + Math.floor((i * intervalMs) / 60000);
+              times.push(`${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`);
+            }
+          }
+
+          for (const t of times) {
+            const dueMs = localTimeToUTC(todayStr, t, tz);
+            if (nowMs - dueMs > 20 * 60000) {
+              const logged = dayLogs.some((l: any) =>
+                new Date(l.taken_at).getTime() >= dueMs - 10 * 60000);
+              if (!logged) missed.push({ name: med.name, time: t });
+            }
+          }
+        }
+
+        if (!missed.length) continue;
+
+        const memberName = link.member_name || memberProf?.full_name || link.member_email || "your family member";
+        const listStr = missed.slice(0, 3).map(m => `${m.name} at ${m.time}`).join(", ");
+        const title = `Missed dose: ${memberName}`;
+        const body = `${missed.length} dose${missed.length > 1 ? "s" : ""} missed today — ${listStr}. Remind them to take it.`;
+        const payload = JSON.stringify({ title, body, tag: `mt-family-${link.id}-${todayStr}` });
+
+        for (const sub of ownerSubs) {
+          try { await sendPush(sub, payload); sent++; }
+          catch (e: any) {
+            if (e.statusCode === 404 || e.statusCode === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            }
+          }
+        }
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, sent }), { status: 200 });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });

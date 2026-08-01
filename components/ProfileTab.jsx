@@ -7,6 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/notifications";
 import { sb } from "@/lib/supabase";
+import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
 import AvatarPicker from "@/components/AvatarPicker";
@@ -54,9 +55,17 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [showMedicalID, setShowMedicalID] = useState(false);
   const [conditionVal, setConditionVal] = useState(profile?.condition || "");
   const [schedVals, setSchedVals] = useState({ wake: profile?.wake_time || "07:00", sleep: profile?.sleep_time || "22:00" });
-  const [familyMembers, setFamilyMembers] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("adhera_family") || "[]"); } catch { return []; }
-  });
+  const [familyMembers, setFamilyMembers] = useState([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+    fetchFamilyMembers(user.id).then(({ data, error }) => {
+      if (!mounted) return;
+      if (!error && Array.isArray(data)) setFamilyMembers(data);
+    });
+    return () => { mounted = false; };
+  }, [user?.id]);
   const [uploading, setUploading] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
@@ -150,16 +159,21 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     }
   }, []);
 
-  function handleInvite(email) {
-    const updated = [...familyMembers, { email, status: "pending", invitedAt: new Date().toISOString() }];
-    setFamilyMembers(updated);
-    localStorage.setItem("adhera_family", JSON.stringify(updated));
+  async function handleInvite(email) {
+    if (!user?.id || !email.trim()) return;
+    const { error } = await insertFamilyMember(user.id, email);
+    if (error) {
+      console.error("invite error:", error?.message || error);
+      return;
+    }
+    const { data } = await fetchFamilyMembers(user.id);
+    if (Array.isArray(data)) setFamilyMembers(data);
   }
 
-  function handleRemoveMember(index) {
-    const updated = familyMembers.filter((_, i) => i !== index);
-    setFamilyMembers(updated);
-    localStorage.setItem("adhera_family", JSON.stringify(updated));
+  async function handleRemoveMember(id) {
+    await removeFamilyMember(id);
+    const { data } = await fetchFamilyMembers(user.id);
+    if (Array.isArray(data)) setFamilyMembers(data);
   }
 
   function exportData(format) {

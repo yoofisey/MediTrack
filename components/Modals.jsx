@@ -311,13 +311,13 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
               <div style={{fontSize:14,fontWeight:600,color:"var(--t2)",marginBottom:8}}>Invited members</div>
               <div className="list">
                 {members.map((m, i) => (
-                  <div key={i} className="row" style={{cursor:"default"}}>
+                  <div key={m.id || i} className="row" style={{cursor:"default"}}>
                     <div className="row-icon" style={{background:"var(--ib4)"}}><Ico><User size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
                     <div className="row-body">
-                      <div className="row-title">{m.email}</div>
-                      <div className="row-sub">{m.status === "pending" ? "Invitation sent" : "Active"}</div>
+                      <div className="row-title">{m.member_email || m.email}</div>
+                      <div className="row-sub">{m.status === "pending" ? "Invitation sent — they'll accept when they sign in" : "Active"}</div>
                     </div>
-                    <button className="btn btn-sm" style={{background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={() => onRemove(i)}>Remove</button>
+                    <button className="btn btn-sm" style={{background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={() => onRemove(m.id || i)}>Remove</button>
                   </div>
                 ))}
               </div>
