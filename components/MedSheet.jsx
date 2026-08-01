@@ -31,7 +31,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
       return;
     }
     if (!f.name.trim()||!f.dosage_amount||!f.course_duration_days) { setErr("Please fill in name, dosage, and duration."); return; }
-    if (parseFloat(f.dosage_amount) <= 0) { setErr("Dosage amount must be greater than 0."); return; }
+    if (!Number.isFinite(parseFloat(f.dosage_amount)) || parseFloat(f.dosage_amount) <= 0) { setErr("Dosage amount must be greater than 0."); return; }
     if (parseInt(f.course_duration_days) < 1) { setErr("Duration must be at least 1 day."); return; }
     if (parseInt(f.times_per_day) < 1) { setErr("Times per day must be at least 1."); return; }
     if (!f.start_date) { setErr("Please select a start date."); return; }
@@ -43,12 +43,17 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
     if (parseInt(f.course_duration_days) > maxDuration) { setErr(`Duration seems too long (max ${maxDuration} days).`); return; }
     setBusy(true); setErr("");
     const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, cost_per_package:f.cost_per_package?parseFloat(f.cost_per_package):null, cost_currency:f.cost_currency||null, notes:f.notes, active:true };
-    const result = med?.id ? await sb.from("medications").eq("id",med.id).update(payload) : await sb.from("medications").insert([payload]);
-    if (result.error) {
-      const msg = result.error?.message || result.error?.error_description || JSON.stringify(result.error);
-      setErr(msg); setBusy(false); return;
+    try {
+      const result = med?.id ? await sb.from("medications").eq("id",med.id).update(payload) : await sb.from("medications").insert([payload]);
+      if (result.error) {
+        const msg = result.error?.message || result.error?.error_description || JSON.stringify(result.error);
+        setErr(msg); setBusy(false); return;
+      }
+      onSave();
+    } catch (e) {
+      const msg = e?.message || "Could not save. Check your connection and try again.";
+      setErr(msg); setBusy(false);
     }
-    onSave();
   }
 
   const units = ["tablet(s)","capsule(s)","ml","mg","mcg","IU","drop(s)","puff(s)","patch(es)","injection(s)"];
