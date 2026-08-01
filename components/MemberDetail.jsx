@@ -5,7 +5,7 @@ import { CSS } from "@/lib/constants";
 import { activeMeds, missedDoses, weekDots, weekAdherence, streak, initials, expectedDosesToday, pushManagedMed } from "@/lib/household";
 import { ChevronLeft, Check, Pill, Plus, Phone } from "lucide-react";
 
-function MemberRing({ pct, size = 92, stroke = 6 }) {
+function MemberRing({ member, pct, size = 92, stroke = 6 }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
   const color = pct >= 1 ? "#34C759" : pct >= 0.5 ? "#FF9500" : "#FF3B30";
   return (
