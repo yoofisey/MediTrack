@@ -65,7 +65,7 @@ function ManagedMedForm({ member, onDone }) {
   );
 }
 
-export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote }) {
+export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onChanged }) {
   const [showAddMed, setShowAddMed] = useState(false);
   const [editNote, setEditNote] = useState(false);
   const [noteText, setNoteText] = useState(member.careNote || "");
@@ -128,7 +128,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
             <Plus size={15} strokeWidth={2.5} /> Add
           </button>
         </div>
-        {member.managed && showAddMed && <ManagedMedForm member={member} onDone={() => setShowAddMed(false)} />}
+        {member.managed && showAddMed && <ManagedMedForm member={member} onDone={() => { setShowAddMed(false); onChanged && onChanged(); }} />}
         {slots.length === 0 ? (
           <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
             <div className="empty-state-icon" style={{ fontSize: 36 }}><Pill size={36} strokeWidth={1.5} /></div>

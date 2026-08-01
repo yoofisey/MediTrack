@@ -153,7 +153,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs }), [user, profile, meds, logs]);
   const household = useMemo(() => [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))], [selfMember, familyRows, linkedData]);
 
-  function openMember(m) { setMemberView(m); }
+  function openMember(m) { setMemberView(m?.key || null); }
   function closeMember() { setMemberView(null); }
 
   async function markDose(member, slot) {
@@ -629,9 +629,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
 
-      {memberView ? (
-        <MemberDetail member={memberView} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} />
-      ) : overlayTab ? (
+      {memberView ? (() => {
+        const activeMember = household.find(m => m.key === memberView);
+        if (!activeMember) return null;
+        return (
+          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onChanged={reload} />
+        );
+      })() : overlayTab ? (
         <div className="scroll">
           {overlayTab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") { setOverlayTab(null); setTab("me"); } }} />}
           {overlayTab === "vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user} />}
