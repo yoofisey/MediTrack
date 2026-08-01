@@ -58,7 +58,7 @@ export function insertManagedFamilyMember(ownerId: string, fields: { member_name
     phone: fields.phone,
     care_note: fields.care_note,
     managed: true,
-    status: "managed",
+    status: "pending",
   }]);
 }
 
