@@ -505,7 +505,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         {tab==="vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user}/>}
         {tab==="reports" && !viewFamily && <ReportsTab logs={logs} meds={meds} plan={profile?.plan||"free"} onNavigate={setTab}/>}
         {tab==="reports" && viewFamily && <FamilyTab user={user} plan={profile?.plan||"free"} onSaveProfile={saveProfile} onBack={() => setViewFamily(false)}/>}
-        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length} meds={meds} logs={logs} onOpenFamily={() => { setViewFamily(true); setTab("reports"); }}/>}
+        {tab==="profile" && <ProfileTab user={user} profile={profile} onSignOut={onSignOut} onSaveProfile={saveProfile} medCount={meds.length} meds={meds} logs={logs}/>}
         </div>
       </div>
 

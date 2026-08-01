@@ -38,7 +38,7 @@ function Toggle({ on, onChange, disabled }) {
   );
 }
 
-export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs, onOpenFamily }) {
+export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs }) {
   const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
@@ -444,17 +444,16 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           </div>
           <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>{t("profile.seeUpgrade")} →</button>
         </div>
-      ) : (
+      ) : plan === "pro" ? (
     <div className="section" style={{marginBottom:16}}>
       <div className="section-header">{t("profile.yourPlanIncludes")}</div>
           <div className="list">
-            {[,
+            {[
                [<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Unlimited medications","No cap on medications"],
                [<Ico><BarChart3 size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Full history & analytics","All-time dose history"],
                [<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Smart refill reminders","Never run out"],
                [<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Drug interaction checker","Stay safe"],
                [<Ico><FileText size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"PDF adherence reports","Share with your doctor"],
-               plan === "family" ? [<Ico><Users size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Family dashboard","5 profiles", onOpenFamily] : null,
              ].filter(Boolean).map(([icon,title,sub,onClick]) => (
               <Row key={title} icon={icon} title={title} sub={sub} onClick={onClick}/>
             ))}
@@ -465,7 +464,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {plan === "family" && (
     <div className="section" style={{marginBottom:16}}>
