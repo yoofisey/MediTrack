@@ -9,7 +9,7 @@ import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPu
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
 import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember } from "@/lib/db";
-import { makeSelfMember, buildMemberFromRow, pushManagedLog } from "@/lib/household";
+import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock } from "@/lib/household";
 import TodayTab from "@/components/TodayTab";
 import ReportsTab from "@/components/ReportsTab";
 import VitalsTab from "@/components/VitalsTab";
@@ -158,6 +158,14 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   async function markDose(member, slot) {
     if (!member || !slot) return;
+    const lock = nextDoseLock(member, slot.med);
+    if (lock.locked) {
+      const waitM = Math.ceil(lock.waitMs / 60000);
+      const name = slot.med.name;
+      if (waitM < 60) alert(`⏳ ${name}: wait ${waitM} more minute${waitM === 1 ? "" : "s"} before the next dose.`);
+      else alert(`⏳ ${name}: wait ~${Math.ceil(waitM / 60)} more hour${Math.ceil(waitM / 60) > 1 ? "s" : ""} before the next dose.`);
+      return;
+    }
     const takenAt = new Date().toISOString();
     if (member.kind === "managed") {
       pushManagedLog(member.rowId, { id: "ml_" + Date.now() + Math.random().toString(36).slice(2, 6), medication_id: slot.med.id, taken_at: takenAt });
