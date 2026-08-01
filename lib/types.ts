@@ -2,6 +2,7 @@ export interface Profile {
   id: string;
   full_name?: string;
   avatar_emoji?: string;
+  avatar_url?: string | null;
   condition?: string;
   wake_time?: string;
   sleep_time?: string;

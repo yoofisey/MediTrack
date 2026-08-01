@@ -9,8 +9,9 @@ import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/n
 import { sb } from "@/lib/supabase";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
-import { Camera, Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart, Check } from "lucide-react";
-import { AVATAR_CHOICES, avatarIcon } from "@/lib/avatars";
+import AvatarPicker from "@/components/AvatarPicker";
+import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart, Check } from "lucide-react";
+import { avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -234,7 +235,6 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
   };
   const pm = planMeta[plan] || planMeta.free;
-  const profileEmojis = AVATAR_CHOICES;
 
   function startEdit() {
     setEditData({
@@ -267,33 +267,15 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       <div className="section">
         <div className="section-header">{t("profile.avatar")}</div>
-        <div style={{padding:"0 16px",marginBottom:14}}>
-          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:editData.avatar_url?10:0}}>
-            <div style={{width:72,height:72,borderRadius:"50%",background:"var(--ib3)",display:"grid",placeItems:"center",fontSize:34,flexShrink:0,overflow:"hidden",boxShadow:"0 4px 16px rgba(0,0,0,.1)",border:"3px solid var(--card)",transition:"transform .2s"}}>
-              {editData.avatar_url ? <img src={editData.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (() => { const A = avatarIcon(editData.avatar_emoji); return <A size={34}/>; })()}
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,justifyContent:"flex-start",display:"flex",alignItems:"center",gap:4}} onClick={() => fileInputRef.current?.click()}>
-                <Ico><Camera size={14} strokeWidth={2.2}/></Ico> {uploading ? t("profile.uploading") : t("profile.uploadPhoto")}
-              </button>
-              {editData.avatar_url && (
-                <button className="btn btn-ghost btn-sm" style={{width:"auto",padding:"7px 14px",fontSize:13,color:"var(--red)",borderColor:"rgba(255,59,48,.2)",justifyContent:"flex-start",display:"flex",alignItems:"center",gap:4}} onClick={() => setEditData(p=>({...p,avatar_url:""}))}>
-                  <Ico><Trash2 size={14} strokeWidth={2.2}/></Ico> {t("profile.removePhoto")}
-                </button>
-              )}
-            </div>
-          </div>
-          {uploading && (
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:"var(--ib1)",borderRadius:10,fontSize:13,color:"var(--teal2)",fontWeight:500,marginTop:8}}>
-              <span style={{width:16,height:16,borderRadius:"50%",border:"2px solid var(--teal)",borderTopColor:"transparent",animation:"spin .6s linear infinite",display:"inline-block"}}/>
-              Uploading your photo…
-            </div>
-          )}
-        </div>
-        <div className="emoji-grid" style={{margin:"0 16px"}}>
-          {profileEmojis.map(({key,Icon}) => (
-            <div key={key} className={`emoji-opt${editData.avatar_emoji===key?" sel":""}`} onClick={()=>setEditData(p=>({...p,avatar_emoji:key}))}><Icon size={26}/></div>
-          ))}
+        <div style={{padding:"0 16px"}}>
+          <AvatarPicker
+            user={user}
+            avatarKey={editData.avatar_emoji}
+            avatarUrl={editData.avatar_url}
+            onPick={k=>setEditData(p=>({...p,avatar_emoji:k}))}
+            onUploaded={u=>{ setEditData(p=>({...p,avatar_url:u})); onSaveProfile({ avatar_url: u }); }}
+            onRemovePhoto={()=>setEditData(p=>({...p,avatar_url:""}))}
+          />
         </div>
       </div>
 
@@ -370,8 +352,6 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           ))}
         </div>
       </div>
-
-      <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarUpload}/>
 
       <div style={{padding:"16px"}}>
         <button className="btn btn-ghost" onClick={()=>setEditing(false)} style={{color:"var(--t3)"}}>{t("btn.cancel")}</button>

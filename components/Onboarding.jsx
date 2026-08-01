@@ -4,7 +4,7 @@ import { useState } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
-import { AVATAR_CHOICES } from "@/lib/avatars";
+import AvatarPicker from "@/components/AvatarPicker";
 import { Hand, Target, Check, Clock, AlarmClock, Moon, Sparkles, Gift, Star, Users, Palette, Pill, HeartPulse, Leaf, Microscope, Bell, BarChart3, Stethoscope, Globe } from "lucide-react";
 
 const OB_STEPS = 5;
@@ -14,6 +14,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
   const [data, setData] = useState({
     full_name: initProfile?.full_name || user?.user_metadata?.full_name || "",
     avatar_emoji: initProfile?.avatar_emoji || "Smile",
+    avatar_url: initProfile?.avatar_url || "",
     condition: initProfile?.condition || "",
     wake_time: initProfile?.wake_time || "07:00",
     sleep_time: initProfile?.sleep_time || "22:00",
@@ -30,7 +31,9 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
     setSaving(true);
     let tz = "";
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
-    await sb.from("profiles").upsert([{ id: user.id, ...data, timezone: tz, onboarded: true }]);
+    const payload = { ...data };
+    if (!payload.avatar_url) payload.avatar_url = null;
+    await sb.from("profiles").upsert([{ id: user.id, ...payload, timezone: tz, onboarded: true }]);
     onDone(data);
   }
 
@@ -51,8 +54,6 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
     { value: 60, label: "1 hour early", sub: "Plan ahead" },
     { value: 120, label: "2 hours early", sub: "Never forget" },
   ];
-  const emojis = AVATAR_CHOICES;
-
   const steps = [
     <div key="0" className="ob-body">
       <div className="ob-emoji"><Hand size={56} strokeWidth={1.5}/></div>
@@ -62,11 +63,14 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
         <div style={{fontSize:13,color:"var(--t3)",marginBottom:8,fontWeight:500}}>YOUR NAME</div>
         <input className="sheet-input" placeholder="Full name" value={data.full_name} onChange={e=>set("full_name",e.target.value)} style={{marginBottom:16}}/>
         <div style={{fontSize:13,color:"var(--t3)",marginBottom:10,fontWeight:500}}>CHOOSE AN AVATAR</div>
-        <div className="emoji-grid">
-          {emojis.map(({key,Icon}) => (
-            <div key={key} className={`emoji-opt${data.avatar_emoji===key?" sel":""}`} onClick={()=>set("avatar_emoji",key)}><Icon size={26}/></div>
-          ))}
-        </div>
+        <AvatarPicker
+          user={user}
+          avatarKey={data.avatar_emoji}
+          avatarUrl={data.avatar_url}
+          onPick={k=>set("avatar_emoji",k)}
+          onUploaded={u=>set("avatar_url",u)}
+          onRemovePhoto={()=>set("avatar_url","")}
+        />
       </div>
     </div>,
 
