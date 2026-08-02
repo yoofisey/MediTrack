@@ -6,6 +6,7 @@ import { insertFamilyMember, insertManagedFamilyMember, removeFamilyMember } fro
 import { memberStatus, initials } from "@/lib/household";
 import { UpgradeModal } from "@/components/Modals";
 import { Users, Plus, ChevronRight, Mail } from "lucide-react";
+import { Resend } from "resend";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -23,6 +24,55 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
   const [err, setErr] = useState("");
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [removeId, setRemoveId] = useState(null);
+  const [sent, setSent] = useState(false);
+
+  const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
+  const fromEmail = "noreply@useadhera.com";
+
+  async function sendInviteEmail(to) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: `${userEmail || "Adhera Team"} <${fromEmail}>`,
+        to: [to],
+        subject: `You've been invited to join ${userEmail}'s family group on Adhera`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">You've been invited to join a family group</h2>
+            <p>Hi,</p>
+            <p><strong>${userEmail}</strong> has invited you to join their family medication tracking group on Adhera.</p>
+            <p>With Adhera, you can:</p>
+            <ul>
+              <li>Track medications for yourself and your family</li>
+              <li>Set up dose reminders</li>
+              <li>Receive alerts when doses are missed</li>
+              <li>Access adherence reports and share them with healthcare providers</li>
+            </ul>
+            <p>To accept the invitation and get started:</p>
+            <p>
+              <a href="https://useadhera.com/invite" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Accept Invitation
+              </a>
+            </p>
+            <p>This invitation will expire in 7 days.</p>
+            <p>If you have any questions, please contact support.</p>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;" />
+            <p style="font-size: 12px; color: #6b7280;">You're receiving this email because you were invited to join a family group on Adhera.</p>
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error("Resend email error:", error);
+        return false;
+      }
+
+      console.log("Invite email sent successfully:", data.id);
+      return true;
+    } catch (e) {
+      console.error("Failed to send invite email:", e);
+      return false;
+    }
+  }
 
   const isFamily = plan === "family";
   const members = household.filter(m => m.kind !== "self");
@@ -37,9 +87,13 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
       if (!email.trim() || !email.includes("@")) { setErr("Enter a valid email address."); return; }
       setBusy(true);
       try {
-        const { error } = await insertFamilyMember(userId(), email);
+        const { error, data } = await insertFamilyMember(userId(), email);
         if (error) { setErr(error.message || "Could not send invite."); }
-        else { reset(); onChanged(); }
+        else {
+          const sent = await sendInviteEmail(email);
+          if (sent) { setSent(true); }
+          reset(); onChanged();
+        }
       } catch (e) { setErr(e?.message || "Could not send invite."); }
       setBusy(false);
       return;
@@ -159,85 +213,83 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
               <div style={{ display: "flex", background: "var(--hover)", borderRadius: 14, padding: 4, marginBottom: 16 }}>
                 {[["invite", "Has their own account", "Invite by email"], ["managed", "No app needed", "Add without app"]].map(([m, sub, label]) => (
                   <button key={m} onClick={() => setMode(m)} style={{
-                    flex: 1, background: mode === m ? "var(--card)" : "transparent", border: mode === m ? "0.5px solid var(--sep)" : "none", borderRadius: 11,
-                    padding: "9px 6px", cursor: "pointer", boxShadow: mode === m ? "var(--card-shadow)" : "none", fontFamily: "inherit",
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--t1)" }}>{label}</div>
-                    <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 2 }}>{sub}</div>
-                  </button>
+                    flex: 1, padding: 10, borderRadius: 12, border: "none", background: "transparent",
+                    color: mode === m ? "var(--t1)" : "var(--t3)", fontSize: 15, fontWeight: 500,
+                    cursor: "pointer", transition: "all .2s",
+                    boxShadow: mode === m ? "inset 0 0 0 1px var(--teal), 0 2px 4px rgba(0,0,0,.04)" : "none",
+                  }}>{label}</button>
                 ))}
               </div>
 
-              {err && <div className="err-msg" style={{ marginBottom: 10 }}>{err}</div>}
-
               {mode === "invite" ? (
-                <div>
+                <>
                   <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Their email</div>
                   <input className="sheet-input" type="email" placeholder="family@example.com" value={email}
-                    onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && doAdd()} style={{ fontSize: 16, marginBottom: 12 }} />
-                  <div style={{ fontSize: 12, color: "var(--t3)", lineHeight: 1.5, marginBottom: 16 }}>
-                    They'll get an invite email. Once they accept, you can see their medications and get alerts.
-                  </div>
-                </div>
+                    onChange={e => setEmail(e.target.value)} style={{ marginBottom: 12 }} />
+                  <div style={{ fontSize: 13, color: "var(--t4)", marginBottom: 16 }}>They'll get an invite email. Once they accept, you can see their medications and get alerts.</div>
+                  {err && <div style={{ color: "var(--red)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
+                </>
               ) : (
-                <div>
-                  <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Full name</div>
-                  <input className="sheet-input" placeholder="e.g. Mom" value={mname} onChange={e => setMname(e.target.value)} style={{ fontSize: 16, marginBottom: 12 }} />
-                  <div className="sheet-row" style={{ marginBottom: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 5 }}>Relationship</div>
-                      <select className="sheet-input" value={rel} onChange={e => setRel(e.target.value)}>
-                        {["Parent", "Child", "Spouse", "Sibling", "Grandparent", "Other"].map(r => <option key={r}>{r}</option>)}
-                      </select>
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Name</div>
+                      <input className="sheet-input" type="text" placeholder="e.g., Grandma Mary" value={mname}
+                        onChange={e => setMname(e.target.value)} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 5 }}>Age</div>
-                      <input className="sheet-input" type="number" inputMode="numeric" placeholder="—" value={age} onChange={e => setAge(e.target.value)} />
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Relationship</div>
+                        <select className="sheet-input" value={rel} onChange={e => setRel(e.target.value)}>
+                          {[["Child", "Child"], ["Partner", "Partner"], ["Sibling", "Sibling"], ["Parent", "Parent"], ["Grandparent", "Grandparent"], ["Other", "Other"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Age (optional)</div>
+                        <input className="sheet-input" type="number" placeholder="e.g., 72" value={age}
+                          onChange={e => setAge(e.target.value)} min="0" max="120" />
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Phone (optional)</div>
+                      <input className="sheet-input" type="tel" placeholder="e.g., 555-123-4567" value={phone}
+                        onChange={e => setPhone(e.target.value)} />
                     </div>
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Phone <span style={{ fontWeight: 400, color: "var(--t4)" }}>(for quick call)</span></div>
-                  <input className="sheet-input" type="tel" placeholder="+1 555 000 1234" value={phone} onChange={e => setPhone(e.target.value)} style={{ fontSize: 16, marginBottom: 12 }} />
-                  <div style={{ fontSize: 12, color: "var(--t3)", lineHeight: 1.5, marginBottom: 16 }}>
-                    Their medications stay private to your household — no account or email needed.
-                  </div>
-                </div>
+                  <div style={{ fontSize: 13, color: "var(--t4)", marginTop: 16, lineHeight: 1.5 }}>Their medications stay private to your household — no account or email needed.</div>
+                </>
               )}
 
-              <div className="sheet-actions" style={{ gap: 8 }}>
-                <button className="btn btn-primary" style={{ flex: 1 }} onClick={doAdd} disabled={busy}>
-                  {busy ? "Adding…" : mode === "invite" ? "Send invite" : "Add member"}
-                </button>
-                <button className="btn btn-ghost" onClick={reset}>Cancel</button>
-              </div>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={doAdd} disabled={busy}>
+                {busy ? "Adding…" : mode === "invite" ? "Send invite" : "Add member"}
+              </button>
+              <button className="btn btn-ghost" onClick={reset}>Cancel</button>
             </div>
           </div>
         </div>
       )}
+
+      {showUpgrade && <UpgradeModal country={country} userEmail={userEmail} currentPlan="free" onClose={() => setShowUpgrade(false)} />}
 
       {removeId && (
         <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setRemoveId(null)}>
           <div className="sheet" onClick={e => e.stopPropagation()}>
             <div className="sheet-handle" />
-            <div style={{ padding: "0 20px 20px" }}>
-              <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 8 }}>Remove this member?</div>
-              <div style={{ fontSize: 14, color: "var(--t3)", marginBottom: 16, lineHeight: 1.5 }}>They'll be removed from your household. Their saved data stays on their own account.</div>
-              <div className="sheet-actions" style={{ gap: 8 }}>
-                <button className="btn btn-primary" style={{ flex: 1, background: "#FF3B30", boxShadow: "none" }} onClick={doRemove}>Remove</button>
+            <div style={{ padding: "20px 20px calc(16px + var(--safe-bottom))" }}>
+              <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                <Ico><Mail size={44} strokeWidth={1.8} color="var(--t1)"/></Ico>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Remove this member?</div>
+              <div style={{ fontSize: 15, color: "var(--t3)", lineHeight: 1.5, marginBottom: 20 }}>
+                The invite will be revoked. Their profile will disappear from your family view.
+              </div>
+              <div className="sheet-actions">
+                <button className="btn btn-primary" style={{ flex: 1, background: "var(--red)", boxShadow: "none" }} onClick={doRemove}>Remove</button>
                 <button className="btn btn-ghost" onClick={() => setRemoveId(null)}>Cancel</button>
               </div>
             </div>
           </div>
         </div>
-      )}
-
-      {showUpgrade && (
-        <UpgradeModal
-          country={country}
-          userEmail={userEmail}
-          currentPlan={plan}
-          onClose={() => setShowUpgrade(false)}
-          onUpgrade={p => { onSaveProfile({ plan: p }); setShowUpgrade(false); }}
-        />
       )}
     </div>
   );
