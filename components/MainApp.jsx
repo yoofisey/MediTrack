@@ -655,7 +655,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} />}
               {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} />}
               {tab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
               {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setOverlayTab("reports")} onOpenVitals={() => setOverlayTab("vitals")} />}

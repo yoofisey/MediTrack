@@ -30,7 +30,7 @@ function CareRing({ member, size = 58, stroke = 4, active }) {
   );
 }
 
-export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif }) {
+export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif, onMarkDose }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -48,13 +48,23 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
   const mostUrgent = selMissed[0] || selRemaining[0];
   const selPhone = selected ? callHref(selected) : null;
 
-  const slots = [];
+  const groups = [];
   household.filter(m => !m.pending).forEach(m => {
-    expectedDosesToday(m, now).forEach(s => {
-      slots.push({ member: m, med: s.med, time: s.time, dueMs: s.dueMs, logged: s.logged, overdue: !s.logged && now.getTime() - s.dueMs > 20 * 60000 });
-    });
+    const memberSlots = expectedDosesToday(m, now).map(s => ({
+      member: m, med: s.med, time: s.time, dueMs: s.dueMs, logged: s.logged,
+      overdue: !s.logged && now.getTime() - s.dueMs > 20 * 60000,
+    })).sort((a, b) => a.dueMs - b.dueMs);
+    if (memberSlots.length) groups.push({ member: m, slots: memberSlots });
   });
-  slots.sort((a, b) => a.dueMs - b.dueMs);
+  groups.sort((a, b) => {
+    const aMissed = a.slots.filter(s => s.overdue).length;
+    const bMissed = b.slots.filter(s => s.overdue).length;
+    if (aMissed !== bMissed) return bMissed - aMissed;
+    const aFirst = a.slots.find(s => !s.logged)?.dueMs ?? Infinity;
+    const bFirst = b.slots.find(s => !s.logged)?.dueMs ?? Infinity;
+    return aFirst - bFirst;
+  });
+  const slots = groups.flatMap(g => g.slots);
 
   const overdueTotal = household.reduce((s, m) => s + missedDoses(m, now).length, 0);
 
@@ -167,16 +177,30 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
           </div>
         ) : (
           <div className="list">
-            {slots.map((s, i) => (
-              <div key={i} className="row" style={{ cursor: "default" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent" }}>
-                  {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
+            {groups.map(g => (
+              <div key={g.member.key} style={{ marginBottom: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 2px" }}>
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "var(--t1)", flexShrink: 0 }}>
+                    {g.member.avatarUrl ? <img src={g.member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(g.member)}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.member.name}</div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: g.slots.some(s => s.overdue) ? "#FF3B30" : "var(--t3)" }}>
+                    {g.slots.filter(s => s.logged).length}/{g.slots.length}
+                  </span>
                 </div>
-                <div className="row-body">
-                  <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
-                  <div className="row-sub">{s.member.name.split(" ")[0]} · {s.time}</div>
-                </div>
-                {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF3B30", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
+                {g.slots.map((s, i) => (
+                  <div key={i} className="row" style={{ cursor: "default" }}>
+                    <div onClick={() => !s.logged && onMarkDose(s.member, s)}
+                      style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer" }}>
+                      {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
+                    </div>
+                    <div className="row-body">
+                      <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
+                      <div className="row-sub">{s.time}{s.overdue ? " · overdue" : ""}</div>
+                    </div>
+                    {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF3B30", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
