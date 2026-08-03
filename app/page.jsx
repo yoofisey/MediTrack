@@ -4,6 +4,7 @@ import { sb, fetchProfile } from "@/lib/supabase";
 import { LanguageProvider } from "@/lib/i18n";
 import TransitionScreen from "@/components/TransitionScreen";
 import AuthScreen from "@/components/AuthScreen";
+import ResetPassword from "@/components/ResetPassword";
 import Onboarding from "@/components/Onboarding";
 import MainApp from "@/components/MainApp";
 import LandingPage from "@/components/LandingPage";
@@ -72,6 +73,7 @@ export default function App() {
 
     async function init() {
       const start = Date.now();
+      const isRecovery = typeof window !== "undefined" && window.location.hash.includes("type=recovery");
 
       try {
         const oldAt = typeof localStorage !== "undefined" ? localStorage.getItem("mt_at") : null;
@@ -100,8 +102,9 @@ export default function App() {
         }
       } catch {}
       if (cancelled) return;
+      if (isRecovery) dest = "reset";
       const elapsed = Date.now() - start;
-      const remaining = Math.max(0, MIN_LOAD_MS - elapsed);
+      const remaining = isRecovery ? 0 : Math.max(0, MIN_LOAD_MS - elapsed);
       await new Promise(r => setTimeout(r, remaining));
       finishInit();
     }
@@ -116,12 +119,14 @@ export default function App() {
     <LanguageProvider>
       {destScreen === "app" && user && <MainApp user={user} profile={profile} onSignOut={handleSignOut} />}
       {destScreen === "onboarding" && user && <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />}
+      {destScreen === "reset" && <ResetPassword onDone={() => { setUser(null); setProfile(null); setHasSession(false); setScreen("auth"); }} />}
       {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("auth")} />}
       <TransitionScreen showMessages={hasSession} fadeOut />
     </LanguageProvider>
   );
   if (screen === "landing")    return <LanguageProvider><LandingPage onGetStarted={() => setScreen("auth")} /></LanguageProvider>;
   if (screen === "auth")       return <LanguageProvider><AuthScreen onAuth={handleAuth} /></LanguageProvider>;
+  if (screen === "reset")      return <LanguageProvider><ResetPassword onDone={() => { setUser(null); setProfile(null); setHasSession(false); setScreen("auth"); }} /></LanguageProvider>;
   if (screen === "onboarding") return <LanguageProvider><Onboarding user={user} profile={profile} onDone={handleOnboardDone} /></LanguageProvider>;
   if (!user)                   return <LanguageProvider><TransitionScreen /></LanguageProvider>;
   return <LanguageProvider><MainApp user={user} profile={profile} onSignOut={handleSignOut} /></LanguageProvider>;

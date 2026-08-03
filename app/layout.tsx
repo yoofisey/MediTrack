@@ -5,6 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://useadhera.com"),
   title: {
     default: "Adhera",
     template: "%s | Adhera",
@@ -14,6 +15,9 @@ export const metadata: Metadata = {
   keywords: ["medication tracker", "dose reminder", "health dashboard", "Adhera"],
   authors: [{ name: "Adhera" }],
   creator: "Adhera",
+  alternates: {
+    canonical: "/",
+  },
   formatDetection: {
     email: false,
     address: false,
@@ -27,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Adhera — Your Personal Treatment Companion",
     description: "Track medications, get smart alarm reminders, and stay on top of your health.",
-    url: process.env.NEXT_PUBLIC_SITE_URL || "https://meditrack-delta-pied.vercel.app",
+    url: "https://useadhera.com",
     siteName: "Adhera",
     locale: "en_US",
     type: "website",

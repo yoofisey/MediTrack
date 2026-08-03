@@ -23,6 +23,7 @@ export default function AuthScreen({ onAuth }) {
   const [pwStore, setPwStore] = useState("");
   const [pwShow, setPwShow] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [forgotDone, setForgotDone] = useState(false);
 
   function startCooldown(sec = 60) { setCooldown(sec); const t = setInterval(() => { setCooldown(p => { if (p <= 1) { clearInterval(t); return 0; } return p - 1; }); }, 1000); }
 
@@ -55,6 +56,18 @@ export default function AuthScreen({ onAuth }) {
       onAuth(data.user, false);
     } catch (e) {
       setErr(e?.message || "Something went wrong.");
+    } finally { setBusy(false); }
+  }
+
+  async function handleForgot(e) {
+    e.preventDefault(); setBusy(true); setErr("");
+    if (!RE_EMAIL.test(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+      if (error) throw error;
+      setForgotDone(true);
+    } catch (e2) {
+      setErr(e2?.message || "Something went wrong. Please try again.");
     } finally { setBusy(false); }
   }
 
@@ -191,6 +204,32 @@ export default function AuthScreen({ onAuth }) {
     </div>
   );
 
+  if (view === "forgot") return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card" key="forgot">
+        <AuthLogo/>
+        <div className="auth-title">{forgotDone ? "Check your inbox" : "Reset password"}</div>
+        <div className="auth-sub">
+          {forgotDone
+            ? "If that email is registered, we sent a reset link. It expires in 30 minutes."
+            : "Enter your email and we'll send you a reset link."}
+        </div>
+        {err && <div className="err-msg">{err}</div>}
+        {!forgotDone && (
+          <form onSubmit={handleForgot}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+              <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value.trim())} required autoComplete="email" />
+            </div>
+            <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>{busy ? "Sending..." : "Send reset link"}</button>
+          </form>
+        )}
+        <div className="auth-switch">
+          <button onClick={() => { setView("signin"); setErr(""); setForgotDone(false); }}>Back to sign in</button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (view === "signin") return (
     <div className="auth-screen"><style>{CSS}</style>
       <div className="auth-card" key="signin">
@@ -215,6 +254,12 @@ export default function AuthScreen({ onAuth }) {
                 }
               </button>
             </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -8, marginBottom: 2 }}>
+            <button type="button" onClick={() => { setView("forgot"); setErr(""); setForgotDone(false); }}
+              style={{ background: "none", border: "none", padding: 0, color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              Forgot password?
+            </button>
           </div>
           <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>{busy?"Signing in...":"Sign in"}</button>
         </form>
