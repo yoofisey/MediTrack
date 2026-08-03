@@ -56,7 +56,7 @@ function CareRing({ member, size = 58, stroke = 4, active }) {
   );
 }
 
-export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif, onMarkDose, onOpenVitals }) {
+export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif, onMarkDose, onOpenVitals, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -108,8 +108,17 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
               {summaryPeople > 1 ? `${summaryPeople} people` : summaryPeople === 1 ? "1 person" : "No one yet"}, {summaryDoses} {summaryDoses === 1 ? "dose" : "doses"} today
             </div>
           </div>
-          <div onClick={onGoMe} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", cursor: "pointer", fontSize: 17, fontWeight: 800, color: "var(--t1)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)" }}>
-            {profile?.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={22} />}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={onOpenAlerts} aria-label="Alerts"
+              style={{ position: "relative", width: 42, height: 42, borderRadius: "50%", background: "var(--card)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
+              <Bell size={19} color="var(--t1)" strokeWidth={2} />
+              {alertCount > 0 && (
+                <span style={{ position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, background: "#FF3B30", color: "#fff", fontSize: 11, fontWeight: 800, lineHeight: 1, display: "grid", placeItems: "center", padding: "0 5px", boxShadow: "0 2px 6px rgba(255,59,48,.4)" }}>{alertCount > 99 ? "99+" : alertCount}</span>
+              )}
+            </button>
+            <div onClick={onGoMe} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", cursor: "pointer", fontSize: 17, fontWeight: 800, color: "var(--t1)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)" }}>
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={22} />}
+            </div>
           </div>
         </div>
       </div>

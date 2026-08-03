@@ -9,7 +9,7 @@ import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPu
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
 import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember } from "@/lib/db";
-import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock } from "@/lib/household";
+import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock, buildAlerts } from "@/lib/household";
 import TodayTab from "@/components/TodayTab";
 import ReportsTab from "@/components/ReportsTab";
 import VitalsTab from "@/components/VitalsTab";
@@ -24,7 +24,7 @@ import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
-import { Home, Users, Bell, User, Pill } from "lucide-react";
+import { Home, Users, User, Pill, BarChart3 } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
@@ -155,6 +155,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs, vitals }), [user, profile, meds, logs, vitals]);
   const household = useMemo(() => [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))], [selfMember, familyRows, linkedData]);
+  const alertCount = useMemo(() => { try { return buildAlerts(household).today.length; } catch { return 0; } }, [household]);
 
   function openMember(m) { setMemberView(m?.key || null); }
   function closeMember() { setMemberView(null); }
@@ -587,7 +588,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     { id: "today", label: t("nav.today"), icon: <Home size={23} strokeWidth={1.9} /> },
     { id: "meds", label: t("nav.meds"), icon: <Pill size={23} strokeWidth={1.9} /> },
     { id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> },
-    { id: "alerts", label: t("nav.alerts"), icon: <Bell size={23} strokeWidth={1.9} /> },
+    { id: "reports", label: t("nav.reports"), icon: <BarChart3 size={23} strokeWidth={1.9} /> },
     { id: "me", label: "", icon: <User size={23} strokeWidth={1.9} /> },
   ];
 
@@ -661,7 +662,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         );
       })() : overlayTab ? (
         <div className="scroll">
-          {overlayTab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") { setOverlayTab(null); setTab("me"); } }} />}
+          {overlayTab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
           <div style={{ padding: "4px 20px 24px" }}>
             <button className="btn btn-ghost" onClick={() => setOverlayTab(null)}>Back</button>
           </div>
@@ -670,11 +671,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={meds} logs={logs} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan || "free"} medCount={meds.length} />}
               {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} onGenerateReport={generateFamilyReport} />}
-              {tab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
-              {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setOverlayTab("reports")} onOpenVitals={() => setVitalsMember(selfMember)} />}
+              {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setTab("reports")} onOpenVitals={() => setVitalsMember(selfMember)} />}
             </div>
           </div>
 

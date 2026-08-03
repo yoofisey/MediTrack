@@ -19,6 +19,7 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntries, setJournalEntries] = useState([]);
+  const [pdfHtml, setPdfHtml] = useState(null);
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
 
@@ -319,23 +320,6 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
 
 <div class="report-wrap">
 
-<div class="top-bar">
-  <div class="top-bar-left">
-    <div class="brand-mark">A</div>
-    <span class="brand-text">Adhera</span>
-  </div>
-  <div class="top-bar-actions">
-    <button class="btn-print" onclick="window.print()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14V6a2 2 0 012-2h8a2 2 0 012 2v8"/><path d="M6 18h12v4H6z"/></svg>
-      Print
-    </button>
-    <a class="btn-back" onclick="window.close()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      Close
-    </a>
-  </div>
-</div>
-
 <div class="report-header">
   <div class="report-header-left">
     <h1>Medication Adherence Report</h1>
@@ -453,10 +437,22 @@ ${limits.reports ? `
 </div>
 </body></html>`;
 
-    const win = window.open("", "_blank");
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => { win.print(); }, 800);
+    setPdfHtml(html);
+  }
+
+  function printPdfReport() {
+    if (!pdfHtml) return;
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    doc.open();
+    doc.write(pdfHtml);
+    doc.close();
+    setTimeout(() => {
+      try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch {}
+      setTimeout(() => { document.body.removeChild(iframe); }, 3000);
+    }, 500);
   }
 
   async function exportHealthSummary() {
@@ -869,6 +865,20 @@ ${limits.reports ? `
           <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal
         </button>
       </div>
+
+      {pdfHtml && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1200, background: "#f1f5f9", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div dangerouslySetInnerHTML={{ __html: pdfHtml }} />
+          </div>
+          <div style={{ position: "sticky", bottom: 0, display: "flex", gap: 10, padding: "12px 16px calc(12px + env(safe-area-inset-bottom,0px))", background: "#fff", borderTop: "1px solid #e2e8f0", boxShadow: "0 -4px 16px rgba(15,23,42,.06)" }}>
+            <button className="btn btn-primary" onClick={printPdfReport} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Print
+            </button>
+            <button className="btn btn-ghost" onClick={() => setPdfHtml(null)} style={{ flex: 1 }}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
