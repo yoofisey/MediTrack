@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://useadhera.com"),
+  metadataBase: new URL("https://www.useadhera.com"),
   title: {
     default: "Adhera",
     template: "%s | Adhera",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Adhera — Your Personal Treatment Companion",
     description: "Track medications, get smart alarm reminders, and stay on top of your health.",
-    url: "https://useadhera.com",
+    url: "https://www.useadhera.com",
     siteName: "Adhera",
     locale: "en_US",
     type: "website",

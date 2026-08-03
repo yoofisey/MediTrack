@@ -42,9 +42,12 @@ export default function LandingPage({ onGetStarted }) {
           Get started — it&apos;s free
         </button>
 
-        <div style={{fontSize:13,color:"#94a3b8",marginBottom:48,animation:"fadeUp .6s .5s ease both"}}>
+        <div style={{fontSize:13,color:"#94a3b8",marginBottom:12,animation:"fadeUp .6s .5s ease both"}}>
           No credit card required · Works on iPhone &amp; Android
         </div>
+        <a href="/pricing" style={{fontSize:14,fontWeight:600,color:"#2563eb",textDecoration:"none",fontFamily:"inherit",animation:"fadeUp .6s .55s ease both"}}>
+          Compare plans and pricing →
+        </a>
       </div>
 
       <div style={{maxWidth:480,margin:"0 auto",padding:"0 24px"}}>
