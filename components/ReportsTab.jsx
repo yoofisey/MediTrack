@@ -838,33 +838,37 @@ ${limits.reports ? `
         })()}
       </div>
 
-      <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
-        <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-          <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Full PDF report
-        </button>
-        <button className="btn" onClick={exportHealthSummary} disabled={meds.length === 0}
-          style={{flex:1,background:"var(--teal2)",color:"white",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-          <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Quick PDF
-        </button>
-      </div>
+      {limits.reports && (
+        <>
+          <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
+            <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Full PDF report
+            </button>
+            <button className="btn" onClick={exportHealthSummary} disabled={meds.length === 0}
+              style={{flex:1,background:"var(--teal2)",color:"white",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Quick PDF
+            </button>
+          </div>
 
-      <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
-        <button className="btn" onClick={shareWithDoctor} disabled={meds.length === 0}
-          style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
-          <Ico><Stethoscope size={15} strokeWidth={2.2}/></Ico> Share with doctor
-        </button>
-        <button className="btn" onClick={() => exportCsv("dose_logs", logs, meds)}
-          style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
-          <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export CSV
-        </button>
-      </div>
+          <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
+            <button className="btn" onClick={shareWithDoctor} disabled={meds.length === 0}
+              style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+              <Ico><Stethoscope size={15} strokeWidth={2.2}/></Ico> Share with doctor
+            </button>
+            <button className="btn" onClick={() => exportCsv("dose_logs", logs, meds)}
+              style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+              <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export CSV
+            </button>
+          </div>
 
-      <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
-        <button className="btn" onClick={exportJournalCsv}
-          style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
-          <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal
-        </button>
-      </div>
+          <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
+            <button className="btn" onClick={exportJournalCsv}
+              style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+              <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal
+            </button>
+          </div>
+        </>
+      )}
 
       {pdfHtml && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1200, background: "#f1f5f9", display: "flex", flexDirection: "column" }}>

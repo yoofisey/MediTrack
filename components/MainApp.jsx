@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
+import { THEMES, TIER_LIMITS, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
@@ -113,7 +113,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           if (Array.isArray(lr.data)) { setLogs(lr.data); setCache("logs", lr.data); }
           if (Array.isArray(vr.data)) { setVitals(vr.data); setCache("vitals", vr.data); }
           try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch (e) { console.error("journal load:", e); }
-          try { const { checkRefillReminders } = await import("@/lib/notifications"); checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
+          try { const { checkRefillReminders } = await import("@/lib/notifications"); if ((TIER_LIMITS[profile?.plan || "free"] || TIER_LIMITS.free).refillReminder) checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
           flushQueue();
         }
       } catch (e) {
