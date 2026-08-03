@@ -4,7 +4,33 @@ import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials } from "@/lib/household";
-import { Bell, Check, ChevronDown, Phone, Plus, User } from "lucide-react";
+import { Bell, Check, ChevronDown, ChevronRight, HeartPulse, Phone, Plus, User } from "lucide-react";
+
+const VITAL_LABELS = {
+  blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
+  temperature: "Temp", spo2: "SpO2", cholesterol: "Chol", bmi: "BMI", hba1c: "HbA1c",
+  water_intake: "Water", peak_flow: "Peak flow",
+};
+const VITAL_UNITS = {
+  blood_pressure: "mmHg", weight: "kg", glucose: "mg/dL", heart_rate: "bpm",
+  temperature: "°F", spo2: "%", cholesterol: "mg/dL", bmi: "kg/m²", hba1c: "%",
+  water_intake: "L", peak_flow: "L/min",
+};
+function latestVitals(member, limit = 3) {
+  const latest = {};
+  (member.vitals || []).forEach(v => {
+    if (!latest[v.type] || new Date(v.created_at) > new Date(latest[v.type].created_at)) latest[v.type] = v;
+  });
+  return Object.values(latest).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, limit);
+}
+function vitalsLine(vitals) {
+  return vitals.map(v => {
+    const label = VITAL_LABELS[v.type] || v.type;
+    const unit = VITAL_UNITS[v.type] || v.unit || "";
+    const val = v.type === "blood_pressure" && v.value_secondary != null ? `${v.value}/${v.value_secondary}` : `${v.value}`;
+    return `${label} ${val}${unit ? " " + unit : ""}`;
+  }).join(" · ");
+}
 
 function CareRing({ member, size = 58, stroke = 4, active }) {
   const pct = member.pending ? 0 : ringPct(member);
@@ -30,7 +56,7 @@ function CareRing({ member, size = 58, stroke = 4, active }) {
   );
 }
 
-export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif, onMarkDose }) {
+export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif, onMarkDose, onOpenVitals }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -211,6 +237,33 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
             })}
           </div>
         )}
+      </div>
+
+      <div className="section" style={{ paddingTop: 4 }}>
+        <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <HeartPulse size={15} color="var(--teal)" strokeWidth={2.2} /> Vitals
+          </span>
+        </div>
+        <div className="list">
+          {household.filter(m => !m.pending).map(m => {
+            const sum = latestVitals(m);
+            const has = sum.length > 0;
+            const first = m.name.split(" ")[0];
+            return (
+              <div key={m.key} className="row" onClick={() => onOpenVitals(m)} style={{ cursor: "pointer" }}>
+                <div className="row-icon" style={{ background: has ? "var(--ib2)" : "var(--ib6)" }}>
+                  <HeartPulse size={19} color={has ? "var(--teal)" : "var(--t3)"} strokeWidth={2.2} />
+                </div>
+                <div className="row-body">
+                  <div className="row-title">{m.kind === "self" ? "Check your vitals" : `Check ${first}'s vitals`}</div>
+                  <div className="row-sub">{has ? vitalsLine(sum) : "No readings yet"}</div>
+                </div>
+                <ChevronRight size={18} color="var(--t4)" />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

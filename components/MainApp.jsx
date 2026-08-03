@@ -670,7 +670,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} />}
               {tab === "meds" && <MedsTab meds={meds} logs={logs} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan || "free"} medCount={meds.length} />}
               {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} onGenerateReport={generateFamilyReport} />}
               {tab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
