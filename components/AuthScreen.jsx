@@ -309,12 +309,12 @@ export default function AuthScreen({ onAuth }) {
                 </div>
                 <div className={`auth-plan${tier==="pro"?" selected":""}`} onClick={()=>setTier("pro")}>
                   <div className="auth-plan-name">Pro</div>
-                  <div className="auth-plan-price">{pricing.pro.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>/mo</span></div>
+                  <div className="auth-plan-price">{pricing.pro.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>{pricing.pro.label !== "Coming soon" ? "/mo" : ""}</span></div>
                   <div className="auth-plan-desc">Unlimited · Full history</div>
                 </div>
                 <div className={`auth-plan${tier==="family"?" selected":""}`} onClick={()=>setTier("family")}>
                   <div className="auth-plan-name">Family</div>
-                  <div className="auth-plan-price">{pricing.family.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>/mo</span></div>
+                  <div className="auth-plan-price">{pricing.family.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>{pricing.family.label !== "Coming soon" ? "/mo" : ""}</span></div>
                   <div className="auth-plan-desc">5 profiles · Dashboard</div>
                 </div>
               </div>

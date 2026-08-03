@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { getPaymentsConfig } from "@/lib/payments";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check } from "lucide-react";
 
 function Ico({ children, ...props }) {
@@ -105,6 +106,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
   }, [paystackOpen]);
   const { pricing } = getPricing(country || "GH");
   const selCountry = COUNTRIES.find(c => c.code === (country || "GH")) || COUNTRIES[0];
+  const pay = getPaymentsConfig(country || "GH");
 
   const plans = [
     {
@@ -150,6 +152,12 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
     setBusy(true);
     setErr("");
 
+    if (!pay.ready) {
+      setErr(pay.reason);
+      setBusy(false);
+      return;
+    }
+
     try {
       await new Promise((resolve, reject) => {
         if (typeof window.PaystackPop === "undefined") {
@@ -165,9 +173,9 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
 
       if (typeof window.PaystackPop?.setup !== "function") throw new Error("Paystack SDK not ready. Please try again.");
 
-      const planCode = selected === "pro" ? "PLN_w5rq3bkd5uh5mqj" : "PLN_h9mlqfmujuh74c9";
+      const planCode = pay.plans[selected];
       const handler = window.PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_KEY,
+        key: pay.key,
         email: userEmail || "patient@example.com",
         plan: planCode,
         ref: "ADR" + Date.now() + Math.random().toString(36).slice(2,8).toUpperCase(),
@@ -272,23 +280,33 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
         </div>
 
         <div style={{padding:"8px 16px",borderTop:"1px solid var(--sep)"}}>
-          <button
-            className="btn"
-            disabled={busy || selected === currentPlan}
-            style={{
-              width:"100%", marginBottom:10,
-              background: plan.color, color:"white",
-              fontSize:16, fontWeight:700, opacity: (busy || selected === currentPlan) ? 0.5 : 1,
-            }}
-            onClick={handlePayment}
-          >
-            {busy ? "Processing…" : selected === currentPlan ? `You're on ${plan.name}` : `Unlock ${plan.name} · ${plan.price}/month`}
-          </button>
+          {pay.ready ? (
+            <button
+              className="btn"
+              disabled={busy || selected === currentPlan}
+              style={{
+                width:"100%", marginBottom:10,
+                background: plan.color, color:"white",
+                fontSize:16, fontWeight:700, opacity: (busy || selected === currentPlan) ? 0.5 : 1,
+              }}
+              onClick={handlePayment}
+            >
+              {busy ? "Processing…" : selected === currentPlan ? `You're on ${plan.name}` : `Unlock ${plan.name} · ${plan.price}/month`}
+            </button>
+          ) : (
+            <div style={{
+              width:"100%", marginBottom:10, padding:"14px 12px", borderRadius:12,
+              background:"var(--ib3)", color:"var(--t2)", textAlign:"center",
+              fontSize:14, fontWeight:600, boxSizing:"border-box",
+            }}>
+              Payments coming soon in {selCountry.name}
+            </div>
+          )}
           <button className="btn btn-ghost" onClick={onClose}>
             {busy ? "Cancel" : "Maybe later"}
           </button>
           <div style={{fontSize:10,color:"var(--t3)",textAlign:"center",marginTop:8,lineHeight:1.4}}>
-            Secure payment via Paystack. Cancel anytime.
+            {pay.ready ? "Secure payment via Paystack. Cancel anytime." : "Free tier stays free — paid plans will unlock here when payments go live in your country."}
           </div>
         </div>
       </div>

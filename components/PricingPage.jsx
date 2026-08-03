@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { getPaymentsConfig } from "@/lib/payments";
 import { Check } from "lucide-react";
 
 const FEATURES = {
@@ -51,11 +52,12 @@ export default function PricingPage() {
   const [country, setCountry] = useState("GH");
   const { pricing } = getPricing(country);
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
+  const pay = getPaymentsConfig(country);
 
   const plans = [
     { id: "free", name: "Free", price: "Free", per: "forever", desc: "Getting started with your own meds.", highlight: false, cta: "Start free", solid: false, features: FEATURES.free },
-    { id: "pro", name: "Pro", price: pricing.pro.label, per: "/mo", desc: "Full tracking, reports, and reminders.", highlight: true, cta: "Start free", solid: true, features: FEATURES.pro },
-    { id: "family", name: "Family", price: pricing.family.label, per: "/mo", desc: "Manage medications for up to 5 people.", highlight: false, cta: "Choose Family", solid: true, features: FEATURES.family },
+    { id: "pro", name: "Pro", price: pricing.pro.label, per: pricing.pro.label === "Coming soon" ? "" : "/mo", desc: "Full tracking, reports, and reminders.", highlight: true, cta: "Coming soon", solid: true, features: FEATURES.pro },
+    { id: "family", name: "Family", price: pricing.family.label, per: pricing.family.label === "Coming soon" ? "" : "/mo", desc: "Manage medications for up to 5 people.", highlight: false, cta: "Coming soon", solid: true, features: FEATURES.family },
   ];
 
   return (
@@ -95,6 +97,12 @@ export default function PricingPage() {
               <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-.5px" }}>{p.price}</span>
               <span style={{ fontSize: 13, color: "#94a3b8" }}> {p.per}</span>
             </div>
+            {p.id !== "free" && !pay.ready ? (
+              <span style={{
+                display: "block", textAlign: "center", padding: "12px 16px", borderRadius: 12, fontSize: 15, fontWeight: 700,
+                background: "#f1f5f9", color: "#94a3b8", marginBottom: 18,
+              }}>{p.cta}</span>
+            ) : (
             <a href="/" style={{
               display: "block", textAlign: "center", padding: "12px 16px", borderRadius: 12, fontSize: 15, fontWeight: 700,
               textDecoration: "none", marginBottom: 18, fontFamily: "inherit",
@@ -102,6 +110,7 @@ export default function PricingPage() {
                 ? { background: "linear-gradient(135deg,#2563eb,#5856d6)", color: "white", boxShadow: "0 4px 16px rgba(37,99,235,.3)" }
                 : { background: "#f1f5f9", color: "#0f172a" }),
             }}>{p.cta}</a>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {p.features.map(f => (
                 <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: f.ok ? "#334155" : "#cbd5e1" }}>
@@ -116,22 +125,26 @@ export default function PricingPage() {
         ))}
       </div>
 
-      <PricingFooter enterprise={pricing.enterprise} />
+      <PricingFooter enterprise={pricing.enterprise} ready={pay.ready} country={selCountry.name} />
     </div>
   );
 }
 
-function PricingFooter({ enterprise }) {
+function PricingFooter({ enterprise, ready, country }) {
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 24px 48px" }}>
       <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid #e2e8f0", boxShadow: "0 1px 8px rgba(0,0,0,.04)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Clinic, hospital, or NGO?</div>
+          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{ready ? "Clinic, hospital, or NGO?" : `Payments coming soon in ${country}`}</div>
           <div style={{ fontSize: 14, color: "#64748b", lineHeight: 1.5 }}>
-            {enterprise.label}/month for teams — API access, white-label branding, and HIPAA/GDPR compliance.
+            {ready ? (
+              <>{enterprise.label}/month for teams — API access, white-label branding, and HIPAA/GDPR compliance.</>
+            ) : (
+              <>Free tier is fully available now. We're working on card and mobile-money payments for {country} — you'll be able to upgrade here soon.</>
+            )}
           </div>
         </div>
-        <a href="/" style={{ background: "#0f172a", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 12, fontFamily: "inherit" }}>Contact sales</a>
+        {ready && <a href="/" style={{ background: "#0f172a", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 12, fontFamily: "inherit" }}>Contact sales</a>}
       </div>
     </div>
   );
