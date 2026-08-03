@@ -203,7 +203,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   async function memberRefill(member, med) {
     if (!med) return;
     try {
-      if (member.kind !== "managed") await sb.from("medications").eq("id", med.id).update({ last_refill_date: new Date().toISOString() });
+      if (member.kind !== "managed") await sb.from("medications").update({ last_refill_date: new Date().toISOString() }).eq("id", med.id);
       if (med.pills_per_package) refillStock(med.id, med.pills_per_package);
       reload();
     } catch (e) { console.error("memberRefill:", e); }
@@ -520,7 +520,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   async function logRefill(medId) {
     try {
       const med = meds.find(m => m.id === medId);
-      await sb.from("medications").eq("id", medId).update({ last_refill_date: new Date().toISOString() });
+      await sb.from("medications").update({ last_refill_date: new Date().toISOString() }).eq("id", medId);
       if (med?.pills_per_package) refillStock(medId, med.pills_per_package);
       reload();
     } catch (e) {
@@ -533,8 +533,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     const id = deleteMedId;
     setDeleteMedId(null);
     try {
-      await sb.from("dose_logs").eq("medication_id", id).delete();
-      await sb.from("medications").eq("id", id).delete();
+      await sb.from("dose_logs").delete().eq("medication_id", id);
+      await sb.from("medications").delete().eq("id", id);
       reload();
     } catch (e) {
       console.error("deleteMed error:", e?.message || e);
@@ -550,7 +550,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     const updated = { ...profile, ...patch };
     setProfile(updated);
     try {
-      await sb.from("profiles").eq("id", user.id).update(patch);
+      await sb.from("profiles").update(patch).eq("id", user.id);
     } catch (e) {
       console.error("saveProfile error:", e?.message || e);
     }

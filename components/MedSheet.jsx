@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { canAddMed } from "@/lib/data";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
@@ -10,6 +10,8 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
   const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
   const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const sheetRef = useRef(null);
+  useEffect(() => { if (err) sheetRef.current?.scrollTo?.({ top: 0, behavior: "smooth" }); }, [err]);
   const existingMeds = allMeds || [];
   const currentInteractions = useMemo(() => {
     if (!f.name.trim() || !existingMeds.length) return [];
@@ -43,11 +45,17 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
     if (parseInt(f.course_duration_days) > maxDuration) { setErr(`Duration seems too long (max ${maxDuration} days).`); return; }
     setBusy(true); setErr("");
     const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, cost_per_package:f.cost_per_package?parseFloat(f.cost_per_package):null, cost_currency:f.cost_currency||null, notes:f.notes, active:true };
+    const withTimeout = (p, ms = 20000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("This is taking too long. Check your connection and try again.")), ms))]);
     try {
-      const result = med?.id ? await sb.from("medications").eq("id",med.id).update(payload) : await sb.from("medications").insert([payload]);
+      const result = med?.id
+        ? await withTimeout(sb.from("medications").update(payload).eq("id", med.id).select())
+        : await withTimeout(sb.from("medications").insert([payload]).select());
       if (result.error) {
         const msg = result.error?.message || result.error?.error_description || JSON.stringify(result.error);
         setErr(msg); setBusy(false); return;
+      }
+      if (!result.data || result.data.length === 0) {
+        setErr("Couldn't save changes — the medication may have been removed, or you don't have permission. Try signing out and back in."); setBusy(false); return;
       }
       onSave();
     } catch (e) {
@@ -60,7 +68,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
 
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="sheet" onClick={e=>e.stopPropagation()}>
+      <div className="sheet" ref={sheetRef} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div className="sheet-title">{med?"Edit Medication":"New Medication"}</div>
         {err && <div style={{margin:"0 16px 8px"}} className="err-msg">{err}</div>}
