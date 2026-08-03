@@ -7,7 +7,7 @@ import { ChevronLeft, Check, Pill, Plus, Phone, HeartPulse } from "lucide-react"
 
 function MemberRing({ member, pct, size = 92, stroke = 6 }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
-  const color = pct >= 1 ? "#34C759" : pct >= 0.5 ? "#FF9500" : "#FF3B30";
+  const color = pct >= 1 ? "var(--green)" : pct >= 0.5 ? "var(--orange)" : "var(--red)";
   return (
     <div style={{ width: size, height: size, position: "relative", margin: "0 auto" }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
@@ -86,7 +86,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
     setTimeout(() => setSavedNote(false), 1500);
   }
 
-  const dotColors = { taken: "#34C759", partial: "#FF9500", missed: "#FF3B30", future: "var(--t4)", none: "var(--t4)" };
+  const dotColors = { taken: "var(--green)", partial: "var(--orange)", missed: "var(--red)", future: "var(--t4)", none: "var(--t4)" };
 
   return (
     <div className="scroll">
@@ -111,7 +111,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 20px", marginBottom: 20 }}>
         {[
-          { v: adh === null ? "—" : `${adh}%`, l: "This week", c: adh === null ? "var(--t3)" : adh >= 80 ? "#34C759" : adh >= 50 ? "#FF9500" : "#FF3B30" },
+          { v: adh === null ? "—" : `${adh}%`, l: "This week", c: adh === null ? "var(--t3)" : adh >= 80 ? "var(--green)" : adh >= 50 ? "var(--orange)" : "var(--red)" },
           { v: streakDays, l: "Day streak", c: "var(--purple)" },
         ].map(s => (
           <div key={s.l} style={{ background: "var(--card)", borderRadius: 18, padding: "16px 8px", textAlign: "center", boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
@@ -186,8 +186,8 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
               return (
                 <div key={i} className="row" style={{ cursor: "default" }}>
                   <div onClick={() => !s.logged && onMarkDose(member, s)}
-                    style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer", transition: "transform .15s" }}>
-                    {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 10, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
+                    style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "var(--red)" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer", transition: "transform .15s" }}>
+                    {s.logged ? <Check size={18} strokeWidth={3} color="var(--green)" /> : <span style={{ fontSize: 10, fontWeight: 700, color: s.overdue ? "var(--red)" : "var(--t3)" }}>{s.time}</span>}
                   </div>
                   <div className="row-body">
                     <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
@@ -256,7 +256,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
             <div style={{ fontSize: 13, fontWeight: 700 }}>{missed.length} missed dose{missed.length > 1 ? "s" : ""} today</div>
             <div style={{ fontSize: 12, opacity: .85 }}>{missed.map(m => `${m.time} · ${m.med.name}`).join(", ")}</div>
           </div>
-          {phoneHref && <a href={phoneHref} style={{ width: 42, height: 42, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", flexShrink: 0 }}><Phone size={19} color="#FF3B30" /></a>}
+          {phoneHref && <a href={phoneHref} style={{ width: 42, height: 42, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", flexShrink: 0 }}><Phone size={19} color="var(--red)" /></a>}
         </div>
       )}
     </div>

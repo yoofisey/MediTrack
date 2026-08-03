@@ -22,7 +22,7 @@ export default function AlertsTab({ household, onOpenMember }) {
       {today.length === 0 && week.length === 0 ? (
         <div className="empty-state" style={{ paddingTop: 70 }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#E8F7EC", display: "grid", placeItems: "center", margin: "0 auto 14px" }}>
-            <CheckCircle2 size={34} color="#1F8A3D" strokeWidth={1.8} />
+            <CheckCircle2 size={34} color="var(--green2)" strokeWidth={1.8} />
           </div>
           <div className="empty-state-title">Nothing needs you today</div>
           <div className="empty-state-sub" style={{ marginBottom: 0 }}>All doses are on track. When something needs attention, it shows up here.</div>
@@ -35,7 +35,7 @@ export default function AlertsTab({ household, onOpenMember }) {
               {today.map((a, i) => {
                 const href = callHref(a.member);
                 return (
-                  <div key={i} style={{ margin: "0 20px 12px", borderRadius: 24, overflow: "hidden", background: "linear-gradient(135deg,#FF3B30,#FF6B3A)", color: "white", boxShadow: "0 10px 28px rgba(255,59,48,.28)" }}>
+                  <div key={i} style={{ margin: "0 20px 12px", borderRadius: 24, overflow: "hidden", background: "linear-gradient(135deg,var(--red),#FF6B3A)", color: "white", boxShadow: "0 10px 28px rgba(255,59,48,.28)" }}>
                     <div style={{ padding: "16px 18px 14px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700 }}>
                         <AlertTriangle size={15} strokeWidth={2.4} /> MISSED DOSE
@@ -47,11 +47,11 @@ export default function AlertsTab({ household, onOpenMember }) {
                     </div>
                     <div style={{ display: "flex" }}>
                       {href ? (
-                        <a href={href} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "white", color: "#FF3B30", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+                        <a href={href} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "white", color: "var(--red)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
                           <Phone size={17} strokeWidth={2.4} /> Call {a.member.kind === "self" ? "now" : a.member.name.split(" ")[0]}
                         </a>
                       ) : (
-                        <div onClick={() => onOpenMember(a.member)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "white", color: "#FF3B30", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                        <div onClick={() => onOpenMember(a.member)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "white", color: "var(--red)", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
                           Remind {a.member.kind === "self" ? "me" : "them"} <ChevronRight size={16} />
                         </div>
                       )}

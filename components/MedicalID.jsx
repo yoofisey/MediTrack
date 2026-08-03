@@ -70,7 +70,7 @@ export default function MedicalID({ meds = [], onClose }) {
             <button className="btn btn-sm" style={{background:"var(--hover)",border:"none",fontSize:13}} onClick={()=>setEditing(!editing)}>{editing?"Done":"Edit"}</button>
           </div>
 
-          <div style={{background:"linear-gradient(135deg,#FF3B30,#FF6B3A)",borderRadius:16,padding:18,color:"white",marginBottom:16}}>
+          <div style={{background:"linear-gradient(135deg,var(--red),#FF6B3A)",borderRadius:16,padding:18,color:"white",marginBottom:16}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
               <Ico><Heart size={20} strokeWidth={2.2} color="white"/></Ico>
               <span style={{fontSize:16,fontWeight:600}}>Emergency Info</span>

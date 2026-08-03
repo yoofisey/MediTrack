@@ -70,7 +70,7 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
   }).filter(Boolean));
   const allActiveMeds = household.filter(m => !m.pending).flatMap(m => activeMeds(m));
 
-  const toneColors = { teal: ["var(--ib2)", "#0A7A54"], red: ["var(--ib6)", "#D9382E"], gray: ["var(--hover)", "var(--t3)"], green: ["#E8F7EC", "#1F8A3D"] };
+  const toneColors = { teal: ["var(--ib2)", "var(--green2)"], red: ["var(--ib6)", "var(--red)"], gray: ["var(--hover)", "var(--t3)"], green: ["#E8F7EC", "var(--green2)"] };
 
   async function doAdd() {
     setErr("");

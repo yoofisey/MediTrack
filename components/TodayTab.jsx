@@ -35,7 +35,7 @@ function vitalsLine(vitals) {
 function CareRing({ member, size = 58, stroke = 4, active }) {
   const pct = member.pending ? 0 : ringPct(member);
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
-  const color = member.pending ? "var(--t4)" : pct >= 1 ? "#34C759" : pct > 0 ? "var(--teal)" : "#FF3B30";
+  const color = member.pending ? "var(--t4)" : pct >= 1 ? "var(--green)" : pct > 0 ? "var(--teal)" : "var(--red)";
   return (
     <div style={{ width: size + 10, height: size + 10, borderRadius: "50%", background: active ? "var(--sel)" : "transparent", display: "grid", placeItems: "center", transition: "background .2s" }}>
       <div style={{ width: size, height: size, position: "relative" }}>
@@ -113,7 +113,7 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
               style={{ position: "relative", width: 42, height: 42, borderRadius: "50%", background: "var(--card)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={19} color="var(--t1)" strokeWidth={2} />
               {alertCount > 0 && (
-                <span style={{ position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, background: "#FF3B30", color: "#fff", fontSize: 11, fontWeight: 800, lineHeight: 1, display: "grid", placeItems: "center", padding: "0 5px", boxShadow: "0 2px 6px rgba(255,59,48,.4)" }}>{alertCount > 99 ? "99+" : alertCount}</span>
+                <span style={{ position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, background: "var(--red)", color: "#fff", fontSize: 11, fontWeight: 800, lineHeight: 1, display: "grid", placeItems: "center", padding: "0 5px", boxShadow: "0 2px 6px rgba(255,59,48,.4)" }}>{alertCount > 99 ? "99+" : alertCount}</span>
               )}
             </button>
             <div onClick={onGoMe} style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", cursor: "pointer", fontSize: 17, fontWeight: 800, color: "var(--t1)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)" }}>
@@ -165,7 +165,7 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
               {selMissed.length > 0 && (
                 <a href={selPhone || undefined} onClick={(e) => { if (!selPhone) { e.preventDefault(); alert(`No phone number on file for ${selected.name}.`); } }}
                   style={{ width: 48, height: 48, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,.2)" }}>
-                  <Phone size={22} color="#FF3B30" />
+                  <Phone size={22} color="var(--red)" />
                 </a>
               )}
             </div>
@@ -223,7 +223,7 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
                       {g.member.avatarUrl ? <img src={g.member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(g.member)}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.member.name}</div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: g.slots.some(s => s.overdue) ? "#FF3B30" : "var(--t3)" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: g.slots.some(s => s.overdue) ? "var(--red)" : "var(--t3)" }}>
                       {g.slots.filter(s => s.logged).length}/{g.slots.length}
                     </span>
                     <ChevronDown size={16} style={{ color: "var(--t4)", flexShrink: 0, transition: "transform .2s", transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
@@ -231,14 +231,14 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
                   {!isCollapsed && g.slots.map((s, i) => (
                     <div key={i} className="row" style={{ cursor: "default" }}>
                       <div onClick={() => !s.logged && onMarkDose(s.member, s)}
-                        style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer" }}>
-                        {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
+                        style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "var(--red)" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer" }}>
+                        {s.logged ? <Check size={18} strokeWidth={3} color="var(--green)" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "var(--red)" : "var(--t3)" }}>{s.time}</span>}
                       </div>
                       <div className="row-body">
                         <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
                         <div className="row-sub">{s.time}{s.overdue ? " · overdue" : ""}</div>
                       </div>
-                      {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF3B30", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
+                      {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "var(--red)", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
                     </div>
                   ))}
                 </div>
