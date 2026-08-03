@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials } from "@/lib/household";
-import { Bell, Check, Phone, Plus, User } from "lucide-react";
+import { Bell, Check, ChevronDown, Phone, Plus, User } from "lucide-react";
 
 function CareRing({ member, size = 58, stroke = 4, active }) {
   const pct = member.pending ? 0 : ringPct(member);
@@ -41,6 +41,8 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
   const summaryDoses = totalExpectedToday(household, now);
 
   const [focusKey, setFocusKey] = useState(null);
+  const [collapsed, setCollapsed] = useState({});
+  function toggleGroup(key) { setCollapsed(c => ({ ...c, [key]: !c[key] })); }
   const focus = focusMember(household, now);
   const selected = household.find(m => m.key === focusKey) || focus?.member || household[0];
   const selMissed = selected ? missedDoses(selected, now) : [];
@@ -177,32 +179,36 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
           </div>
         ) : (
           <div className="list">
-            {groups.map(g => (
-              <div key={g.member.key} style={{ marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 2px" }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "var(--t1)", flexShrink: 0 }}>
-                    {g.member.avatarUrl ? <img src={g.member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(g.member)}
+            {groups.map(g => {
+              const isCollapsed = !!collapsed[g.member.key];
+              return (
+                <div key={g.member.key} style={{ marginBottom: 4 }}>
+                  <div onClick={() => toggleGroup(g.member.key)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 2px", cursor: "pointer", userSelect: "none" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "var(--t1)", flexShrink: 0 }}>
+                      {g.member.avatarUrl ? <img src={g.member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(g.member)}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.member.name}</div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: g.slots.some(s => s.overdue) ? "#FF3B30" : "var(--t3)" }}>
+                      {g.slots.filter(s => s.logged).length}/{g.slots.length}
+                    </span>
+                    <ChevronDown size={16} style={{ color: "var(--t4)", flexShrink: 0, transition: "transform .2s", transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.member.name}</div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: g.slots.some(s => s.overdue) ? "#FF3B30" : "var(--t3)" }}>
-                    {g.slots.filter(s => s.logged).length}/{g.slots.length}
-                  </span>
+                  {!isCollapsed && g.slots.map((s, i) => (
+                    <div key={i} className="row" style={{ cursor: "default" }}>
+                      <div onClick={() => !s.logged && onMarkDose(s.member, s)}
+                        style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer" }}>
+                        {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
+                      </div>
+                      <div className="row-body">
+                        <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
+                        <div className="row-sub">{s.time}{s.overdue ? " · overdue" : ""}</div>
+                      </div>
+                      {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF3B30", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
+                    </div>
+                  ))}
                 </div>
-                {g.slots.map((s, i) => (
-                  <div key={i} className="row" style={{ cursor: "default" }}>
-                    <div onClick={() => !s.logged && onMarkDose(s.member, s)}
-                      style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "#FF3B30" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer" }}>
-                      {s.logged ? <Check size={18} strokeWidth={3} color="#34C759" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "#FF3B30" : "var(--t3)" }}>{s.time}</span>}
-                    </div>
-                    <div className="row-body">
-                      <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
-                      <div className="row-sub">{s.time}{s.overdue ? " · overdue" : ""}</div>
-                    </div>
-                    {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF3B30", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
-                  </div>
-                ))}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

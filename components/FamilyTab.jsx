@@ -3,15 +3,23 @@
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { insertFamilyMember, insertManagedFamilyMember, removeFamilyMember } from "@/lib/db";
-import { memberStatus, initials } from "@/lib/household";
+import { memberStatus, initials, activeMeds, missedDoses, weekAdherence } from "@/lib/household";
 import { UpgradeModal } from "@/components/Modals";
-import { Users, Plus, ChevronRight, Mail } from "lucide-react";
+import InteractionChecker from "@/components/InteractionChecker";
+import { Users, Plus, ChevronRight, Mail, AlertTriangle, FileText, Package } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function FamilyTab({ household, plan, country, userEmail, onSaveProfile, onOpenMember, onChanged }) {
+function medRemaining(med, logs) {
+  if (!med.pills_per_package) return null;
+  const lastRefill = med.last_refill_date ? new Date(med.last_refill_date) : new Date(med.start_date);
+  const sinceRefill = (logs || []).filter(l => l.medication_id === med.id && new Date(l.taken_at) >= lastRefill).length;
+  return Math.max(0, (med.pills_per_package || 0) - sinceRefill);
+}
+
+export default function FamilyTab({ household, plan, country, userEmail, onSaveProfile, onOpenMember, onChanged, onGenerateReport }) {
   const [showAdd, setShowAdd] = useState(false);
   const [mode, setMode] = useState("invite");
   const [email, setEmail] = useState("");
@@ -24,6 +32,7 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [removeId, setRemoveId] = useState(null);
   const [sent, setSent] = useState(false);
+  const [showChecker, setShowChecker] = useState(false);
 
   async function sendInviteEmail(to) {
     try {
@@ -48,6 +57,18 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
   const members = household.filter(m => m.kind !== "self");
   const maxMembers = isFamily ? 5 : 0;
   const slotsLeft = Math.max(0, maxMembers - members.length);
+
+  const activeFam = members.filter(m => !m.pending);
+  const activeMedCount = activeFam.reduce((s, m) => s + activeMeds(m).length, 0);
+  const missedCount = activeFam.reduce((s, m) => s + missedDoses(m).length, 0);
+  const adherenceVals = activeFam.map(m => weekAdherence(m)).filter(v => v !== null);
+  const avgAdherence = adherenceVals.length ? Math.round(adherenceVals.reduce((s, v) => s + v, 0) / adherenceVals.length) : null;
+  const refills = activeFam.flatMap(m => (m.meds || []).map(med => {
+    const remaining = medRemaining(med, m.logs);
+    if (!med.active || remaining === null || remaining > (med.refill_reminder_at || 5)) return null;
+    return { member: m, med, remaining };
+  }).filter(Boolean));
+  const allActiveMeds = household.filter(m => !m.pending).flatMap(m => activeMeds(m));
 
   const toneColors = { teal: ["var(--ib2)", "#0A7A54"], red: ["var(--ib6)", "#D9382E"], gray: ["var(--hover)", "var(--t3)"], green: ["#E8F7EC", "#1F8A3D"] };
 
@@ -135,6 +156,24 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
             </div>
           </div>
 
+          <div className="chips" style={{ margin: "12px 20px 4px" }}>
+            <div className="chip"><div className="chip-val">{activeMedCount}</div><div className="chip-lbl">Active meds</div></div>
+            <div className="chip"><div className="chip-val" style={{ color: missedCount ? "var(--red)" : "var(--teal)" }}>{missedCount}</div><div className="chip-lbl">Missed today</div></div>
+            <div className="chip"><div className="chip-val" style={{ color: refills.length ? "var(--red)" : "var(--teal)" }}>{refills.length}</div><div className="chip-lbl">Refills due</div></div>
+            <div className="chip"><div className="chip-val">{avgAdherence !== null ? `${avgAdherence}%` : "–"}</div><div className="chip-lbl">Adherence</div></div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, padding: "6px 20px 12px" }}>
+            {allActiveMeds.length >= 2 && (
+              <button className="btn" style={{ flex: 1, background: "var(--ib5)", color: "var(--t1)", fontWeight: 500, fontSize: 13, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => setShowChecker(true)}>
+                <Ico><AlertTriangle size={16} strokeWidth={2.2} /></Ico> Check interactions
+              </button>
+            )}
+            <button className="btn" style={{ flex: 1, background: "var(--ib1)", color: "var(--t1)", fontWeight: 500, fontSize: 13, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={onGenerateReport}>
+              <Ico><FileText size={16} strokeWidth={2.2} /></Ico> Family report
+            </button>
+          </div>
+
           <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
             {members.map(m => {
               const st = memberStatus(m);
@@ -165,6 +204,24 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
               );
             })}
           </div>
+
+          {refills.length > 0 && (
+            <div className="section" style={{ paddingTop: 4 }}>
+              <div className="section-header">Refills needed</div>
+              <div className="list">
+                {refills.map(r => (
+                  <div key={r.med.id + r.member.key} className="row" style={{ cursor: "pointer" }} onClick={() => !r.member.pending && onOpenMember(r.member)}>
+                    <div className="row-icon" style={{ background: "var(--ib6)" }}><Package size={18} color="var(--red)" /></div>
+                    <div className="row-body">
+                      <div className="row-title">{r.med.name} · {r.member.name}</div>
+                      <div className="row-sub">{r.remaining} {r.med.dosage_unit === "tabs" ? "tablets" : r.med.dosage_unit} left · {r.med.dosage_amount} per dose</div>
+                    </div>
+                    <ChevronRight size={18} color="var(--t4)" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {slotsLeft > 0 && (
             <button onClick={() => setShowAdd(true)} style={{ margin: "0 20px 8px", padding: 18, borderRadius: 22, border: "2px dashed var(--sep)", background: "none", color: "var(--t3)", fontSize: 15, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit" }}>
@@ -240,6 +297,8 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
       )}
 
       {showUpgrade && <UpgradeModal country={country} userEmail={userEmail} currentPlan="free" onClose={() => setShowUpgrade(false)} />}
+
+      {showChecker && <InteractionChecker meds={allActiveMeds} onClose={() => setShowChecker(false)} />}
 
       {removeId && (
         <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setRemoveId(null)}>

@@ -14,6 +14,7 @@ import TodayTab from "@/components/TodayTab";
 import ReportsTab from "@/components/ReportsTab";
 import VitalsTab from "@/components/VitalsTab";
 import FamilyTab from "@/components/FamilyTab";
+import MedsTab from "@/components/MedsTab";
 import AlertsTab from "@/components/AlertsTab";
 import MeTab from "@/components/MeTab";
 import MemberDetail from "@/components/MemberDetail";
@@ -23,7 +24,7 @@ import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
-import { Home, Users, Bell, User } from "lucide-react";
+import { Home, Users, Bell, User, Pill } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
@@ -584,6 +585,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   const tabs = [
     { id: "today", label: t("nav.today"), icon: <Home size={23} strokeWidth={1.9} /> },
+    { id: "meds", label: t("nav.meds"), icon: <Pill size={23} strokeWidth={1.9} /> },
     { id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> },
     { id: "alerts", label: t("nav.alerts"), icon: <Bell size={23} strokeWidth={1.9} /> },
     { id: "me", label: "", icon: <User size={23} strokeWidth={1.9} /> },
@@ -669,7 +671,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
               {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} />}
-              {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} />}
+              {tab === "meds" && <MedsTab meds={meds} logs={logs} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan || "free"} medCount={meds.length} />}
+              {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} onGenerateReport={generateFamilyReport} />}
               {tab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
               {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setOverlayTab("reports")} onOpenVitals={() => setVitalsMember(selfMember)} />}
             </div>
