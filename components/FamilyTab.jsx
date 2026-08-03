@@ -6,7 +6,6 @@ import { insertFamilyMember, insertManagedFamilyMember, removeFamilyMember } fro
 import { memberStatus, initials } from "@/lib/household";
 import { UpgradeModal } from "@/components/Modals";
 import { Users, Plus, ChevronRight, Mail } from "lucide-react";
-import { Resend } from "resend";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -26,47 +25,18 @@ export default function FamilyTab({ household, plan, country, userEmail, onSaveP
   const [removeId, setRemoveId] = useState(null);
   const [sent, setSent] = useState(false);
 
-  const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
-  const fromEmail = "noreply@useadhera.com";
-
   async function sendInviteEmail(to) {
     try {
-      const { data, error } = await resend.emails.send({
-        from: `${userEmail || "Adhera Team"} <${fromEmail}>`,
-        to: [to],
-        subject: `You've been invited to join ${userEmail}'s family group on Adhera`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">You've been invited to join a family group</h2>
-            <p>Hi,</p>
-            <p><strong>${userEmail}</strong> has invited you to join their family medication tracking group on Adhera.</p>
-            <p>With Adhera, you can:</p>
-            <ul>
-              <li>Track medications for yourself and your family</li>
-              <li>Set up dose reminders</li>
-              <li>Receive alerts when doses are missed</li>
-              <li>Access adherence reports and share them with healthcare providers</li>
-            </ul>
-            <p>To accept the invitation and get started:</p>
-            <p>
-              <a href="https://useadhera.com/invite" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Accept Invitation
-              </a>
-            </p>
-            <p>This invitation will expire in 7 days.</p>
-            <p>If you have any questions, please contact support.</p>
-            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;" />
-            <p style="font-size: 12px; color: #6b7280;">You're receiving this email because you were invited to join a family group on Adhera.</p>
-          </div>
-        `,
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, senderName: userEmail || "Adhera Team" }),
       });
-
-      if (error) {
-        console.error("Resend email error:", error);
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        console.error("Invite email error:", data?.error || res.status);
         return false;
       }
-
-      console.log("Invite email sent successfully:", data.id);
       return true;
     } catch (e) {
       console.error("Failed to send invite email:", e);
