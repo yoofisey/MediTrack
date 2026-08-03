@@ -52,6 +52,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [linkedData, setLinkedData] = useState({});
   const [memberView, setMemberView] = useState(null);
   const [overlayTab, setOverlayTab] = useState(null);
+  const [vitalsMember, setVitalsMember] = useState(null);
   const [medSheetFor, setMedSheetFor] = useState(null);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
@@ -136,12 +137,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const map = {};
         await Promise.all(linked.map(async m => {
           try {
-            const [medsRes, logsRes, profRes] = await Promise.all([
+            const [medsRes, logsRes, vitalsRes, profRes] = await Promise.all([
               sb.from("medications").select("*").eq("user_id", m.member_user_id).order("created_at", { ascending: false }),
               sb.from("dose_logs").select("*, medications(name)").eq("user_id", m.member_user_id).order("taken_at", { ascending: false }).limit(120),
+              sb.from("vitals").select("*").eq("user_id", m.member_user_id).order("created_at", { ascending: false }).limit(200),
               sb.from("profiles").select("full_name, avatar_url, wake_time, reminder_lead").eq("id", m.member_user_id).maybeSingle(),
             ]);
-            map[m.id] = { meds: medsRes.data || [], logs: logsRes.data || [], profile: profRes.data || null };
+            map[m.id] = { meds: medsRes.data || [], logs: logsRes.data || [], vitals: vitalsRes.data || [], profile: profRes.data || null };
           } catch (e) { console.error("linked load:", e); }
         }));
         if (!cancelled) setLinkedData(map);
@@ -150,11 +152,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     return () => { cancelled = true; };
   }, [user?.id, loadKey]);
 
-  const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs }), [user, profile, meds, logs]);
+  const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs, vitals }), [user, profile, meds, logs, vitals]);
   const household = useMemo(() => [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))], [selfMember, familyRows, linkedData]);
 
   function openMember(m) { setMemberView(m?.key || null); }
   function closeMember() { setMemberView(null); }
+  function openMemberVitals(m) { setVitalsMember(m); }
+  function closeVitals() { setVitalsMember(null); }
 
   async function markDose(member, slot) {
     if (!member || !slot) return;
@@ -637,16 +641,25 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
 
-      {memberView ? (() => {
+      {vitalsMember ? (() => {
+        const live = vitalsMember.kind === "self" ? selfMember : (household.find(m => m.key === vitalsMember.key) || vitalsMember);
+        return (
+          <div className="scroll">
+            <VitalsTab vitals={live.vitals || []} onRefresh={reload} member={live} />
+            <div style={{ padding: "4px 20px 24px" }}>
+              <button className="btn btn-ghost" onClick={closeVitals}>Back</button>
+            </div>
+          </div>
+        );
+      })() : memberView ? (() => {
         const activeMember = household.find(m => m.key === memberView);
         if (!activeMember) return null;
         return (
-          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onChanged={reload} />
+          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={(profile?.plan || "free") === "family"} onChanged={reload} />
         );
       })() : overlayTab ? (
         <div className="scroll">
           {overlayTab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") { setOverlayTab(null); setTab("me"); } }} />}
-          {overlayTab === "vitals" && <VitalsTab vitals={vitals} onRefresh={reload} user={user} />}
           <div style={{ padding: "4px 20px 24px" }}>
             <button className="btn btn-ghost" onClick={() => setOverlayTab(null)}>Back</button>
           </div>
@@ -658,7 +671,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} />}
               {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} />}
               {tab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
-              {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setOverlayTab("reports")} onOpenVitals={() => setOverlayTab("vitals")} />}
+              {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setOverlayTab("reports")} onOpenVitals={() => setVitalsMember(selfMember)} />}
             </div>
           </div>
 

@@ -374,7 +374,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
   );
 }
 
-export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
+export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
   const { t } = useLang();
   const [logType, setLogType] = useState(null);
   const [historyType, setHistoryType] = useState(null);
@@ -419,7 +419,14 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
         @keyframes cardIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
       `}</style>
 
-      <div style={{margin:"16px 16px 12px",background:"linear-gradient(145deg,#007AFF,#0055CC)",borderRadius:16,padding:20,color:"white",position:"relative",overflow:"hidden",animation:"fadeUp .3s ease both"}}>
+      <div style={{ margin: "16px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+        <Stethoscope size={20} color="var(--teal)" />
+        <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: -.3, color: "var(--t1)" }}>
+          {t("vitals.title")}{member && member.kind !== "self" ? ` — ${member.name}` : ""}
+        </span>
+      </div>
+
+      <div style={{margin:"0 16px 12px",background:"linear-gradient(145deg,#007AFF,#0055CC)",borderRadius:16,padding:20,color:"white",position:"relative",overflow:"hidden",animation:"fadeUp .3s ease both"}}>
         <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
         <div style={{position:"absolute",bottom:-30,left:-10,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
         <div style={{position:"relative",zIndex:1}}>
@@ -482,8 +489,18 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, user }) {
 
       {logType && (
         <LogSheet vitalType={logType} onClose={() => setLogType(null)} onSave={async (reading) => {
-          const { sb } = await import("@/lib/supabase");
-          await sb.from("vitals").insert({ user_id: user.id, ...reading });
+          if (member && member.kind === "managed") {
+            const { pushManagedVital } = await import("@/lib/household");
+            pushManagedVital(member.rowId, {
+              id: "mv_" + Date.now() + Math.random().toString(36).slice(2, 6),
+              user_id: member.rowId,
+              ...reading,
+              created_at: new Date().toISOString(),
+            });
+          } else {
+            const { sb } = await import("@/lib/supabase");
+            await sb.from("vitals").insert({ user_id: member?.userId, ...reading });
+          }
           setLogType(null);
           if (onRefresh) onRefresh();
         }}/>

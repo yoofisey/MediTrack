@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { activeMeds, missedDoses, weekDots, weekAdherence, streak, initials, expectedDosesToday, pushManagedMed } from "@/lib/household";
-import { ChevronLeft, Check, Pill, Plus, Phone } from "lucide-react";
+import { ChevronLeft, Check, Pill, Plus, Phone, HeartPulse } from "lucide-react";
 
 function MemberRing({ member, pct, size = 92, stroke = 6 }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
@@ -65,7 +65,7 @@ function ManagedMedForm({ member, onDone }) {
   );
 }
 
-export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onChanged }) {
+export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onOpenVitals, isFamily, onChanged }) {
   const [showAddMed, setShowAddMed] = useState(false);
   const [editNote, setEditNote] = useState(false);
   const [noteText, setNoteText] = useState(member.careNote || "");
@@ -120,6 +120,50 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
           </div>
         ))}
       </div>
+
+      {(member.kind === "self" || isFamily) && (() => {
+        const memberVitals = member.vitals || [];
+        const latestByType = {};
+        memberVitals.forEach(v => { if (v.type && !latestByType[v.type]) latestByType[v.type] = v; });
+        const vitalsTypes = Object.keys(latestByType);
+        return (
+          <div className="section" style={{ marginBottom: 12 }}>
+            <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Vitals</span>
+              <button className="nav-action" style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }} onClick={() => onOpenVitals && onOpenVitals(member)}>
+                <Plus size={15} strokeWidth={2.5} /> Log reading
+              </button>
+            </div>
+            {vitalsTypes.length === 0 ? (
+              <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
+                <div className="empty-state-icon" style={{ fontSize: 36 }}><HeartPulse size={36} strokeWidth={1.5} /></div>
+                <div className="empty-state-title" style={{ fontSize: 15 }}>No vitals yet</div>
+                <div className="empty-state-sub" style={{ marginBottom: 0 }}>Log {member.kind === "self" ? "your" : `${member.name.split(" ")[0]}'s`} first reading — blood pressure, glucose, weight & more.</div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8, padding: "0 16px 8px" }}>
+                {vitalsTypes.map(type => {
+                  const v = latestByType[type];
+                  return (
+                    <div key={type} style={{ background: "var(--card)", borderRadius: 12, padding: "10px 12px", boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
+                      <div style={{ fontSize: 10, color: "var(--t3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: .3, marginBottom: 3 }}>{type.replace(/_/g, " ")}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", lineHeight: 1 }}>
+                        {v.value}{v.value_secondary != null ? `/${v.value_secondary}` : ""} <span style={{ fontSize: 11, fontWeight: 400, color: "var(--t3)" }}>{v.unit}</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--t3)", marginTop: 3 }}>{v.created_at ? new Date(v.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ padding: "0 16px 16px" }}>
+              <button onClick={() => onOpenVitals && onOpenVitals(member)} style={{ width: "100%", padding: "11px", borderRadius: 12, border: "1.5px solid var(--sep)", background: "var(--card)", color: "var(--teal)", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                View full vitals
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="section" style={{ marginBottom: 12 }}>
         <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
