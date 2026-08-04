@@ -99,7 +99,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
         <div className="chip"><div className="chip-val">{ended.length}</div><div className="chip-lbl">{t("meds.completed")}</div></div>
       </div>
 
-      {plan==="free" && (
+      {plan==="free" ? (
         <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>{t("meds.medLimit")}</span>
@@ -107,6 +107,13 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
           </div>
           <div className="prog"><div className="prog-fill" style={{width:`${Math.min(medCount/limits.maxMeds,1)*100}%`,background:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}/></div>
           {medCount>=limits.maxMeds && <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>{t("meds.upgradeForUnlimited")}</div>}
+        </div>
+      ) : (
+        <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <Ico><CheckCircle2 size={16} color="var(--teal2)"/></Ico>
+            <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>No limits — track as many medications as you need</span>
+          </div>
         </div>
       )}
 

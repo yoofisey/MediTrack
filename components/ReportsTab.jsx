@@ -6,9 +6,10 @@ import { useLang } from "@/lib/i18n";
 import { calcStreak, TIER_LIMITS, getVisits } from "@/lib/data";
 import AdherenceChart from "@/components/AdherenceChart";
 import AdherenceCalendar from "@/components/AdherenceCalendar";
+import { Card, Segmented, InsightCard } from "@/components/ui";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, Clock, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -20,6 +21,10 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntries, setJournalEntries] = useState([]);
   const [pdfHtml, setPdfHtml] = useState(null);
+  const [range, setRange] = useState("all");
+  const [dismissed, setDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mt_dismissed_insights") || "[]"); } catch { return []; }
+  });
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
 
@@ -27,16 +32,18 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
     try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch { setJournalEntries([]); }
   }, [showHistory]);
 
+  const cutoff = range === "7d" ? new Date(Date.now() - 6 * 86400000) : range === "30d" ? new Date(Date.now() - 29 * 86400000) : null;
+  const rangedLogs = cutoff ? logs.filter(l => new Date(l.taken_at) >= cutoff) : logs;
   const streak = calcStreak(logs, meds);
   const grouped = {};
-  logs.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); } });
+  rangedLogs.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); } });
   const daysTracked = Object.keys(grouped).length;
-  const totalDoses = logs.length;
+  const totalDoses = rangedLogs.length;
   const adherence = daysTracked > 0 ? Math.round((totalDoses / (daysTracked * meds.reduce((s,m) => s + (m.times_per_day || 1), 0))) * 100) : 0;
 
   function perMedAdherence() {
     return meds.map(med => {
-      const medLogs = logs.filter(l => l.medication_id === med.id);
+      const medLogs = rangedLogs.filter(l => l.medication_id === med.id);
       const expected = med.course_duration_days * (med.times_per_day || 1);
       const pct = expected > 0 ? Math.round((medLogs.length / expected) * 100) : 0;
       return { ...med, taken: medLogs.length, expected, pct: Math.min(pct, 100) };
@@ -597,11 +604,25 @@ ${limits.reports ? `
     <div className="scroll">
       <div className="nav-large">{t("reports.title")}</div>
 
-      <div className="chips">
-        <div className="chip blue"><div className="chip-val">{daysTracked}</div><div className="chip-lbl">{t("reports.daysTracked")}</div></div>
-        <div className="chip green"><div className="chip-val">{adherence}%</div><div className="chip-lbl">{t("reports.adherenceRate")}</div></div>
-        <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">{t("reports.bestStreak")}</div></div>
-      </div>
+      {limits.reports ? (
+        <div style={{ margin: "0 20px 14px" }}>
+          <Segmented options={[["7d","7 days"],["30d","30 days"],["all","All time"]]} value={range} onChange={setRange} style={{ marginBottom: 10 }} />
+          <Card style={{ padding: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--t3)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Adherence</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 44, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1, color: "var(--t1)" }}>{daysTracked ? adherence : "—"}%</span>
+              {streak > 1 && <span className="streak-badge fire">🔥 {streak}-day streak</span>}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--t3)", marginTop: 6 }}>{daysTracked} days tracked · {totalDoses} doses logged{meds.length ? ` · ${meds.length} med${meds.length !== 1 ? "s" : ""}` : ""}</div>
+          </Card>
+        </div>
+      ) : (
+        <div className="chips">
+          <div className="chip blue"><div className="chip-val">{daysTracked}</div><div className="chip-lbl">{t("reports.daysTracked")}</div></div>
+          <div className="chip green"><div className="chip-val">{adherence}%</div><div className="chip-lbl">{t("reports.adherenceRate")}</div></div>
+          <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">{t("reports.bestStreak")}</div></div>
+        </div>
+      )}
 
       <div className="section">
         <div className="section-header">{t("reports.adherenceByMed")}</div>
@@ -671,53 +692,55 @@ ${limits.reports ? `
         </div>
       )}
 
-      {limits.reports && (
-        <div className="section">
-          <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
-            <Ico><Lightbulb size={15} strokeWidth={2.2} color="var(--orange)"/></Ico> Treatment insights
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:30,height:30,borderRadius:8,background:"var(--ib2)",display:"grid",placeItems:"center",flexShrink:0}}><Ico><Clock size={16} strokeWidth={2.2} color="var(--t1)"/></Ico></div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>Best time adherence</div>
-                <div style={{fontSize:13,color:"var(--t3)"}}>
-                  {logs.length > 0
-                    ? (() => {
-                        const hours = {};
-                        logs.forEach(l => {
-                          const h = new Date(l.taken_at).getHours();
-                          const slot = h < 6 ? "Night" : h < 12 ? "Morning" : h < 18 ? "Afternoon" : "Evening";
-                          hours[slot] = (hours[slot]||0)+1;
-                        });
-                        const bestSlot = Object.entries(hours).sort((a,b)=>b[1]-a[1])[0];
-                        return `Most consistent in the ${bestSlot?.[0]||"day"} (${bestSlot?.[1]||0} doses)`;
-                      })()
-                    : "Log doses to see insights"}
-                </div>
-              </div>
+      {limits.reports && (() => {
+        const lowStock = meds.filter(m => {
+          if (!m.pills_per_package) return false;
+          const lastRefill = m.last_refill_date ? new Date(m.last_refill_date) : new Date(m.start_date);
+          const since = rangedLogs.filter(l => l.medication_id === m.id && new Date(l.taken_at) >= lastRefill).length;
+          return Math.max(0, m.pills_per_package - since) <= (m.refill_reminder_at || 5);
+        });
+        const weak = pm.filter(m => m.expected > 0 && m.pct < 80).sort((a, b) => a.pct - b.pct)[0];
+        const insightList = [];
+        if (daysTracked > 0) {
+          insightList.push(adherence >= 80
+            ? { id: "adh-good", tone: "good", headline: `${adherence}% adherence`, suggestion: "Great consistency — keep this habit going." }
+            : adherence >= 50
+              ? { id: "adh-warn", tone: "warn", headline: `Adherence at ${adherence}%`, suggestion: "A few more doses a day would bring this back to target." }
+              : { id: "adh-bad", tone: "bad", headline: `Adherence is at ${adherence}%`, suggestion: "Set a daily reminder so doses don't slip." });
+        }
+        if (weak && daysTracked >= 7) {
+          insightList.push({ id: `weak-${weak.id}`, tone: "warn", headline: `${weak.name} is at ${weak.pct}%`, suggestion: "Add a phone alert around its usual dosing time." });
+        }
+        if (streak >= 3) {
+          insightList.push({ id: "streak", tone: "good", headline: `${streak}-day streak`, suggestion: "Log today's dose to keep the run alive." });
+        }
+        if (lowStock.length > 0) {
+          const names = lowStock.slice(0, 2).map(m => m.name).join(", ");
+          insightList.push({ id: "stock", tone: "warn", headline: `${names} ${lowStock.length > 1 ? "need" : "needs"} a refill soon`, suggestion: "Restock before you run out to avoid a gap in dosing." });
+        }
+        const visible = insightList.filter(i => !dismissed.includes(i.id));
+        return (
+          <div className="section">
+            <div className="section-header" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Ico><Lightbulb size={15} strokeWidth={2.2} color="var(--orange)"/></Ico> Treatment insights
             </div>
-            <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:30,height:30,borderRadius:8,background:"var(--ib3)",display:"grid",placeItems:"center",flexShrink:0}}><Ico><ClipboardList size={16} strokeWidth={2.2} color="var(--t1)"/></Ico></div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>Course completion forecast</div>
-                <div style={{fontSize:13,color:"var(--t3)"}}>
-                  {(() => {
-                    const active = meds.filter(m=>m.active);
-                    if (!active.length) return "No active courses";
-                    const avg = active.reduce((s,m)=>{
-                      const spent = Math.min(Math.ceil((today-new Date(m.start_date).getTime())/86400000), m.course_duration_days);
-                      return s + (spent/m.course_duration_days);
-                    },0)/active.length;
-                    const pct = Math.round(avg*100);
-                    return `${pct}% complete across ${active.length} active course${active.length>1?"s":""}`;
-                  })()}
-                </div>
+            {visible.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--t3)", padding: "4px 2px" }}>Log a few days of doses to see personalized insights.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {visible.map(ins => (
+                  <InsightCard key={ins.id} tone={ins.tone} headline={ins.headline} suggestion={ins.suggestion}
+                    onDismiss={() => {
+                      const next = [...dismissed, ins.id];
+                      setDismissed(next);
+                      try { localStorage.setItem("mt_dismissed_insights", JSON.stringify(next)); } catch {}
+                    }} />
+                ))}
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {!limits.reports && (
         <div className="upgrade-card" style={{margin:"0 20px 16px"}}>

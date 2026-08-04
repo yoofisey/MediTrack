@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials } from "@/lib/household";
+import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { Bell, Check, ChevronDown, ChevronRight, HeartPulse, Phone, Plus, User } from "lucide-react";
 
 const VITAL_LABELS = {
@@ -56,7 +56,7 @@ function CareRing({ member, size = 58, stroke = 4, active }) {
   );
 }
 
-export default function TodayTab({ household, user, profile, onGoMe, onGoFamily, notifPerm, onEnableNotif, onMarkDose, onOpenVitals, onOpenAlerts, alertCount }) {
+export default function TodayTab({ household, user, profile, plan, onGoMe, onGoFamily, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onOpenVitals, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -96,6 +96,10 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
 
   const overdueTotal = household.reduce((s, m) => s + missedDoses(m, now).length, 0);
 
+  const isPro = ["pro", "family", "enterprise"].includes(plan);
+  const adh = selected ? weekAdherence(selected) : null;
+  const stk = selected ? streak(selected) : 0;
+
   return (
     <div className="scroll" style={{ paddingTop: 0 }}>
       <style>{CSS}</style>
@@ -122,6 +126,40 @@ export default function TodayTab({ household, user, profile, onGoMe, onGoFamily,
           </div>
         </div>
       </div>
+
+      {isPro && adh !== null && (
+        <div style={{ margin: "14px 20px 4px" }}>
+          <div className="card" style={{ padding: 18 }}>
+            <div className="hero-label">Adherence this week</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
+              <span style={{ fontSize: 44, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1, color: "var(--t1)" }}>{adh}%</span>
+              {stk > 1 && <span className="streak-badge fire">🔥 {stk}-day streak</span>}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--t3)", marginTop: 6 }}>
+              {adh >= 80 ? "Great consistency — keep it up" : adh >= 50 ? "Some missed doses this week" : "Let's get back on track"}
+            </div>
+            <button onClick={onGoReports} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--teal)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: "8px 0 0", marginTop: 4 }}>
+              View full report <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isPro && (
+        <div style={{ margin: "14px 20px 4px" }}>
+          <div className="card" style={{ padding: 18, background: "linear-gradient(135deg,#FFFFFF,var(--ib2))", border: "1px solid var(--ib3)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "var(--t1)" }}>Unlock Pro</span>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.45 }}>
+              Track unlimited medications, see weekly adherence insights, and export reports to share with your doctor.
+            </div>
+            <button className="btn btn-primary" style={{ width: "auto", marginTop: 12, padding: "10px 18px" }} onClick={onUpgrade}>
+              See what's included →
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: "14px 14px 4px" }}>
         <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
