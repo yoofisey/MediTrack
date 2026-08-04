@@ -1,324 +1,303 @@
 "use client";
 
-import { useState } from "react";
-import { CSS } from "@/lib/constants";
-import { insertFamilyMember, insertManagedFamilyMember, removeFamilyMember } from "@/lib/db";
-import { memberStatus, initials, activeMeds, missedDoses, weekAdherence } from "@/lib/household";
-import { UpgradeModal } from "@/components/Modals";
-import InteractionChecker from "@/components/InteractionChecker";
-import { Users, Plus, ChevronRight, Mail, AlertTriangle, FileText, Package } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useLang } from "@/lib/i18n";
+import { useTier } from "@/components/TierContext";
+import { expectedDosesToday, activeMeds, missedDoses, weekAdherence, streak, initials, ringPct, memberStatus } from "@/lib/household";
+import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
+import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock } from "lucide-react";
 
-function Ico({ children, ...props }) {
-  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
+const VITAL_LABELS = {
+  blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
+  temperature: "Temp", spo2: "SpO2", cholesterol: "Chol", bmi: "BMI", hba1c: "HbA1c",
+  water_intake: "Water", peak_flow: "Peak flow",
+};
+const VITAL_UNITS = {
+  blood_pressure: "mmHg", weight: "kg", glucose: "mg/dL", heart_rate: "bpm",
+  temperature: "°F", spo2: "%", cholesterol: "mg/dL", bmi: "kg/m²", hba1c: "%",
+  water_intake: "L", peak_flow: "L/min",
+};
+
+function fmtVisitDate(v) {
+  const d = new Date(v.date + "T" + (v.time || "09:00"));
+  return `${d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }
 
-function medRemaining(med, logs) {
-  if (!med.pills_per_package) return null;
-  const lastRefill = med.last_refill_date ? new Date(med.last_refill_date) : new Date(med.start_date);
-  const sinceRefill = (logs || []).filter(l => l.medication_id === med.id && new Date(l.taken_at) >= lastRefill).length;
-  return Math.max(0, (med.pills_per_package || 0) - sinceRefill);
+function MedSlot({ slot, onMarkDose, now }) {
+  const isOverdue = !slot.logged && now.getTime() - slot.dueMs > 20 * 60000;
+  return (
+    <div className="row" style={{ cursor: "default", alignItems: "center" }}>
+      <div className="row-icon" style={{ background: slot.logged ? "var(--ib2)" : isOverdue ? "var(--ib6)" : "var(--ib1)" }}>
+        <Pill size={19} color={slot.logged ? "var(--green)" : isOverdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
+      </div>
+      <div className="row-body">
+        <div className="row-title" style={{ fontSize: 14 }}>
+          {slot.med.name}
+          <span style={{ fontSize: 12, color: "var(--t3)", marginLeft: 6 }}>{slot.med.dosage_amount}{slot.med.dosage_unit}</span>
+        </div>
+        <div className="row-sub">{slot.time}{slot.logged ? " · taken" : isOverdue ? " · overdue" : ""}</div>
+      </div>
+      {!slot.logged && (
+        <button onClick={() => onMarkDose?.(slot.member, slot)} style={{ width: 36, height: 36, borderRadius: "50%", background: isOverdue ? "var(--red)" : "var(--teal)", border: "none", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,.15)" }}>
+          <Check size={16} color="white" strokeWidth={3} />
+        </button>
+      )}
+      {slot.logged && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--green)" }}>Done</span>}
+    </div>
+  );
 }
 
-export default function FamilyTab({ household, plan, country, userEmail, onSaveProfile, onOpenMember, onChanged, onGenerateReport }) {
-  const [showAdd, setShowAdd] = useState(false);
-  const [mode, setMode] = useState("invite");
-  const [email, setEmail] = useState("");
-  const [mname, setMname] = useState("");
-  const [rel, setRel] = useState("Child");
-  const [age, setAge] = useState("");
-  const [phone, setPhone] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [removeId, setRemoveId] = useState(null);
-  const [sent, setSent] = useState(false);
-  const [showChecker, setShowChecker] = useState(false);
+export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports }) {
+  const { t } = useLang();
+  const { has, config } = useTier();
+  const now = useMemo(() => new Date(), []);
+  const [selectedKey, setSelectedKey] = useState(null);
+  const [, setVisitsTick] = useState(0);
 
-  async function sendInviteEmail(to) {
-    try {
-      const res = await fetch("/api/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, senderName: userEmail || "Adhera Team" }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        console.error("Invite email error:", data?.error || res.status);
-        return false;
-      }
-      return true;
-    } catch (e) {
-      console.error("Failed to send invite email:", e);
-      return false;
-    }
+  const members = useMemo(() => household.filter(m => !m.pending), [household]);
+  const selected = selectedKey ? household.find(m => m.key === selectedKey) : null;
+
+  const visits = useMemo(() => getUpcomingVisits(60), []);
+
+  function markVisit(id, status) {
+    markVisitStatus(id, status);
+    setVisitsTick(x => x + 1);
   }
 
-  const isFamily = plan === "family";
-  const members = household.filter(m => m.kind !== "self");
-  const maxMembers = isFamily ? 5 : 0;
-  const slotsLeft = Math.max(0, maxMembers - members.length);
+  const selectedSlots = useMemo(() => selected ? expectedDosesToday(selected, now) : [], [selected, now]);
+  const selectedDone = selectedSlots.filter(s => s.logged).length;
+  const selectedAdh = useMemo(() => selected ? weekAdherence(selected) : null, [selected]);
+  const selectedStreak = useMemo(() => selected ? streak(selected) : 0, [selected]);
+  const selectedMeds = useMemo(() => selected ? activeMeds(selected) : [], [selected]);
+  const selectedVitals = selected?.vitals || [];
 
-  const activeFam = members.filter(m => !m.pending);
-  const activeMedCount = activeFam.reduce((s, m) => s + activeMeds(m).length, 0);
-  const missedCount = activeFam.reduce((s, m) => s + missedDoses(m).length, 0);
-  const adherenceVals = activeFam.map(m => weekAdherence(m)).filter(v => v !== null);
-  const avgAdherence = adherenceVals.length ? Math.round(adherenceVals.reduce((s, v) => s + v, 0) / adherenceVals.length) : null;
-  const refills = activeFam.flatMap(m => (m.meds || []).map(med => {
-    const remaining = medRemaining(med, m.logs);
-    if (!med.active || remaining === null || remaining > (med.refill_reminder_at || 5)) return null;
-    return { member: m, med, remaining };
-  }).filter(Boolean));
-  const allActiveMeds = household.filter(m => !m.pending).flatMap(m => activeMeds(m));
-
-  const toneColors = { teal: ["var(--ib2)", "var(--green2)"], red: ["var(--ib6)", "var(--red)"], gray: ["var(--hover)", "var(--t3)"], green: ["#E8F7EC", "var(--green2)"] };
-
-  async function doAdd() {
-    setErr("");
-    if (mode === "invite") {
-      if (!email.trim() || !email.includes("@")) { setErr("Enter a valid email address."); return; }
-      setBusy(true);
-      try {
-        const { error, data } = await insertFamilyMember(userId(), email);
-        if (error) { setErr(error.message || "Could not send invite."); }
-        else {
-          const sent = await sendInviteEmail(email);
-          if (sent) { setSent(true); }
-          reset(); onChanged();
-        }
-      } catch (e) { setErr(e?.message || "Could not send invite."); }
-      setBusy(false);
-      return;
-    }
-    if (!mname.trim()) { setErr("Enter a name."); return; }
-    setBusy(true);
-    try {
-      const { error } = await insertManagedFamilyMember(userId(), {
-        member_name: mname.trim(),
-        relationship: rel,
-        age: age ? parseInt(age) : null,
-        phone: phone.trim() || null,
-      });
-      if (error) { setErr(error.message || "Could not add."); }
-      else { reset(); onChanged(); }
-    } catch (e) { setErr(e?.message || "Could not add."); }
-    setBusy(false);
-  }
-
-  function userId() {
-    return household.find(m => m.kind === "self")?.userId || "";
-  }
-
-  function reset() {
-    setEmail(""); setMname(""); setAge(""); setPhone(""); setShowAdd(false); setMode("invite"); setErr("");
-  }
-
-  async function doRemove() {
-    const id = removeId;
-    setRemoveId(null);
-    if (!id) return;
-    try { await removeFamilyMember(id); onChanged(); } catch (e) { console.error("remove:", e); }
+  function latestVitals(member, limit = 3) {
+    const latest = {};
+    (member.vitals || []).forEach(v => {
+      if (!latest[v.type] || new Date(v.created_at) > new Date(latest[v.type].created_at)) latest[v.type] = v;
+    });
+    return Object.values(latest).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, limit);
   }
 
   return (
     <div className="scroll">
-      <style>{CSS}</style>
+      <div className="nav-large">{t("nav.family")}</div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px 0" }}>
-        <div className="nav-large" style={{ padding: 0 }}>Family</div>
-        {isFamily && slotsLeft > 0 && (
-          <button className="nav-action" style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }} onClick={() => setShowAdd(true)}>
-            <Plus size={16} strokeWidth={2.5} /> Add
-          </button>
-        )}
-      </div>
-
-      {!isFamily ? (
-        <div className="upgrade-card" style={{ margin: "16px 20px" }}>
-          <div className="upgrade-title">Track your family's medications</div>
-          <div className="upgrade-sub">Add up to 5 profiles — a partner, kids, or aging parents. Get caregiver alerts when a dose is missed.</div>
-          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>Upgrade to Family →</button>
-        </div>
-      ) : members.length === 0 ? (
-        <div className="empty-state" style={{ paddingTop: 60 }}>
-          <div className="empty-state-icon"><Users size={52} strokeWidth={1.5} /></div>
-          <div className="empty-state-title">No family members yet</div>
-          <div className="empty-state-sub">Add your loved ones to see their medications at a glance.</div>
-          <button className="btn btn-primary" style={{ width: "auto", marginTop: 14, padding: "12px 24px" }} onClick={() => setShowAdd(true)}>
-            <Plus size={17} strokeWidth={2.5} /> Add family member
-          </button>
+      {members.length <= 1 ? (
+        <div style={{ padding: "40px 20px", textAlign: "center" }}>
+          <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--ib4)", display: "grid", placeItems: "center" }}>
+              <Users size={28} color="var(--teal2)" strokeWidth={2} />
+            </div>
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", marginBottom: 6 }}>No family members yet</div>
+          <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.5 }}>Add family members from your Profile to start tracking together.</div>
         </div>
       ) : (
         <>
-          <div style={{ padding: "4px 20px 2px", display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
-            <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 600 }}>{members.length} of {maxMembers} profiles used</span>
-            <div style={{ flex: 1, height: 4, borderRadius: 99, background: "var(--sep)", overflow: "hidden" }}>
-              <div style={{ width: `${(members.length / maxMembers) * 100}%`, height: "100%", background: "var(--teal)", borderRadius: 99 }} />
+          {/* Member selector */}
+          <div style={{ padding: "0 20px", marginBottom: 8, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ display: "flex", gap: 10, paddingBottom: 8, minWidth: "min-content" }}>
+              {members.map(m => {
+                const isSel = m.key === selectedKey;
+                const status = memberStatus(m);
+                return (
+                  <div key={m.key} onClick={() => setSelectedKey(m.key === selectedKey ? null : m.key)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", minWidth: 62, flexShrink: 0 }}>
+                    <div style={{ width: 54, height: 54, borderRadius: "50%", overflow: "hidden", background: isSel ? config.theme.accent : "var(--ib1)", display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: isSel ? "white" : "var(--t1)", border: isSel ? `3px solid ${config.theme.accent}` : "3px solid var(--card)", boxShadow: isSel ? `0 2px 12px ${config.theme.accent}40` : "0 2px 8px rgba(0,0,0,.08)", transition: "all .2s" }}>
+                      {m.avatarUrl ? <img src={m.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: isSel ? config.theme.accent : "var(--t2)", whiteSpace: "nowrap" }}>{m.kind === "self" ? "You" : m.name}</span>
+                    {status.label && m.kind !== "self" && (
+                      <span style={{ fontSize: 9, fontWeight: 600, color: status.tone === "green" ? "var(--green)" : status.tone === "red" ? "var(--red)" : "var(--t3)", background: status.tone === "green" ? "var(--ib2)" : status.tone === "red" ? "var(--ib6)" : "var(--bg)", padding: "1px 6px", borderRadius: 99, whiteSpace: "nowrap" }}>{status.label}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="chips" style={{ margin: "12px 20px 4px" }}>
-            <div className="chip"><div className="chip-val">{activeMedCount}</div><div className="chip-lbl">Active meds</div></div>
-            <div className="chip"><div className="chip-val" style={{ color: missedCount ? "var(--red)" : "var(--teal)" }}>{missedCount}</div><div className="chip-lbl">Missed today</div></div>
-            <div className="chip"><div className="chip-val" style={{ color: refills.length ? "var(--red)" : "var(--teal)" }}>{refills.length}</div><div className="chip-lbl">Refills due</div></div>
-            <div className="chip"><div className="chip-val">{avgAdherence !== null ? `${avgAdherence}%` : "–"}</div><div className="chip-lbl">Adherence</div></div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, padding: "6px 20px 12px" }}>
-            {allActiveMeds.length >= 2 && (
-              <button className="btn" style={{ flex: 1, background: "var(--ib5)", color: "var(--t1)", fontWeight: 500, fontSize: 13, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => setShowChecker(true)}>
-                <Ico><AlertTriangle size={16} strokeWidth={2.2} /></Ico> Check interactions
-              </button>
-            )}
-            <button className="btn" style={{ flex: 1, background: "var(--ib1)", color: "var(--t1)", fontWeight: 500, fontSize: 13, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={onGenerateReport}>
-              <Ico><FileText size={16} strokeWidth={2.2} /></Ico> Family report
-            </button>
-          </div>
-
-          <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-            {members.map(m => {
-              const st = memberStatus(m);
-              const tone = toneColors[st.tone] || toneColors.gray;
-              return (
-                <div key={m.key} onClick={() => !m.pending && onOpenMember(m)} style={{
-                  background: "var(--card)", borderRadius: 22, padding: 16, boxShadow: "var(--card-shadow)", border: "var(--card-border)",
-                  display: "flex", alignItems: "center", gap: 14, cursor: m.pending ? "default" : "pointer",
-                }}>
-                  <div style={{ width: 54, height: 54, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 20, fontWeight: 800, color: "var(--t1)", flexShrink: 0, border: "2px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
-                    {m.avatarUrl ? <img src={m.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
+          {/* Selected member content */}
+          {selected ? (
+            <div style={{ padding: "0 20px 24px" }}>
+              {/* Summary card */}
+              <div className="card" style={{ padding: 18, marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: config.theme.accent, display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: "white", flexShrink: 0 }}>
+                    {selected.avatarUrl ? <img src={selected.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(selected)}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
-                    <div style={{ fontSize: 13, color: "var(--t3)", marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
-                      {m.pending && <Ico><Mail size={12} /></Ico>}
-                      {m.pending ? "Waiting for them to accept" : [m.relationship, m.age ? `${m.age} yrs` : null].filter(Boolean).join(" · ") || "Family member"}
-                    </div>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99, background: tone[0], color: tone[1] }}>
-                      {m.pending ? <Ico><Mail size={11} /></Ico> : <Ico><span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} /></Ico>}
-                      {st.label}
-                    </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: "var(--t1)" }}>{selected.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--t3)" }}>{selected.relationship || (selected.kind === "self" ? "You" : selected.email || "")}</div>
                   </div>
-                  {!m.pending ? <ChevronRight size={20} color="var(--t4)" /> : (
-                    <button onClick={e => { e.stopPropagation(); setRemoveId(m.rowId); }} style={{ background: "none", border: "none", color: "var(--t4)", fontSize: 20, cursor: "pointer", padding: 6 }}>…</button>
+                  {selected.phone && (
+                    <a href={`tel:${selected.phone}`} style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--ib2)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <Phone size={18} color="var(--teal)" strokeWidth={2.2} />
+                    </a>
                   )}
                 </div>
-              );
-            })}
-          </div>
 
-          {refills.length > 0 && (
-            <div className="section" style={{ paddingTop: 4 }}>
-              <div className="section-header">Refills needed</div>
-              <div className="list">
-                {refills.map(r => (
-                  <div key={r.med.id + r.member.key} className="row" style={{ cursor: "pointer" }} onClick={() => !r.member.pending && onOpenMember(r.member)}>
-                    <div className="row-icon" style={{ background: "var(--ib6)" }}><Package size={18} color="var(--red)" /></div>
-                    <div className="row-body">
-                      <div className="row-title">{r.med.name} · {r.member.name}</div>
-                      <div className="row-sub">{r.remaining} {r.med.dosage_unit === "tabs" ? "tablets" : r.med.dosage_unit} left · {r.med.dosage_amount} per dose</div>
-                    </div>
-                    <ChevronRight size={18} color="var(--t4)" />
+                {/* Stats row */}
+                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                  <div style={{ flex: 1, background: "var(--bg)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: selectedAdh != null && selectedAdh >= 80 ? "var(--green)" : selectedAdh != null && selectedAdh >= 50 ? "var(--orange)" : "var(--t1)" }}>{selectedAdh != null ? `${selectedAdh}%` : "—"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--t3)", textTransform: "uppercase" }}>This week</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {slotsLeft > 0 && (
-            <button onClick={() => setShowAdd(true)} style={{ margin: "0 20px 8px", padding: 18, borderRadius: 22, border: "2px dashed var(--sep)", background: "none", color: "var(--t3)", fontSize: 15, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "inherit" }}>
-              <Plus size={18} strokeWidth={2.5} /> Add {slotsLeft > 1 ? `another member (${slotsLeft} left)` : "a family member"}
-            </button>
-          )}
-        </>
-      )}
-
-      {showAdd && (
-        <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && reset()}>
-          <div className="sheet" style={{ maxHeight: "82vh" }} onClick={e => e.stopPropagation()}>
-            <div className="sheet-handle" />
-            <div style={{ padding: "0 20px 20px" }}>
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 14 }}>Add family member</div>
-              <div style={{ display: "flex", background: "var(--hover)", borderRadius: 14, padding: 4, marginBottom: 16 }}>
-                {[["invite", "Has their own account", "Invite by email"], ["managed", "No app needed", "Add without app"]].map(([m, sub, label]) => (
-                  <button key={m} onClick={() => setMode(m)} style={{
-                    flex: 1, padding: 10, borderRadius: 12, border: "none", background: "transparent",
-                    color: mode === m ? "var(--t1)" : "var(--t3)", fontSize: 15, fontWeight: 500,
-                    cursor: "pointer", transition: "all .2s",
-                    boxShadow: mode === m ? "inset 0 0 0 1px var(--teal), 0 2px 4px rgba(0,0,0,.04)" : "none",
-                  }}>{label}</button>
-                ))}
+                  <div style={{ flex: 1, background: "var(--bg)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: "var(--t1)" }}>{selectedDone}/{selectedSlots.length}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--t3)", textTransform: "uppercase" }}>Today</div>
+                  </div>
+                  <div style={{ flex: 1, background: "var(--bg)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: "var(--t1)" }}>{selectedStreak}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--t3)", textTransform: "uppercase" }}>Streak</div>
+                  </div>
+                </div>
               </div>
 
-              {mode === "invite" ? (
-                <>
-                  <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Their email</div>
-                  <input className="sheet-input" type="email" placeholder="family@example.com" value={email}
-                    onChange={e => setEmail(e.target.value)} style={{ marginBottom: 12 }} />
-                  <div style={{ fontSize: 13, color: "var(--t4)", marginBottom: 16 }}>They'll get an invite email. Once they accept, you can see their medications and get alerts.</div>
-                  {err && <div style={{ color: "var(--red)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
-                </>
-              ) : (
-                <>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Name</div>
-                      <input className="sheet-input" type="text" placeholder="e.g., Grandma Mary" value={mname}
-                        onChange={e => setMname(e.target.value)} />
-                    </div>
-                    <div style={{ display: "flex", gap: 12 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Relationship</div>
-                        <select className="sheet-input" value={rel} onChange={e => setRel(e.target.value)}>
-                          {[["Child", "Child"], ["Partner", "Partner"], ["Sibling", "Sibling"], ["Parent", "Parent"], ["Grandparent", "Grandparent"], ["Other", "Other"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                        </select>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Age (optional)</div>
-                        <input className="sheet-input" type="number" placeholder="e.g., 72" value={age}
-                          onChange={e => setAge(e.target.value)} min="0" max="120" />
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 6, fontWeight: 500 }}>Phone (optional)</div>
-                      <input className="sheet-input" type="tel" placeholder="e.g., 555-123-4567" value={phone}
-                        onChange={e => setPhone(e.target.value)} />
-                    </div>
+              {/* Today's Medications */}
+              <div className="section">
+                <div className="section-header">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <Pill size={15} color="var(--teal)" strokeWidth={2.2} /> Today&apos;s medications
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--t3)" }}>{selectedDone}/{selectedSlots.length} done</span>
+                </div>
+                {selectedSlots.length === 0 ? (
+                  <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
+                    <div className="empty-state-title" style={{ fontSize: 14 }}>No medications scheduled</div>
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--t4)", marginTop: 16, lineHeight: 1.5 }}>Their medications stay private to your household — no account or email needed.</div>
-                </>
+                ) : (
+                  <div className="list">
+                    {selectedSlots.map((s, i) => (
+                      <MedSlot key={`${s.med.id}-${i}`} slot={s} onMarkDose={onMarkDose} now={now} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Upcoming Visits */}
+              <div className="section">
+                <div className="section-header">
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <CalendarDays size={15} color="var(--teal)" strokeWidth={2.2} /> Hospital visits
+                  </span>
+                </div>
+                {visits.length === 0 ? (
+                  <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
+                    <div className="empty-state-title" style={{ fontSize: 14 }}>No visits scheduled</div>
+                  </div>
+                ) : (
+                  <div className="list">
+                    {visits.slice(0, 3).map(v => {
+                      const visitTime = getVisitTime(v);
+                      const isLocked = !v.status && visitTime > now;
+                      return (
+                        <div key={v.id} className="row" style={{ cursor: "default" }}>
+                          <div className="row-icon" style={{ background: "var(--ib5)" }}>
+                            <CalendarDays size={19} color="var(--t1)" strokeWidth={2.2} />
+                          </div>
+                          <div className="row-body">
+                            <div className="row-title" style={{ fontSize: 14 }}>{v.reason || "Hospital visit"}{v.doctor ? ` · ${v.doctor}` : ""}</div>
+                            <div className="row-sub">{fmtVisitDate(v)}{v.facility ? ` · ${v.facility}` : ""}</div>
+                          </div>
+                          {v.status === "attended" ? (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--green)", background: "var(--ib2)", padding: "3px 10px", borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 4 }}><Check size={12} strokeWidth={3} /> Attended</span>
+                          ) : v.status === "missed" ? (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--red)", background: "var(--ib6)", padding: "3px 10px", borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 4 }}><Lock size={12} /> Missed</span>
+                          ) : isLocked ? (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--t3)", background: "var(--bg)", padding: "3px 10px", borderRadius: 99, display: "inline-flex", alignItems: "center", gap: 4 }}><Lock size={12} /> {v.time}</span>
+                          ) : (
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button onClick={() => markVisit(v.id, "attended")} style={{ fontSize: 11, fontWeight: 600, color: "var(--green)", background: "var(--ib2)", padding: "4px 10px", borderRadius: 99, border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}><Check size={11} strokeWidth={3} /> Attended</button>
+                              <button onClick={() => markVisit(v.id, "missed")} style={{ fontSize: 11, fontWeight: 600, color: "var(--red)", background: "var(--ib6)", padding: "4px 10px", borderRadius: 99, border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}><Lock size={11} /> Missed</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Vitals (family + pro tiers) */}
+              {has("vitals") && (
+                <div className="section">
+                  <div className="section-header">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <HeartPulse size={15} color="var(--teal)" strokeWidth={2.2} /> Vitals
+                    </span>
+                    <button className="nav-action" onClick={() => onOpenVitals?.()} style={{ fontSize: 12 }}>View all</button>
+                  </div>
+                  {(() => {
+                    const latest = latestVitals(selected);
+                    if (latest.length === 0) {
+                      return <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
+                        <div className="empty-state-title" style={{ fontSize: 14 }}>No vitals recorded</div>
+                      </div>;
+                    }
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 4px" }}>
+                        {latest.map(v => {
+                          const label = VITAL_LABELS[v.type] || v.type;
+                          const unit = VITAL_UNITS[v.type] || v.unit || "";
+                          const val = v.type === "blood_pressure" && v.value_secondary != null ? `${v.value}/${v.value_secondary}` : `${v.value}`;
+                          return (
+                            <div key={v.type} style={{ background: "var(--card)", borderRadius: 14, padding: 12, boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--t3)", textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: "var(--t1)" }}>{val}</div>
+                              <div style={{ fontSize: 11, color: "var(--t3)" }}>{unit}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
 
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={doAdd} disabled={busy}>
-                {busy ? "Adding…" : mode === "invite" ? "Send invite" : "Add member"}
-              </button>
-              <button className="btn btn-ghost" onClick={reset}>Cancel</button>
+              {/* Reports / Per-med adherence */}
+              {has("reports") && (
+                <div className="section">
+                  <div className="section-header">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <BarChart3 size={15} color="var(--teal)" strokeWidth={2.2} /> Reports
+                    </span>
+                    <button className="nav-action" onClick={() => onGoReports?.()} style={{ fontSize: 12 }}>Full report</button>
+                  </div>
+                  {selectedMeds.length === 0 ? (
+                    <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
+                      <div className="empty-state-title" style={{ fontSize: 14 }}>No active medications</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 4px" }}>
+                      {selectedMeds.map(med => {
+                        const weekLogs = (selected.logs || []).filter(l => l.medication_id === med.id && (now - new Date(l.taken_at)) < 7 * 86400000);
+                        const expectedPerDay = med.times_per_day || 1;
+                        const totalExpected = expectedPerDay * 7;
+                        const pct = totalExpected > 0 ? Math.min(Math.round((weekLogs.length / totalExpected) * 100), 100) : 0;
+                        return (
+                          <div key={med.id} style={{ background: "var(--card)", borderRadius: 14, padding: 12, boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>{med.name}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--orange)" : "var(--red)" }}>{pct}%</span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 99, background: "var(--sep)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${pct}%`, borderRadius: 99, background: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--orange)" : "var(--red)", transition: "width .4s ease" }} />
+                            </div>
+                            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 4 }}>{weekLogs.length}/{totalExpected} doses this week · {med.dosage_amount}{med.dosage_unit}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {showUpgrade && <UpgradeModal country={country} userEmail={userEmail} currentPlan="free" onClose={() => setShowUpgrade(false)} />}
-
-      {showChecker && <InteractionChecker meds={allActiveMeds} onClose={() => setShowChecker(false)} />}
-
-      {removeId && (
-        <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setRemoveId(null)}>
-          <div className="sheet" onClick={e => e.stopPropagation()}>
-            <div className="sheet-handle" />
-            <div style={{ padding: "20px 20px calc(16px + var(--safe-bottom))" }}>
-              <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
-                <Ico><Mail size={44} strokeWidth={1.8} color="var(--t1)"/></Ico>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Remove this member?</div>
-              <div style={{ fontSize: 15, color: "var(--t3)", lineHeight: 1.5, marginBottom: 20 }}>
-                The invite will be revoked. Their profile will disappear from your family view.
-              </div>
-              <div className="sheet-actions">
-                <button className="btn btn-primary" style={{ flex: 1, background: "var(--red)", boxShadow: "none" }} onClick={doRemove}>Remove</button>
-                <button className="btn btn-ghost" onClick={() => setRemoveId(null)}>Cancel</button>
-              </div>
+          ) : (
+            <div style={{ padding: "30px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: 14, color: "var(--t3)" }}>Tap a member above to view their details</div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -20,12 +20,13 @@ import AlertsTab from "@/components/AlertsTab";
 import ProfileTab from "@/components/ProfileTab";
 import MemberDetail from "@/components/MemberDetail";
 import MedSheet from "@/components/MedSheet";
+import FamilyTab from "@/components/FamilyTab";
 import { DeleteConfirmModal, LogDoseModal, UpgradeModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
-import { Home, User, Pill, BarChart3, HeartPulse } from "lucide-react";
+import { Home, User, Pill, BarChart3, HeartPulse, Users } from "lucide-react";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
@@ -603,6 +604,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     { id: "meds", label: t("nav.meds"), icon: <Pill size={23} strokeWidth={1.9} /> },
     ...(hasFeature("vitals") ? [{ id: "vitals", label: t("nav.vitals"), icon: <HeartPulse size={23} strokeWidth={1.9} /> }] : []),
     { id: "reports", label: t("nav.reports"), icon: <BarChart3 size={23} strokeWidth={1.9} /> },
+    ...(hasFeature("familyMembers") ? [{ id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> }] : []),
     { id: "me", label: t("nav.profile"), icon: <User size={23} strokeWidth={1.9} /> },
   ];
 
@@ -690,6 +692,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
               {tab === "vitals" && hasFeature("vitals") && <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={() => setTab("vitals")} onGoReports={() => setTab("reports")} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>
           </div>
