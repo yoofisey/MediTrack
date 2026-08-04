@@ -11,7 +11,7 @@ import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/li
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
 import AvatarPicker from "@/components/AvatarPicker";
-import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, FileText, Crown, Sparkles, Stethoscope, Heart, Check } from "lucide-react";
+import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Check } from "lucide-react";
 import { avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
@@ -443,26 +443,6 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             ))}
           </div>
           <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>{t("profile.seeUpgrade")} →</button>
-        </div>
-      ) : plan === "pro" ? (
-    <div className="section" style={{marginBottom:16}}>
-      <div className="section-header">{t("profile.yourPlanIncludes")}</div>
-          <div className="list">
-            {[
-               [<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Unlimited medications","No cap on medications"],
-               [<Ico><BarChart3 size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Full history & analytics","All-time dose history"],
-               [<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Smart refill reminders","Never run out"],
-               [<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"Drug interaction checker","Stay safe"],
-               [<Ico><FileText size={18} strokeWidth={2} color="var(--t1)"/></Ico>,"PDF adherence reports","Share with your doctor"],
-             ].filter(Boolean).map(([icon,title,sub,onClick]) => (
-              <Row key={title} icon={icon} title={title} sub={sub} onClick={onClick}/>
-            ))}
-          </div>
-          <div style={{padding:"10px 4px"}}>
-            <button className="btn btn-ghost" style={{border:"1.5px solid var(--sep)"}} onClick={() => setShowUpgrade(true)}>
-              {plan === "pro" ? t("profile.upgradeToFamily") : t("profile.manageSubscription")}
-            </button>
-          </div>
         </div>
       ) : null}
 
