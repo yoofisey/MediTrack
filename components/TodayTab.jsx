@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { getUpcomingVisits } from "@/lib/data";
-import { Bell, Building2, CalendarDays, Check, ChevronDown, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User } from "lucide-react";
+import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -38,17 +37,15 @@ function fmtVisitDate(v) {
   return `${d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }
 
-function LogButton({ slot, now, onMarkDose }) {
-  const overdue = !slot.logged && now.getTime() - slot.dueMs > 20 * 60000;
-  const locked = !slot.logged && now.getTime() < slot.dueMs;
-  if (slot.logged) {
+function LogButton({ member, slot, allLogged, now, onMarkDose }) {
+  if (allLogged || slot?.logged) {
     return (
       <span className="btn btn-sm" style={{ background: "var(--ib2)", color: "var(--green)", border: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, pointerEvents: "none" }}>
         <Check size={13} strokeWidth={3} /> Taken
       </span>
     );
   }
-  if (locked) {
+  if (now.getTime() < slot.dueMs) {
     return (
       <span className="btn btn-sm" style={{ background: "var(--hover)", color: "var(--t4)", border: "none", display: "flex", alignItems: "center", gap: 4, cursor: "not-allowed", pointerEvents: "none" }}>
         <Lock size={12} /> {slot.time}
@@ -56,8 +53,8 @@ function LogButton({ slot, now, onMarkDose }) {
     );
   }
   return (
-    <button className="btn btn-sm" onClick={() => onMarkDose(slot.member, slot)}
-      style={{ background: overdue ? "var(--red)" : "var(--teal)", color: "#fff", border: "none", fontWeight: 700, padding: "8px 14px" }}>
+    <button className="btn btn-sm" onClick={() => onMarkDose(member, slot)}
+      style={{ background: "var(--teal)", color: "#fff", border: "none", fontWeight: 700, padding: "8px 14px" }}>
       Log
     </button>
   );
@@ -73,8 +70,6 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const summaryPeople = household.filter(m => !m.pending && m.meds?.length).length;
   const summaryDoses = totalExpectedToday(household, now);
 
-  const [collapsed, setCollapsed] = useState({});
-  function toggleGroup(key) { setCollapsed(c => ({ ...c, [key]: !c[key] })); }
   const focus = focusMember(household, now);
   const selected = household.find(m => m.kind === "self") || focus?.member || household[0];
   const selMissed = selected ? missedDoses(selected, now) : [];
@@ -82,23 +77,29 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const mostUrgent = selMissed[0] || selRemaining[0];
   const selPhone = selected ? callHref(selected) : null;
 
-  const groups = [];
+  const medRows = [];
   household.filter(m => !m.pending).forEach(m => {
-    const memberSlots = expectedDosesToday(m, now).map(s => ({
-      member: m, med: s.med, time: s.time, dueMs: s.dueMs, logged: s.logged,
-      overdue: !s.logged && now.getTime() - s.dueMs > 20 * 60000,
-    })).sort((a, b) => a.dueMs - b.dueMs);
-    if (memberSlots.length) groups.push({ member: m, slots: memberSlots });
+    const byMed = {};
+    expectedDosesToday(m, now).forEach(s => {
+      if (!byMed[s.med.id]) byMed[s.med.id] = [];
+      byMed[s.med.id].push(s);
+    });
+    Object.values(byMed).forEach(medSlots => {
+      const next = medSlots.find(s => !s.logged);
+      medRows.push({
+        member: m,
+        med: medSlots[0].med,
+        slots: medSlots,
+        next,
+        allLogged: !next,
+        loggedCount: medSlots.filter(s => s.logged).length,
+        total: medSlots.length,
+        overdue: !!(next && now.getTime() - next.dueMs > 20 * 60000),
+      });
+    });
   });
-  groups.sort((a, b) => {
-    const aMissed = a.slots.filter(s => s.overdue).length;
-    const bMissed = b.slots.filter(s => s.overdue).length;
-    if (aMissed !== bMissed) return bMissed - aMissed;
-    const aFirst = a.slots.find(s => !s.logged)?.dueMs ?? Infinity;
-    const bFirst = b.slots.find(s => !s.logged)?.dueMs ?? Infinity;
-    return aFirst - bFirst;
-  });
-  const slots = groups.flatMap(g => g.slots);
+  medRows.sort((a, b) => (a.next?.dueMs ?? Infinity) - (b.next?.dueMs ?? Infinity));
+  const slots = medRows.flatMap(r => r.slots);
 
   const overdueTotal = household.reduce((s, m) => s + missedDoses(m, now).length, 0);
 
@@ -251,35 +252,18 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           )
         ) : (
           <div className="list">
-            {groups.map(g => {
-              const isCollapsed = !!collapsed[g.member.key];
-              return (
-                <div key={g.member.key} style={{ marginBottom: 4 }}>
-                  <div onClick={() => toggleGroup(g.member.key)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px 2px", cursor: "pointer", userSelect: "none" }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "var(--t1)", flexShrink: 0 }}>
-                      {g.member.avatarUrl ? <img src={g.member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(g.member)}
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.member.name}</div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: g.slots.some(s => s.overdue) ? "var(--red)" : "var(--t3)" }}>
-                      {g.slots.filter(s => s.logged).length}/{g.slots.length}
-                    </span>
-                    <ChevronDown size={16} style={{ color: "var(--t4)", flexShrink: 0, transition: "transform .2s", transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
-                  </div>
-                  {!isCollapsed && g.slots.map((s, i) => (
-                    <div key={i} className="row" style={{ cursor: "default", alignItems: "center" }}>
-                      <div className="row-icon" style={{ background: s.logged ? "var(--ib2)" : s.overdue ? "var(--ib6)" : "var(--ib1)" }}>
-                        <Pill size={19} color={s.logged ? "var(--green)" : s.overdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
-                      </div>
-                      <div className="row-body">
-                        <div className="row-title" style={{ fontWeight: 600 }}>{s.med.name}</div>
-                        <div className="row-sub">{s.med.dosage_amount}{s.med.dosage_unit} · {s.time}{s.overdue ? " · overdue" : ""}</div>
-                      </div>
-                      <LogButton slot={s} now={now} onMarkDose={onMarkDose} />
-                    </div>
-                  ))}
+            {medRows.map(r => (
+              <div key={r.med.id} className="row" style={{ cursor: "default", alignItems: "center" }}>
+                <div className="row-icon" style={{ background: r.allLogged ? "var(--ib2)" : r.overdue ? "var(--ib6)" : "var(--ib1)" }}>
+                  <Pill size={19} color={r.allLogged ? "var(--green)" : r.overdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
                 </div>
-              );
-            })}
+                <div className="row-body">
+                  <div className="row-title" style={{ fontWeight: 600 }}>{r.med.name}</div>
+                  <div className="row-sub">{r.med.dosage_amount}{r.med.dosage_unit}{r.total > 1 ? ` · ${r.loggedCount}/${r.total} doses` : ""}{r.overdue ? " · overdue" : ""}</div>
+                </div>
+                <LogButton member={r.member} slot={r.next} allLogged={r.allLogged} now={now} onMarkDose={onMarkDose} />
+              </div>
+            ))}
           </div>
         )}
       </div>

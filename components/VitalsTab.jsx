@@ -426,18 +426,6 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
         </span>
       </div>
 
-      {household?.length > 1 && (
-        <div style={{ padding: "0 14px 8px" }}>
-          <MemberSwitcher members={household} value={member?.key} onChange={k => onSwitchMember?.(household.find(m => m.key === k) || member)} />
-        </div>
-      )}
-
-      {household?.length > 1 && (
-        <div style={{ padding: "0 14px 8px" }}>
-          <MemberSwitcher members={household} value={member?.key} onChange={k => onSwitchMember?.(household.find(m => m.key === k) || member)} />
-        </div>
-      )}
-
       <div style={{margin:"0 16px 12px",background:"linear-gradient(145deg,var(--teal),var(--teal2))",borderRadius:16,padding:20,color:"white",position:"relative",overflow:"hidden",animation:"fadeUp .3s ease both"}}>
         <div style={{position:"absolute",top:-20,right:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
         <div style={{position:"absolute",bottom:-30,left:-10,width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,.05)"}}/>
