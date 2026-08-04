@@ -83,7 +83,7 @@ function MiniSparkline({ data, color, width = 120, height = 32 }) {
   );
 }
 
-function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
+function VitalCard({ vitalType, entries, onLog, onHistory }) {
   const { t } = useLang();
   const latest = entries[0];
   const status = latest ? getStatus(latest) : null;
@@ -92,7 +92,7 @@ function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
   return (
     <div style={{
       background:"var(--card)", borderRadius:16, padding:16,
-      boxShadow:"var(--card-shadow)", marginBottom:8,
+      boxShadow:"var(--card-shadow)", marginBottom:12,
       animation:"fadeUp .3s ease both",
       position:"relative", overflow:"hidden",
     }}>
@@ -105,7 +105,7 @@ function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
           <div>
             <div style={{fontSize:15,fontWeight:600,color:"var(--t1)"}}>{vitalType.label}</div>
             <div style={{fontSize:12,color:"var(--t3)"}}>
-              {config?.frequency || "Not configured"}
+              {entries.length > 0 ? `${entries.length} ${t("vitals.readings")}` : t("vitals.noReadings")}
             </div>
           </div>
         </div>
@@ -143,18 +143,30 @@ function VitalCard({ vitalType, entries, onLog, onConfigure, config }) {
         </div>
       ) : (
         <div style={{fontSize:14,color:"var(--t3)",marginBottom:12,textAlign:"center",padding:"8px 0"}}>
-          No readings yet
+          {t("vitals.noReadings")}
         </div>
       )}
 
-      <button onClick={() => onLog(vitalType)} style={{
-        width:"100%",padding:"11px",borderRadius:12,border:`1.5px solid ${vitalType.color}20`,
-        background:`${vitalType.color}08`,color:vitalType.color,
-        fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
-        transition:"all .15s",
-      }}>
-        + {t("btn.log")} {vitalType.label}
-      </button>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={() => onLog(vitalType)} style={{
+          flex:1,padding:"11px",borderRadius:12,border:"none",
+          background:vitalType.color,color:"#fff",
+          fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+          transition:"all .15s",
+        }}>
+          + {t("btn.log")}
+        </button>
+        {entries.length > 0 && (
+          <button onClick={() => onHistory(vitalType)} style={{
+            padding:"11px 14px",borderRadius:12,border:`1.5px solid ${vitalType.color}20`,
+            background:`${vitalType.color}08`,color:vitalType.color,
+            fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+            transition:"all .15s",
+          }}>
+            {t("vitals.viewHistory")}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -409,8 +421,15 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
   }, []);
 
   const totalReadings = allVitals.length;
-  const todayStr = new Date().toISOString().split("T")[0];
-  const todayReadings = allVitals.filter(v => v.created_at?.startsWith(todayStr)).length;
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const todayReadings = allVitals.filter(v => {
+    const d = new Date(v.created_at).toLocaleDateString("en-CA");
+    return d === todayStr;
+  }).length;
+  const lastLogged = allVitals[0];
+  const glanceVitals = enabled
+    .map(id => ({ vt: VITAL_TYPES.find(v => v.id === id), latest: allVitals.find(v => v.type === id) }))
+    .filter(x => x.vt && x.latest);
 
   return (
     <div className="scroll" style={{paddingTop:0}}>
@@ -441,10 +460,35 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
               <div style={{fontSize:13,opacity:.7}}>{totalReadings} {t("vitals.totalReadings")}</div>
             </div>
           </div>
+          {lastLogged ? (
+            <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(255,255,255,.2)",fontSize:12,opacity:.85}}>
+              {t("vitals.lastLogged")}: {VITAL_TYPES.find(v => v.id === lastLogged.type)?.label || lastLogged.type} {lastLogged.value}{lastLogged.value_secondary != null ? `/${lastLogged.value_secondary}` : ""}{lastLogged.unit ? ` ${lastLogged.unit}` : ""} · {new Date(lastLogged.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 16px 8px"}}>
+      {glanceVitals.length > 0 && (
+        <div style={{display:"flex",gap:8,overflowX:"auto",padding:"0 16px 4px",marginBottom:4,scrollbarWidth:"none"}}>
+          {glanceVitals.map(({ vt, latest }) => {
+            const st = getStatus(latest);
+            return (
+              <div key={vt.id} onClick={() => setHistoryType(vt)} style={{
+                flexShrink:0,display:"flex",alignItems:"center",gap:8,
+                background:"var(--card)",borderRadius:12,padding:"10px 12px",
+                boxShadow:"var(--card-shadow)",cursor:"pointer",
+                border:"1px solid var(--sep)",animation:"fadeUp .3s ease both",
+              }}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:statusColor(st),boxShadow:`0 0 6px ${statusColor(st)}40`}}/>
+                <div style={{fontSize:12,fontWeight:600,color:"var(--t2)"}}>{vt.label}</div>
+                <div style={{fontSize:13,fontWeight:700,color:"var(--t1)"}}>{latest.value}{latest.value_secondary != null ? `/${latest.value_secondary}` : ""}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 16px 8px"}}>
         <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:.5}}>{t("vitals.trackedVitals")}</div>
         <button onClick={() => setShowConfig(true)} style={{
           background:"none",border:"none",color:"var(--teal)",fontSize:13,fontWeight:600,
@@ -469,18 +513,7 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
             const entries = allVitals.filter(v => v.type === id);
             return (
               <div key={id} style={{animation:`fadeUp .3s ${i * .06}s ease both`}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,marginTop:i > 0 ? 8 : 0}}>
-                  <div/>
-                  {entries.length > 0 && (
-                    <button onClick={() => setHistoryType(vt)} style={{
-                      background:"none",border:"none",color:"var(--t3)",fontSize:12,fontWeight:500,
-                      cursor:"pointer",fontFamily:"inherit",padding:"4px 8px",
-                    }}>
-                      History →
-                    </button>
-                  )}
-                </div>
-                <VitalCard vitalType={vt} entries={entries} onLog={setLogType}/>
+                <VitalCard vitalType={vt} entries={entries} onLog={setLogType} onHistory={setHistoryType}/>
               </div>
             );
           })
