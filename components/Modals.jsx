@@ -5,7 +5,7 @@ import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
-import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User } from "lucide-react";
+import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -363,6 +363,118 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
           <div style={{fontSize:12,color:"var(--t3)",marginTop:8}}>They&apos;ll receive an email to join your family group.</div>
 
           <button className="btn btn-ghost" style={{marginTop:16,width:"100%"}} onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const RELATIONSHIP_OPTIONS = ["Spouse", "Parent", "Child", "Sibling", "Grandparent", "Friend", "Caregiver", "Other"];
+
+export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
+  const [mode, setMode] = useState(null);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [phone, setPhone] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  function handleInvite() {
+    if (!email.trim()) return;
+    onInviteEmail(email.trim());
+    setEmail("");
+    setSaved(true);
+    setTimeout(() => { setSaved(false); setMode(null); }, 1200);
+  }
+
+  function handleAddManaged() {
+    if (!name.trim()) return;
+    onAddManaged({ name: name.trim(), relationship, phone: phone.trim() || undefined });
+    setName(""); setRelationship(""); setPhone("");
+    setSaved(true);
+    setTimeout(() => { setSaved(false); setMode(null); }, 1200);
+  }
+
+  if (mode === null) {
+    return (
+      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="sheet" style={{ maxHeight: "70vh" }} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Add family member</div>
+            <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 20 }}>How would you like to add this person?</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button onClick={() => setMode("invite")} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--ib1)", borderRadius: 14, border: "1px solid var(--sep)", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--ib2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Mail size={20} color="var(--teal)" strokeWidth={2} /></div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>On the app</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Invite by email — they need a MediTrack account</div>
+                </div>
+              </button>
+              <button onClick={() => setMode("managed")} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--ib1)", borderRadius: 14, border: "1px solid var(--sep)", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--ib4)", display: "grid", placeItems: "center", flexShrink: 0 }}><UserPlus size={20} color="var(--teal)" strokeWidth={2} /></div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>Not on the app</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Track meds & vitals for someone without an account</div>
+                </div>
+              </button>
+            </div>
+            <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "invite") {
+    return (
+      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="sheet" style={{ maxHeight: "70vh" }} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Invite by email</div>
+            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 16 }}>They&apos;ll receive an email to join your family group.</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input className="sheet-input" type="email" placeholder="family@example.com" value={email} onChange={e => setEmail(e.target.value)} style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && handleInvite()} />
+              <button className="btn btn-primary btn-sm" style={{ width: "auto" }} onClick={handleInvite} disabled={!email.trim()}>
+                {saved ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Check size={14} /> Sent!</span> : "Invite"}
+              </button>
+            </div>
+            <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }} onClick={() => setMode(null)}>← Back</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" style={{ maxHeight: "80vh" }} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle" />
+        <div style={{ padding: "0 20px 20px" }}>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Add member manually</div>
+          <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 16 }}>You&apos;ll track their medications & vitals on their behalf.</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Name *</div>
+            <input className="sheet-input" placeholder="e.g. Mom, Dad, Grandma…" value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Relationship</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {RELATIONSHIP_OPTIONS.map(r => (
+                <button key={r} onClick={() => setRelationship(r)} style={{ padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 600, border: "1px solid var(--sep)", background: relationship === r ? "var(--teal)" : "var(--card)", color: relationship === r ? "white" : "var(--t2)", cursor: "pointer", transition: "all .15s" }}>{r}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Phone (optional)</div>
+            <input className="sheet-input" type="tel" placeholder="+234…" value={phone} onChange={e => setPhone(e.target.value)} />
+          </div>
+          {saved && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 600, marginBottom: 8 }}>✓ Member added</div>}
+          <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleAddManaged} disabled={!name.trim()}>
+            {saved ? "✓ Added" : "Add member"}
+          </button>
+          <button className="btn btn-ghost" style={{ marginTop: 8, width: "100%" }} onClick={() => setMode(null)}>← Back</button>
         </div>
       </div>
     </div>

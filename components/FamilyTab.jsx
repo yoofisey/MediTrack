@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useLang } from "@/lib/i18n";
 import { useTier } from "@/components/TierContext";
 import { expectedDosesToday, activeMeds, missedDoses, weekAdherence, streak, initials, ringPct, memberStatus } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock, Plus } from "lucide-react";
+import { AddMemberModal } from "@/components/Modals";
+import { insertFamilyMember, insertManagedFamilyMember, fetchFamilyMembers } from "@/lib/db";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -47,12 +50,13 @@ function MedSlot({ slot, onMarkDose, now }) {
   );
 }
 
-export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, onAddMember }) {
+export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, user, onRefresh }) {
   const { t } = useLang();
   const { has, config } = useTier();
   const now = useMemo(() => new Date(), []);
   const [selectedKey, setSelectedKey] = useState(null);
   const [, setVisitsTick] = useState(0);
+  const [showAddMember, setShowAddMember] = useState(false);
 
   const members = useMemo(() => household.filter(m => !m.pending), [household]);
   const selected = selectedKey ? household.find(m => m.key === selectedKey) : null;
@@ -62,6 +66,18 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
   function markVisit(id, status) {
     markVisitStatus(id, status);
     setVisitsTick(x => x + 1);
+  }
+
+  async function handleInviteEmail(email) {
+    if (!user?.id || !email) return;
+    await insertFamilyMember(user.id, email);
+    onRefresh?.();
+  }
+
+  async function handleAddManaged(fields) {
+    if (!user?.id) return;
+    await insertManagedFamilyMember(user.id, fields);
+    onRefresh?.();
   }
 
   const selectedSlots = useMemo(() => selected ? expectedDosesToday(selected, now) : [], [selected, now]);
@@ -92,11 +108,9 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", marginBottom: 6 }}>No family members yet</div>
           <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.5, marginBottom: 16 }}>Add family members to start tracking together.</div>
-          {onAddMember && (
-            <button onClick={onAddMember} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Plus size={16} strokeWidth={2.5} /> Add family member
-            </button>
-          )}
+          <button onClick={() => setShowAddMember(true)} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <Plus size={16} strokeWidth={2.5} /> Add family member
+          </button>
         </div>
       ) : (
         <>
@@ -118,6 +132,13 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                   </div>
                 );
               })}
+              {/* Add member button */}
+              <div onClick={() => setShowAddMember(true)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", minWidth: 62, flexShrink: 0 }}>
+                <div style={{ width: 54, height: 54, borderRadius: "50%", background: "var(--card)", border: "2px dashed var(--sep)", display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
+                  <Plus size={20} color="var(--teal)" strokeWidth={2.2} />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--teal)", whiteSpace: "nowrap" }}>Add</span>
+              </div>
             </div>
           </div>
 
@@ -303,6 +324,16 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
             </div>
           )}
         </>
+      )}
+      {createPortal(
+        showAddMember && (
+          <AddMemberModal
+            onInviteEmail={handleInviteEmail}
+            onAddManaged={handleAddManaged}
+            onClose={() => setShowAddMember(false)}
+          />
+        ),
+        document.body
       )}
     </div>
   );
