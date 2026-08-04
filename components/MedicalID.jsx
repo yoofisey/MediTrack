@@ -168,6 +168,7 @@ export default function MedicalID({ meds = [], onClose }) {
 
   const commonAllergies = ["Penicillin", "Sulfa", "Aspirin", "Ibuprofen", "Naproxen", "Codeine", "Morphine", "Tramadol", "Amoxicillin", "Erythromycin", "Tetracycline", "Latex", "Peanuts", "Tree nuts", "Soy", "Wheat", "Shellfish", "Fish", "Eggs", "Milk / Dairy", "Bee stings", "Dust mites", "Pollen", "Mold", "Iodine", "Contrast dye"];
   const commonConditions = ["Diabetes", "Hypertension", "Asthma", "Heart disease", "Epilepsy", "Thyroid disorder", "Anemia", "Sickle cell", "High cholesterol", "Kidney disease", "Liver disease", "Arthritis", "Migraine", "Allergic rhinitis", "COPD", "HIV/AIDS", "Tuberculosis", "Malaria"];
+  const relations = ["Parent / Guardian", "Spouse", "Partner", "Sibling", "Child", "Grandparent", "Friend", "Neighbor", "Colleague", "Caregiver", "Other"];
 
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -273,6 +274,16 @@ export default function MedicalID({ meds = [], onClose }) {
               <span style={{fontSize:12,fontWeight:600,color:"var(--t3)",textTransform:"uppercase",letterSpacing:0.5}}>Emergency Contacts</span>
             </div>
             <div>
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:11,color:"var(--t3)",marginBottom:6}}>Relation</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {relations.map(r => {
+                    const has = data.emergency_relation === r;
+                    return <button key={r} onClick={()=>update("emergency_relation", has ? "" : r)}
+                      style={{padding:"6px 12px",borderRadius:8,border:has?"2px solid var(--teal)":"0.5px solid var(--sep)",background:has?"var(--ib2)":"var(--card)",fontSize:13,cursor:"pointer",fontFamily:"inherit",color:has?"var(--teal)":"var(--t1)"}}>{r}</button>;
+                  })}
+                </div>
+              </div>
               <div style={{marginBottom:8}}>
                 <div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>Name</div>
                 <input className="sheet-input" type="text" placeholder="Contact name" value={data.emergency_name||""} onChange={e=>update("emergency_name",e.target.value)} style={{fontSize:14}}/>
@@ -296,7 +307,7 @@ export default function MedicalID({ meds = [], onClose }) {
                 <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg)",borderRadius:12,marginTop:10}}>
                   <Ico><Phone size={16} strokeWidth={2.2} color="var(--teal)"/></Ico>
                   <div>
-                    {data.emergency_name && <div style={{fontSize:14,fontWeight:500}}>{data.emergency_name}</div>}
+                    {data.emergency_name && <div style={{fontSize:14,fontWeight:500}}>{data.emergency_name}{data.emergency_relation ? <span style={{fontSize:12,fontWeight:400,color:"var(--t3)"}}> · {data.emergency_relation}</span> : null}</div>}
                     {data.emergency_phone && <div style={{fontSize:12,color:"var(--t3)"}}>{emergencyCode} {data.emergency_phone}</div>}
                   </div>
                 </div>
