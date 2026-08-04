@@ -4,7 +4,8 @@ import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
-import { Bell, Check, ChevronDown, ChevronRight, HeartPulse, Phone, User } from "lucide-react";
+import { getUpcomingVisits } from "@/lib/data";
+import { Bell, Building2, CalendarDays, Check, ChevronDown, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -32,7 +33,37 @@ function vitalsLine(vitals) {
   }).join(" · ");
 }
 
-export default function TodayTab({ household, user, profile, plan, onGoMe, onGoVitals, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onOpenAlerts, alertCount }) {
+function fmtVisitDate(v) {
+  const d = new Date(v.date + "T" + (v.time || "09:00"));
+  return `${d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
+function LogButton({ slot, now, onMarkDose }) {
+  const overdue = !slot.logged && now.getTime() - slot.dueMs > 20 * 60000;
+  const locked = !slot.logged && now.getTime() < slot.dueMs;
+  if (slot.logged) {
+    return (
+      <span className="btn btn-sm" style={{ background: "var(--ib2)", color: "var(--green)", border: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, pointerEvents: "none" }}>
+        <Check size={13} strokeWidth={3} /> Taken
+      </span>
+    );
+  }
+  if (locked) {
+    return (
+      <span className="btn btn-sm" style={{ background: "var(--hover)", color: "var(--t4)", border: "none", display: "flex", alignItems: "center", gap: 4, cursor: "not-allowed", pointerEvents: "none" }}>
+        <Lock size={12} /> {slot.time}
+      </span>
+    );
+  }
+  return (
+    <button className="btn btn-sm" onClick={() => onMarkDose(slot.member, slot)}
+      style={{ background: overdue ? "var(--red)" : "var(--teal)", color: "#fff", border: "none", fontWeight: 700, padding: "8px 14px" }}>
+      Log
+    </button>
+  );
+}
+
+export default function TodayTab({ household, user, profile, plan, onGoMe, onGoMeds, onGoVitals, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onScheduleVisit, onEditVisit, onOpenVisits, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -74,6 +105,8 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoV
   const isPro = ["pro", "family", "enterprise"].includes(plan);
   const adh = selected ? weekAdherence(selected) : null;
   const stk = selected ? streak(selected) : 0;
+  const upcomingVisits = getUpcomingVisits(60);
+  const hasAnyMeds = household.some(m => !m.pending && (m.meds || []).length);
 
   return (
     <div className="scroll" style={{ paddingTop: 0 }}>
@@ -199,14 +232,23 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoV
 
       <div className="section" style={{ paddingTop: 4 }}>
         <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>Up next</span>
+          <span>Today's medications</span>
           {slots.length > 0 && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 500 }}>{slots.filter(s => s.logged).length}/{slots.length} done</span>}
         </div>
         {slots.length === 0 ? (
-          <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
-            <div className="empty-state-title" style={{ fontSize: 15 }}>All caught up</div>
-            <div className="empty-state-sub" style={{ marginBottom: 0 }}>No doses scheduled for today.</div>
-          </div>
+          hasAnyMeds ? (
+            <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
+              <div className="empty-state-title" style={{ fontSize: 15 }}>All doses logged for today 🎉</div>
+              <div className="empty-state-sub" style={{ marginBottom: 0 }}>No more doses scheduled today.</div>
+            </div>
+          ) : (
+            <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
+              <div className="empty-state-icon"><Pill size={40} strokeWidth={1.5} /></div>
+              <div className="empty-state-title" style={{ fontSize: 15 }}>No medications yet</div>
+              <div className="empty-state-sub" style={{ marginBottom: 0 }}>Add your first medication to start tracking doses.</div>
+              <button className="btn btn-primary" style={{ width: "auto", padding: "11px 20px" }} onClick={onGoMeds}>Add medication</button>
+            </div>
+          )
         ) : (
           <div className="list">
             {groups.map(g => {
@@ -224,21 +266,59 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoV
                     <ChevronDown size={16} style={{ color: "var(--t4)", flexShrink: 0, transition: "transform .2s", transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }} />
                   </div>
                   {!isCollapsed && g.slots.map((s, i) => (
-                    <div key={i} className="row" style={{ cursor: "default" }}>
-                      <div onClick={() => !s.logged && onMarkDose(s.member, s)}
-                        style={{ width: 34, height: 34, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "var(--red)" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer" }}>
-                        {s.logged ? <Check size={18} strokeWidth={3} color="var(--green)" /> : <span style={{ fontSize: 11, fontWeight: 700, color: s.overdue ? "var(--red)" : "var(--t3)" }}>{s.time}</span>}
+                    <div key={i} className="row" style={{ cursor: "default", alignItems: "center" }}>
+                      <div className="row-icon" style={{ background: s.logged ? "var(--ib2)" : s.overdue ? "var(--ib6)" : "var(--ib1)" }}>
+                        <Pill size={19} color={s.logged ? "var(--green)" : s.overdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
                       </div>
                       <div className="row-body">
-                        <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
-                        <div className="row-sub">{s.time}{s.overdue ? " · overdue" : ""}</div>
+                        <div className="row-title" style={{ fontWeight: 600 }}>{s.med.name}</div>
+                        <div className="row-sub">{s.med.dosage_amount}{s.med.dosage_unit} · {s.time}{s.overdue ? " · overdue" : ""}</div>
                       </div>
-                      {s.overdue && <span style={{ fontSize: 11, fontWeight: 700, color: "var(--red)", background: "var(--ib6)", padding: "3px 8px", borderRadius: 99 }}>{Math.max(0, Math.round((now.getTime() - s.dueMs) / 60000))}m</span>}
+                      <LogButton slot={s} now={now} onMarkDose={onMarkDose} />
                     </div>
                   ))}
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      <div className="section" style={{ paddingTop: 4 }}>
+        <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <CalendarDays size={15} color="var(--teal)" strokeWidth={2.2} /> Upcoming visits
+          </span>
+          <button className="nav-action" style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }} onClick={onScheduleVisit}>
+            <Plus size={14} strokeWidth={2.5} /> Schedule
+          </button>
+        </div>
+        {upcomingVisits.length === 0 ? (
+          <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
+            <div className="empty-state-icon"><Building2 size={40} strokeWidth={1.5} /></div>
+            <div className="empty-state-title" style={{ fontSize: 15 }}>No visits scheduled</div>
+            <div className="empty-state-sub" style={{ marginBottom: 0 }}>Keep track of hospital & clinic appointments.</div>
+            <button className="btn btn-primary" style={{ width: "auto", padding: "11px 20px" }} onClick={onScheduleVisit}>Schedule a visit</button>
+          </div>
+        ) : (
+          <div className="list">
+            {upcomingVisits.slice(0, 3).map(v => (
+              <div key={v.id} className="row" style={{ cursor: "pointer" }} onClick={() => onEditVisit(v)}>
+                <div className="row-icon" style={{ background: "var(--ib5)" }}><Building2 size={19} color="var(--t1)" strokeWidth={2.2} /></div>
+                <div className="row-body">
+                  <div className="row-title">{v.reason || "Hospital visit"}{v.doctor ? ` · ${v.doctor}` : ""}</div>
+                  <div className="row-sub">{fmtVisitDate(v)}{v.facility ? ` · ${v.facility}` : ""}</div>
+                </div>
+                <ChevronRight size={18} color="var(--t4)" />
+              </div>
+            ))}
+          </div>
+        )}
+        {upcomingVisits.length > 3 && (
+          <div style={{ padding: "6px 4px 2px" }}>
+            <button onClick={onOpenVisits} style={{ background: "none", border: "none", color: "var(--teal)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+              View all {upcomingVisits.length} visits <ChevronRight size={14} />
+            </button>
           </div>
         )}
       </div>
