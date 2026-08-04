@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
-import { getUpcomingVisits } from "@/lib/data";
+import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User } from "lucide-react";
 
 const VITAL_LABELS = {
@@ -78,6 +79,37 @@ function LogButton({ member, slot, allLogged, now, onMarkDose }) {
   );
 }
 
+function VisitStatusControl({ v, now, onMark }) {
+  const t = getVisitTime(v);
+  if (v.status === "attended" || v.status === "missed") {
+    const attended = v.status === "attended";
+    return (
+      <span className="btn btn-sm" style={{ background: attended ? "var(--ib2)" : "var(--ib6)", color: attended ? "var(--green)" : "var(--red)", border: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, pointerEvents: "none" }}>
+        {attended ? <><Check size={13} strokeWidth={3} /> Attended</> : "Missed"}
+      </span>
+    );
+  }
+  if (now.getTime() < t.getTime()) {
+    return (
+      <span className="btn btn-sm" style={{ background: "var(--hover)", color: "var(--t4)", border: "none", display: "flex", alignItems: "center", gap: 4, cursor: "not-allowed", pointerEvents: "none" }}>
+        <Lock size={12} /> {t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+      </span>
+    );
+  }
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onMark(v.id, "attended"); }}
+        style={{ background: "var(--ib2)", color: "var(--green)", border: "none", fontWeight: 700, padding: "6px 10px", fontSize: 11 }}>
+        Attended
+      </button>
+      <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onMark(v.id, "missed"); }}
+        style={{ background: "var(--ib6)", color: "var(--red)", border: "none", fontWeight: 700, padding: "6px 10px", fontSize: 11 }}>
+        Missed
+      </button>
+    </div>
+  );
+}
+
 export default function TodayTab({ household, user, profile, plan, onGoMe, onGoMeds, onGoVitals, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onScheduleVisit, onEditVisit, onOpenVisits, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const now = new Date();
@@ -129,6 +161,11 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const adh = selected ? weekAdherence(selected) : null;
   const stk = selected ? streak(selected) : 0;
   const upcomingVisits = getUpcomingVisits(60);
+  const [, setVisitsTick] = useState(0);
+  function markVisit(id, status) {
+    markVisitStatus(id, status);
+    setVisitsTick(x => x + 1);
+  }
   const hasAnyMeds = household.some(m => !m.pending && (m.meds || []).length);
 
   return (
@@ -315,7 +352,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
                   <div className="row-title">{v.reason || "Hospital visit"}{v.doctor ? ` · ${v.doctor}` : ""}</div>
                   <div className="row-sub">{fmtVisitDate(v)}{v.facility ? ` · ${v.facility}` : ""}</div>
                 </div>
-                <ChevronRight size={18} color="var(--t4)" />
+                <VisitStatusControl v={v} now={now} onMark={markVisit} />
               </div>
             ))}
           </div>
