@@ -5,7 +5,7 @@ import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
-import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User } from "lucide-react";
+import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -85,7 +85,7 @@ function VisitStatusControl({ v, now, onMark }) {
     const attended = v.status === "attended";
     return (
       <span className="btn btn-sm" style={{ background: attended ? "var(--ib2)" : "var(--ib6)", color: attended ? "var(--green)" : "var(--red)", border: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, pointerEvents: "none" }}>
-        {attended ? <><Check size={13} strokeWidth={3} /> Attended</> : "Missed"}
+        {attended ? <><Check size={13} strokeWidth={3} /> Attended</> : <><X size={13} strokeWidth={3} /> Missed</>}
       </span>
     );
   }
@@ -99,12 +99,12 @@ function VisitStatusControl({ v, now, onMark }) {
   return (
     <div style={{ display: "flex", gap: 6 }}>
       <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onMark(v.id, "attended"); }}
-        style={{ background: "var(--ib2)", color: "var(--green)", border: "none", fontWeight: 700, padding: "6px 10px", fontSize: 11 }}>
-        Attended
+        style={{ background: "var(--ib2)", color: "var(--green)", border: "none", fontWeight: 700, padding: "6px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+        <Check size={12} strokeWidth={3} /> Attended
       </button>
       <button className="btn btn-sm" onClick={e => { e.stopPropagation(); onMark(v.id, "missed"); }}
-        style={{ background: "var(--ib6)", color: "var(--red)", border: "none", fontWeight: 700, padding: "6px 10px", fontSize: 11 }}>
-        Missed
+        style={{ background: "var(--ib6)", color: "var(--red)", border: "none", fontWeight: 700, padding: "6px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+        <X size={12} strokeWidth={3} /> Missed
       </button>
     </div>
   );
