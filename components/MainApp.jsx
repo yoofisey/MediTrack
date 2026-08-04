@@ -15,7 +15,7 @@ import ReportsTab from "@/components/ReportsTab";
 import VitalsTab from "@/components/VitalsTab";
 import MedsTab from "@/components/MedsTab";
 import AlertsTab from "@/components/AlertsTab";
-import MeTab from "@/components/MeTab";
+import ProfileTab from "@/components/ProfileTab";
 import MemberDetail from "@/components/MemberDetail";
 import MedSheet from "@/components/MedSheet";
 import { DeleteConfirmModal, LogDoseModal, UpgradeModal } from "@/components/Modals";
@@ -681,7 +681,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
               {tab === "vitals" && isPro && <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "me" && <MeTab user={user} profile={profile} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenReports={() => setTab("reports")} onGoVitals={() => setTab("vitals")} />}
+              {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>
           </div>
 
