@@ -317,7 +317,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
                   <Pill size={19} color={r.allLogged ? "var(--green)" : r.overdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
                 </div>
                 <div className="row-body">
-                  <div className="row-title" style={{ fontWeight: 600 }}>{r.med.name}</div>
+                  <div className="row-title" style={{ fontWeight: 600 }}>{r.med.name}{r.member.kind !== "self" && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--teal)", marginLeft: 6 }}>· for {r.member.name}</span>}</div>
                   <div className="row-sub">{r.med.dosage_amount}{r.med.dosage_unit}{r.total > 1 ? ` · ${r.loggedCount}/${r.total} doses` : ""}{r.overdue ? " · overdue" : ""}</div>
                 </div>
                 <LogButton member={r.member} slot={r.next} allLogged={r.allLogged} now={now} onMarkDose={onMarkDose} />
