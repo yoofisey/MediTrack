@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useLang } from "@/lib/i18n";
-import { MemberSwitcher } from "@/components/ui";
 import { Stethoscope, Scale, Droplets, Heart, Thermometer, Wind, FlaskConical, Ruler, Droplet, Gauge, BarChart3 } from "lucide-react";
 
 const VITAL_TYPES = [
@@ -375,7 +374,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
   );
 }
 
-export default function VitalsTab({ vitals: allVitals, onRefresh, member, household, onSwitchMember }) {
+export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
   const { t } = useLang();
   const [logType, setLogType] = useState(null);
   const [historyType, setHistoryType] = useState(null);
@@ -426,6 +425,12 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, househ
           {t("vitals.title")}{member && member.kind !== "self" ? ` — ${member.name}` : ""}
         </span>
       </div>
+
+      {household?.length > 1 && (
+        <div style={{ padding: "0 14px 8px" }}>
+          <MemberSwitcher members={household} value={member?.key} onChange={k => onSwitchMember?.(household.find(m => m.key === k) || member)} />
+        </div>
+      )}
 
       {household?.length > 1 && (
         <div style={{ padding: "0 14px 8px" }}>

@@ -3,11 +3,7 @@
 import { CSS, fmtDate } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { TIER_LIMITS } from "@/lib/data";
-import { useState } from "react";
-import InteractionChecker from "@/components/InteractionChecker";
-import { MemberSwitcher } from "@/components/ui";
-import { ringPct } from "@/lib/household";
-import { Pill, AlertTriangle, FileText, Package, Plus, CheckCircle2, Clock } from "lucide-react";
+import { Pill, FileText, Package, Plus, CheckCircle2, Clock } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -20,15 +16,10 @@ function rem(med, logs) {
   return Math.max(0, (med.pills_per_package || 0) - sinceRefill);
 }
 
-export default function MedsTab({ household, memberKey, onMemberChange, onAdd, onEdit, onDelete, onRefill, plan }) {
+export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill, plan }) {
   const { t } = useLang();
-  const [showChecker, setShowChecker] = useState(false);
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
-  const sel = household.find(m => m.key === memberKey) || household.find(m => m.kind === "self") || household[0] || {};
-  const meds = sel.meds || [];
-  const logs = sel.logs || [];
   const medCount = meds.length;
-  const isManaged = sel.kind === "managed";
   const today = new Date();
   const active = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e>=today&&m.active;});
   const ended = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e<today||!m.active;});
@@ -73,11 +64,11 @@ export default function MedsTab({ household, memberKey, onMemberChange, onAdd, o
         <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
         {med.reminder_times&&<div style={{fontSize:12,color:"var(--t3)",marginTop:6,display:"flex",alignItems:"center",gap:5}}><Ico><Clock size={13} strokeWidth={2.2}/></Ico> {med.reminder_times.split(",").join(" · ")}</div>}
         {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8,display:"flex",alignItems:"center",gap:5}}><Ico><FileText size={14} strokeWidth={2.2}/></Ico> {med.notes}</div>}
-        {remaining !== null && !isManaged && (
+        {remaining !== null && (
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:13}}>
             <span style={{color:lowStock?"var(--red)":"var(--teal2)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Ico><Package size={14} strokeWidth={2.2}/></Ico> {remaining} {t("meds.remaining")}</span>
             {lowStock && <span style={{color:"var(--red)",fontWeight:500}}>· {t("meds.refillSoon")}</span>}
-            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11,display:"flex",alignItems:"center",gap:4}} onClick={()=>onRefill(sel, med)}><Ico><Plus size={13} strokeWidth={2.5}/></Ico> {t("meds.refill")}</button>
+            <button className="btn btn-sm" style={{marginLeft:"auto",background:"var(--ib1)",border:"none",fontSize:11,display:"flex",alignItems:"center",gap:4}} onClick={()=>onRefill(med)}><Ico><Plus size={13} strokeWidth={2.5}/></Ico> {t("meds.refill")}</button>
           </div>
         )}
         {(med.doctor_name||med.pharmacy_name)&&<div style={{marginTop:10,paddingTop:10,borderTop:"0.5px solid var(--sep)",display:"flex",gap:12,fontSize:12,color:"var(--t3)"}}>
@@ -85,9 +76,9 @@ export default function MedsTab({ household, memberKey, onMemberChange, onAdd, o
           {med.pharmacy_name&&<div><span style={{fontWeight:500,color:"var(--t2)"}}>Rx:</span> {med.pharmacy_name}{med.pharmacy_phone?` · ${med.pharmacy_phone}`:""}</div>}
           {med.next_refill_date&&<div><span style={{fontWeight:500,color:"var(--t2)"}}>Refill:</span> {fmtDate(med.next_refill_date)}</div>}
         </div>}
-        {!isManaged && <div style={{display:"flex",gap:8,marginTop:12}}>
-          <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>onEdit(sel, med)}>{t("meds.edit")}</button>
-          <button className="btn btn-sm" style={{flex:1,background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={()=>onDelete(sel, med.id)}>{t("meds.delete")}</button>
+        {<div style={{display:"flex",gap:8,marginTop:12}}>
+          <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>onEdit(med)}>{t("meds.edit")}</button>
+          <button className="btn btn-sm" style={{flex:1,background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={()=>onDelete(med.id)}>{t("meds.delete")}</button>
         </div>}
       </div>
     );
@@ -97,20 +88,8 @@ export default function MedsTab({ household, memberKey, onMemberChange, onAdd, o
     <div className="scroll">
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingRight:4}}>
         <div className="nav-large" style={{paddingBottom:4}}>{t("meds.title")}</div>
-        {!isManaged && <button className="nav-action" onClick={() => onAdd(sel)} style={{fontSize:28,lineHeight:1}}>＋</button>}
+        <button className="nav-action" onClick={onAdd} style={{fontSize:28,lineHeight:1}}>＋</button>
       </div>
-
-      {household.length > 1 && (
-        <div style={{ padding: "0 14px 8px" }}>
-          <MemberSwitcher members={household} value={sel?.key} onChange={onMemberChange} ring={m => ringPct(m)} />
-        </div>
-      )}
-
-      {isManaged && (
-        <div style={{ margin: "0 20px 14px", background: "var(--ib3)", borderRadius: "var(--rl)", padding: "12px 16px", fontSize: 12, color: "var(--t2)", lineHeight: 1.45 }}>
-          This profile is managed for <b>{sel.name}</b> — add or edit their medications from their profile.
-        </div>
-      )}
 
       <div className="chips">
         <div className="chip blue"><div className="chip-val">{meds.length}</div><div className="chip-lbl">{t("meds.total")}</div></div>
@@ -135,16 +114,6 @@ export default function MedsTab({ household, memberKey, onMemberChange, onAdd, o
           </div>
         </div>
       )}
-
-      {active.length>0&&limits.interactionCheck&&(
-        <div style={{padding:"0 20px",marginBottom:14}}>
-          <button className="btn" style={{width:"100%",background:"var(--ib5)",color:"var(--t1)",fontWeight:500,fontSize:13,padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>setShowChecker(true)}>
-            <Ico><AlertTriangle size={16} strokeWidth={2.2}/></Ico> {t("meds.checkInteractions", {n: meds.length, s: meds.length!==1?"s":""})}
-          </button>
-        </div>
-      )}
-
-      {showChecker&&<InteractionChecker meds={meds} onClose={()=>setShowChecker(false)}/>}
 
       {active.length>0&&<div className="section"><div className="section-header">{t("meds.activeSection")}</div>{active.map(m=><MedCard key={m.id} med={m}/>)}</div>}
       {ended.length>0&&<div className="section"><div className="section-header">{t("meds.completedSection")}</div>{ended.map(m=><MedCard key={m.id} med={m}/>)}</div>}

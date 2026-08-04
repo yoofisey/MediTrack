@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { activeMeds, missedDoses, weekDots, weekAdherence, streak, initials, expectedDosesToday, pushManagedMed } from "@/lib/household";
-import { MemberSwitcher } from "@/components/ui";
 import { ChevronLeft, Check, Pill, Plus, Phone, HeartPulse } from "lucide-react";
 
 function MemberRing({ member, pct, size = 92, stroke = 6 }) {
@@ -66,7 +65,7 @@ function ManagedMedForm({ member, onDone }) {
   );
 }
 
-export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onOpenVitals, isFamily, household, onSwitchMember, onChanged }) {
+export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onOpenVitals, isFamily, onChanged }) {
   const [showAddMed, setShowAddMed] = useState(false);
   const [editNote, setEditNote] = useState(false);
   const [noteText, setNoteText] = useState(member.careNote || "");
@@ -101,12 +100,6 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
         <span style={{ fontSize: 13, color: "var(--t4)" }}>/</span>
         <span style={{ fontSize: 13, color: "var(--t2)", fontWeight: 600 }}>{member.name}</span>
       </div>
-
-      {household?.length > 1 && (
-        <div style={{ padding: "6px 14px 0" }}>
-          <MemberSwitcher members={household} value={member?.key} onChange={k => onSwitchMember?.(household.find(m => m.key === k) || member)} />
-        </div>
-      )}
 
       <div style={{ margin: "12px 20px 18px", textAlign: "center" }}>
         <MemberRing member={member} pct={slots.length ? slots.filter(s => s.logged).length / slots.length : 0} />

@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
-import { Bell, Check, ChevronDown, ChevronRight, HeartPulse, Phone, Plus, User } from "lucide-react";
-import { MemberSwitcher } from "@/components/ui";
+import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
+import { Bell, Check, ChevronDown, ChevronRight, HeartPulse, Phone, User } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -33,7 +32,7 @@ function vitalsLine(vitals) {
   }).join(" · ");
 }
 
-export default function TodayTab({ household, user, profile, plan, viewKey, onViewMember, onGoMe, onGoFamily, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onOpenVitals, onOpenAlerts, alertCount }) {
+export default function TodayTab({ household, user, profile, plan, onGoMe, onGoVitals, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -46,7 +45,7 @@ export default function TodayTab({ household, user, profile, plan, viewKey, onVi
   const [collapsed, setCollapsed] = useState({});
   function toggleGroup(key) { setCollapsed(c => ({ ...c, [key]: !c[key] })); }
   const focus = focusMember(household, now);
-  const selected = household.find(m => m.key === viewKey) || focus?.member || household[0];
+  const selected = household.find(m => m.kind === "self") || focus?.member || household[0];
   const selMissed = selected ? missedDoses(selected, now) : [];
   const selRemaining = selected ? remainingDoses(selected, now) : [];
   const mostUrgent = selMissed[0] || selRemaining[0];
@@ -136,24 +135,6 @@ export default function TodayTab({ household, user, profile, plan, viewKey, onVi
           </div>
         </div>
       )}
-
-      <div style={{ padding: "14px 14px 4px" }}>
-        <div style={{ display: "flex", gap: 4, alignItems: "flex-start", overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
-          <MemberSwitcher
-            members={household}
-            value={selected?.key}
-            ring={m => ringPct(m)}
-            onChange={k => onViewMember(k === selected?.key ? null : k)}
-            style={{ flex: 1, minWidth: 0 }}
-          />
-          {household.length === 1 && (
-            <div onClick={onGoFamily} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 74, cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", border: "1.5px dashed var(--t4)", display: "grid", placeItems: "center", color: "var(--t3)" }}><Plus size={22} /></div>
-              <span style={{ fontSize: 11, color: "var(--t3)" }}>Add people</span>
-            </div>
-          )}
-        </div>
-      </div>
 
       {selected ? (
         <div style={{ margin: "10px 20px 14px", borderRadius: 26, overflow: "hidden", background: "var(--card)", boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
@@ -269,23 +250,34 @@ export default function TodayTab({ household, user, profile, plan, viewKey, onVi
           </span>
         </div>
         <div className="list">
-          {household.filter(m => !m.pending).map(m => {
-            const sum = latestVitals(m);
+          {isPro ? (() => {
+            const self = household.find(m => m.kind === "self") || household[0] || {};
+            const sum = latestVitals(self);
             const has = sum.length > 0;
-            const first = m.name.split(" ")[0];
             return (
-              <div key={m.key} className="row" onClick={() => onOpenVitals(m)} style={{ cursor: "pointer" }}>
+              <div key={self.key || "self"} className="row" onClick={onGoVitals} style={{ cursor: "pointer" }}>
                 <div className="row-icon" style={{ background: has ? "var(--ib2)" : "var(--ib6)" }}>
                   <HeartPulse size={19} color={has ? "var(--teal)" : "var(--t3)"} strokeWidth={2.2} />
                 </div>
                 <div className="row-body">
-                  <div className="row-title">{m.kind === "self" ? "Check your vitals" : `Check ${first}'s vitals`}</div>
+                  <div className="row-title">Check your vitals</div>
                   <div className="row-sub">{has ? vitalsLine(sum) : "No readings yet"}</div>
                 </div>
                 <ChevronRight size={18} color="var(--t4)" />
               </div>
             );
-          })}
+          })() : (
+            <div key="teaser" className="row" onClick={onUpgrade} style={{ cursor: "pointer" }}>
+              <div className="row-icon" style={{ background: "var(--ib6)" }}>
+                <HeartPulse size={19} color="var(--t3)" strokeWidth={2.2} />
+              </div>
+              <div className="row-body">
+                <div className="row-title">Track vitals with Pro</div>
+                <div className="row-sub">Blood pressure, glucose, weight & more</div>
+              </div>
+              <ChevronRight size={18} color="var(--t4)" />
+            </div>
+          )}
         </div>
       </div>
     </div>
