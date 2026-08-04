@@ -5,6 +5,7 @@ import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, ringPct, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { Bell, Check, ChevronDown, ChevronRight, HeartPulse, Phone, Plus, User } from "lucide-react";
+import { MemberSwitcher } from "@/components/ui";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -32,31 +33,7 @@ function vitalsLine(vitals) {
   }).join(" · ");
 }
 
-function CareRing({ member, size = 58, stroke = 4, active }) {
-  const pct = member.pending ? 0 : ringPct(member);
-  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
-  const color = member.pending ? "var(--t4)" : pct >= 1 ? "var(--green)" : pct > 0 ? "var(--teal)" : "var(--red)";
-  return (
-    <div style={{ width: size + 10, height: size + 10, borderRadius: "50%", background: active ? "var(--sel)" : "transparent", display: "grid", placeItems: "center", transition: "background .2s" }}>
-      <div style={{ width: size, height: size, position: "relative" }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--sep)" strokeWidth={stroke} />
-          {!member.pending && (
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-              strokeDasharray={`${pct * c} ${c}`} strokeLinecap="round" />
-          )}
-        </svg>
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ width: size - stroke * 3, height: size - stroke * 3, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: size * 0.34, fontWeight: 800, color: "var(--t1)" }}>
-            {member.avatarUrl ? <img src={member.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(member)}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function TodayTab({ household, user, profile, plan, onGoMe, onGoFamily, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onOpenVitals, onOpenAlerts, alertCount }) {
+export default function TodayTab({ household, user, profile, plan, viewKey, onViewMember, onGoMe, onGoFamily, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onOpenVitals, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const now = new Date();
   const hour = now.getHours();
@@ -66,11 +43,10 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoF
   const summaryPeople = household.filter(m => !m.pending && m.meds?.length).length;
   const summaryDoses = totalExpectedToday(household, now);
 
-  const [focusKey, setFocusKey] = useState(null);
   const [collapsed, setCollapsed] = useState({});
   function toggleGroup(key) { setCollapsed(c => ({ ...c, [key]: !c[key] })); }
   const focus = focusMember(household, now);
-  const selected = household.find(m => m.key === focusKey) || focus?.member || household[0];
+  const selected = household.find(m => m.key === viewKey) || focus?.member || household[0];
   const selMissed = selected ? missedDoses(selected, now) : [];
   const selRemaining = selected ? remainingDoses(selected, now) : [];
   const mostUrgent = selMissed[0] || selRemaining[0];
@@ -162,18 +138,18 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoF
       )}
 
       <div style={{ padding: "14px 14px 4px" }}>
-        <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
-          {household.map(m => (
-            <div key={m.key} onClick={() => setFocusKey(m.key === selected?.key ? null : m.key)}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 78, cursor: "pointer", userSelect: "none" }}>
-              <CareRing member={m} active={m.key === selected?.key} />
-              <span style={{ fontSize: 12, fontWeight: m.key === selected?.key ? 700 : 500, color: "var(--t1)", maxWidth: 76, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name.split(" ")[0]}</span>
-            </div>
-          ))}
+        <div style={{ display: "flex", gap: 4, alignItems: "flex-start", overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none" }}>
+          <MemberSwitcher
+            members={household}
+            value={selected?.key}
+            ring={m => ringPct(m)}
+            onChange={k => onViewMember(k === selected?.key ? null : k)}
+            style={{ flex: 1, minWidth: 0 }}
+          />
           {household.length === 1 && (
-            <div onClick={onGoFamily} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 78, cursor: "pointer" }}>
-              <div style={{ width: 68, height: 68, borderRadius: "50%", border: "2px dashed var(--t4)", display: "grid", placeItems: "center", color: "var(--t3)" }}><Plus size={22} /></div>
-              <span style={{ fontSize: 12, color: "var(--t3)" }}>Add people</span>
+            <div onClick={onGoFamily} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 74, cursor: "pointer", flexShrink: 0, marginTop: 2 }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", border: "1.5px dashed var(--t4)", display: "grid", placeItems: "center", color: "var(--t3)" }}><Plus size={22} /></div>
+              <span style={{ fontSize: 11, color: "var(--t3)" }}>Add people</span>
             </div>
           )}
         </div>

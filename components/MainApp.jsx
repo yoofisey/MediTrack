@@ -9,7 +9,7 @@ import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPu
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
 import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember } from "@/lib/db";
-import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock, buildAlerts } from "@/lib/household";
+import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock, buildAlerts, removeManagedMed } from "@/lib/household";
 import TodayTab from "@/components/TodayTab";
 import ReportsTab from "@/components/ReportsTab";
 import VitalsTab from "@/components/VitalsTab";
@@ -56,6 +56,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [vitalsMember, setVitalsMember] = useState(null);
   const [medSheetFor, setMedSheetFor] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [viewKey, setViewKey] = useState("me");
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -543,7 +544,12 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     }
   }
 
-  function deleteMed(id) {
+  function deleteMed(member, id) {
+    if (member?.kind === "managed") {
+      try { removeManagedMed(member.rowId, id); } catch (e) { console.error("removeManagedMed:", e); }
+      reload();
+      return;
+    }
     setDeleteMedId(id);
   }
 
@@ -649,7 +655,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const live = vitalsMember.kind === "self" ? selfMember : (household.find(m => m.key === vitalsMember.key) || vitalsMember);
         return (
           <div className="scroll">
-            <VitalsTab vitals={live.vitals || []} onRefresh={reload} member={live} />
+            <VitalsTab vitals={live.vitals || []} onRefresh={reload} member={live} household={household} onSwitchMember={m => setVitalsMember(m)} />
             <div style={{ padding: "4px 20px 24px" }}>
               <button className="btn btn-ghost" onClick={closeVitals}>Back</button>
             </div>
@@ -659,7 +665,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const activeMember = household.find(m => m.key === memberView);
         if (!activeMember) return null;
         return (
-          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={(profile?.plan || "free") === "family"} onChanged={reload} />
+          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={(profile?.plan || "free") === "family"} household={household} onSwitchMember={openMember} onChanged={reload} />
         );
       })() : overlayTab ? (
         <div className="scroll">
@@ -672,10 +678,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} onGoReports={() => setTab("reports")} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
-              {tab === "meds" && <MedsTab meds={meds} logs={logs} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan || "free"} medCount={meds.length} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} viewKey={viewKey} onViewMember={setViewKey} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} onGoReports={() => setTab("reports")} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
+              {tab === "meds" && <MedsTab household={household} memberKey={viewKey} onMemberChange={setViewKey} onAdd={m => openMedSheet(m, null)} onEdit={(m, med) => openMedSheet(m, med)} onDelete={deleteMed} onRefill={memberRefill} plan={profile?.plan || "free"} />}
               {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} onGenerateReport={generateFamilyReport} />}
-              {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} members={household} memberKey={viewKey} onMemberChange={setViewKey} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
               {tab === "me" && <MeTab user={user} profile={profile} household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} notifPerm={notifPerm} onEnableNotif={enableNotif} onSaveProfile={saveProfile} onSignOut={onSignOut} onOpenMember={openMember} onGenerateReport={generateFamilyReport} onOpenReports={() => setTab("reports")} onOpenVitals={() => setVitalsMember(selfMember)} />}
             </div>
           </div>
@@ -706,7 +712,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       )}
       {deleteMedId && (
         <DeleteConfirmModal
-          medName={meds.find(m => m.id === deleteMedId)?.name || "this medication"}
+          medName={household.flatMap(m => m.meds || []).find(m => m.id === deleteMedId)?.name || "this medication"}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteMedId(null)}
         />

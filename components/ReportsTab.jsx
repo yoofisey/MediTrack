@@ -6,7 +6,7 @@ import { useLang } from "@/lib/i18n";
 import { calcStreak, TIER_LIMITS, getVisits } from "@/lib/data";
 import AdherenceChart from "@/components/AdherenceChart";
 import AdherenceCalendar from "@/components/AdherenceCalendar";
-import { Card, Segmented, InsightCard } from "@/components/ui";
+import { Card, Segmented, InsightCard, MemberSwitcher } from "@/components/ui";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
 import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
@@ -15,7 +15,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function ReportsTab({ logs, meds, plan, onNavigate }) {
+export default function ReportsTab({ logs: logsProp, meds: medsProp, plan, onNavigate, members, memberKey, onMemberChange }) {
   const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
@@ -27,6 +27,9 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
   });
   const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
   const today = new Date();
+  const scoped = members?.length ? (members.find(m => m.key === memberKey) || members.find(m => m.kind === "self") || members[0]) : null;
+  const logs = scoped ? (scoped.logs || []) : logsProp;
+  const meds = scoped ? (scoped.meds || []) : medsProp;
 
   useEffect(() => {
     try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch { setJournalEntries([]); }
@@ -603,6 +606,12 @@ ${limits.reports ? `
   return (
     <div className="scroll">
       <div className="nav-large">{t("reports.title")}</div>
+
+      {members?.length > 1 && (
+        <div style={{ padding: "4px 14px 10px" }}>
+          <MemberSwitcher members={members} value={scoped?.key} onChange={onMemberChange} />
+        </div>
+      )}
 
       {limits.reports ? (
         <div style={{ margin: "0 20px 14px" }}>

@@ -1,5 +1,7 @@
 "use client";
 
+import { initials } from "@/lib/household";
+
 export function Card({ children, style, onClick, pad = true }) {
   return (
     <div className="card" style={{ ...(pad ? { padding: 16 } : { padding: 0 }), ...style }} onClick={onClick}>
@@ -75,6 +77,53 @@ export function InsightCard({ tone = "good", headline, suggestion, onClick, onDi
         )}
       </div>
       {suggestion && <div style={{ fontSize: 13, color: "var(--t3)", marginTop: 4, lineHeight: 1.4 }}>{suggestion}</div>}
+    </div>
+  );
+}
+
+export function MemberSwitcher({ members, value, onChange, ring, style }) {
+  if (!members || members.length === 0) return null;
+  const R = 25;
+  const C = 2 * Math.PI * R;
+  return (
+    <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "2px 2px 6px", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", ...style }}>
+      {members.map(m => {
+        const active = m.key === value;
+        const pct = ring ? ring(m) : null;
+        const ringColor = m.pending ? "var(--t4)" : pct >= 1 ? "var(--green)" : pct > 0 ? "var(--teal)" : "var(--red)";
+        return (
+          <div key={m.key} onClick={() => onChange?.(m.key)}
+            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 74, cursor: "pointer", userSelect: "none", WebkitTapHighlightColor: "transparent" }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: "50%", padding: active ? 2 : 1.5,
+              background: active ? "linear-gradient(135deg,var(--teal),var(--purple))" : "transparent",
+              boxShadow: active ? "0 4px 14px rgba(0,122,255,.35)" : "none",
+              transition: "padding .18s ease, box-shadow .18s ease",
+              display: "grid", placeItems: "center",
+            }}>
+              <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "var(--card)", display: "grid", placeItems: "center", position: "relative" }}>
+                <svg width="100%" height="100%" viewBox={`0 0 56 56`} style={{ position: "absolute", transform: "rotate(-90deg)" }}>
+                  <circle cx="28" cy="28" r={R} fill="none" stroke="var(--sep)" strokeWidth="3" />
+                  {pct !== null && pct !== undefined && (
+                    <circle cx="28" cy="28" r={R} fill="none" stroke={ringColor} strokeWidth="3" strokeLinecap="round"
+                      strokeDasharray={`${Math.max(0, Math.min(pct, 1)) * C} ${C}`} />
+                  )}
+                </svg>
+                <div style={{ width: 46, height: 46, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: "var(--t1)" }}>
+                  {m.avatarUrl ? <img src={m.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
+                </div>
+              </div>
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "var(--t1)" : "var(--t3)",
+              maxWidth: 74, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              background: active ? "var(--ib3)" : "transparent", padding: active ? "2px 9px" : 0, borderRadius: 99, transition: "background .18s ease",
+            }}>
+              {m.pending ? "Invited" : m.name.split(" ")[0]}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
