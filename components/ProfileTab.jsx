@@ -11,7 +11,7 @@ import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/li
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
 import AvatarPicker from "@/components/AvatarPicker";
-import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Check } from "lucide-react";
+import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Info, Check } from "lucide-react";
 import { avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
@@ -85,7 +85,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const currentLang = LANGUAGES.find(l => l.code === lang) || LANGUAGES[0];
   const [showPersonalDetails, setShowPersonalDetails] = useState(false);
   const [personalDetails, setPersonalDetails] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("adhera_personal") || "{}"); } catch { return {}; }
+    try {
+      const v = JSON.parse(localStorage.getItem("adhera_personal") || "{}");
+      return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+    } catch { return {}; }
   });
   const [medicalID, setMedicalID] = useState(() => {
     try { return JSON.parse(localStorage.getItem("mt_medical_id") || "null") || {}; } catch { return {}; }

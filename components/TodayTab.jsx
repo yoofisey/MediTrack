@@ -144,7 +144,6 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <ProgressRing pct={progressPct} />
             <button onClick={onOpenAlerts} aria-label="Alerts"
               style={{ position: "relative", width: 42, height: 42, borderRadius: "50%", background: "var(--card)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={19} color="var(--t1)" strokeWidth={2} />
@@ -164,7 +163,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           <div className="card" style={{ padding: 18 }}>
             <div className="hero-label">Adherence this week</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
-              <span style={{ fontSize: 44, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1, color: "var(--t1)" }}>{adh}%</span>
+              <ProgressRing pct={progressPct} />
               {stk > 1 && <span className="streak-badge fire">🔥 {stk}-day streak</span>}
             </div>
             <div style={{ fontSize: 13, color: "var(--t3)", marginTop: 6 }}>
@@ -187,7 +186,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
               Track unlimited medications, see weekly adherence insights, and export reports to share with your doctor.
             </div>
             <button className="btn btn-primary" style={{ width: "auto", marginTop: 12, padding: "10px 18px" }} onClick={onUpgrade}>
-              See what's included →
+              See what&apos;s included →
             </button>
           </div>
         </div>
@@ -256,7 +255,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
 
       <div className="section" style={{ paddingTop: 4 }}>
         <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>Today's medications</span>
+          <span>Today&apos;s medications</span>
           {slots.length > 0 && <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 500 }}>{slots.filter(s => s.logged).length}/{slots.length} done</span>}
         </div>
         {slots.length === 0 ? (
