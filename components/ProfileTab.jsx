@@ -541,7 +541,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <Row icon={<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Current medications" sub={(medicalID.medication_ids||[]).length ? `${(medicalID.medication_ids||[]).length} listed in Medical ID` : "Not set"} onClick={()=>setShowMedicalID(true)}/>
           <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Blood type" sub={medicalID.blood_type || "Not set"} onClick={()=>setShowMedicalID(true)}/>
           <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={(medicalID.allergies||[]).length ? medicalID.allergies.join(", ") : "None recorded"} onClick={()=>setShowMedicalID(true)}/>
-          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={medicalID.emergency_name || "Not set"} onClick={()=>setShowMedicalID(true)}/>
+          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={medicalID.emergency_name ? (medicalID.emergency_phone ? `${medicalID.emergency_name} · ${medicalID.emergency_code || "+233"} ${medicalID.emergency_phone}` : medicalID.emergency_name) : "Not set"} onClick={()=>setShowMedicalID(true)}/>
         </div>
       </div>
 
