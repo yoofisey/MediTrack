@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
-import { COUNTRIES, getPricing, TIER_LIMITS } from "@/lib/data";
+import { COUNTRIES, getPricing } from "@/lib/data";
+import { getTierConfig } from "@/lib/tiers";
 import SentOtpView from "./SentOtpView";
 import { CheckCircle2, Bell, Flame, BarChart3, Check, Circle, Globe } from "lucide-react";
 
@@ -303,19 +304,19 @@ export default function AuthScreen({ onAuth }) {
               </div>
               <div className="auth-plan-grid">
                 <div className={`auth-plan${tier==="free"?" selected":""}`} onClick={()=>setTier("free")}>
-                  <div className="auth-plan-name">Free</div>
+                  <div className="auth-plan-name">{getTierConfig("free").label}</div>
                   <div className="auth-plan-price">Free</div>
-                  <div className="auth-plan-desc">{TIER_LIMITS.free.maxMeds} meds · {TIER_LIMITS.free.history}d</div>
+                  <div className="auth-plan-desc">{getTierConfig("free").maxMeds} meds · {getTierConfig("free").history}d</div>
                 </div>
                 <div className={`auth-plan${tier==="pro"?" selected":""}`} onClick={()=>setTier("pro")}>
-                  <div className="auth-plan-name">Pro</div>
+                  <div className="auth-plan-name">{getTierConfig("pro").label}</div>
                   <div className="auth-plan-price">{pricing.pro.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>{pricing.pro.label !== "Coming soon" ? "/mo" : ""}</span></div>
                   <div className="auth-plan-desc">Unlimited · Full history</div>
                 </div>
                 <div className={`auth-plan${tier==="family"?" selected":""}`} onClick={()=>setTier("family")}>
-                  <div className="auth-plan-name">Family</div>
+                  <div className="auth-plan-name">{getTierConfig("family").label}</div>
                   <div className="auth-plan-price">{pricing.family.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>{pricing.family.label !== "Coming soon" ? "/mo" : ""}</span></div>
-                  <div className="auth-plan-desc">5 profiles · Dashboard</div>
+                  <div className="auth-plan-desc">{getTierConfig("family").profiles} profiles · Dashboard</div>
                 </div>
               </div>
             </div>

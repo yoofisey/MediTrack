@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { CSS, Chevron } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { getTierConfig } from "@/lib/tiers";
+import { useTier } from "@/components/TierContext";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/notifications";
 import { sb } from "@/lib/supabase";
 import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
@@ -144,7 +146,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   }
 
   function handleUpgrade(plan) {
-    alert(`Upgraded to ${plan.charAt(0).toUpperCase()+plan.slice(1)}!`);
+    alert(`Upgraded to ${getTierConfig(plan).label}!`);
     onSaveProfile({ plan });
     setShowUpgrade(false);
     sessionStorage.removeItem("adhera_pending_plan");
@@ -243,13 +245,14 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const { pricing } = getPricing(country);
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
 
-  const planMeta = {
-    free:      { label:t("profile.freePlan"),            color:"var(--t3)",        badge:"" },
-    pro:       { label:t("profile.proPlan"),          color:"var(--teal)",     badge:"Pro", icon: <Crown size={13} strokeWidth={2.5} color="var(--teal)"/> },
-    family:    { label:t("profile.familyPlan"),   color:"var(--teal2)",   badge:"Family", icon: <Users size={13} strokeWidth={2.5} color="var(--teal2)"/> },
-
+  const { has, config } = useTier();
+  const tierCfg = getTierConfig(plan);
+  const pm = {
+    label: tierCfg.label,
+    color: tierCfg.theme.accent,
+    badge: tierCfg.badge,
+    icon: plan === "pro" ? <Crown size={13} strokeWidth={2.5} color={tierCfg.theme.accent}/> : plan === "family" ? <Users size={13} strokeWidth={2.5} color={tierCfg.theme.accent}/> : null,
   };
-  const pm = planMeta[plan] || planMeta.free;
 
   function startEdit() {
     setEditData({
@@ -428,7 +431,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
       )}
 
-      {plan === "free" ? (
+      {config.upsell ? (
         <div className="upgrade-card" style={{margin:"0 20px 20px"}}>
           <div className="upgrade-title" style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>{t("profile.unlockPro")} <Ico><Sparkles size={16} strokeWidth={2.2} color="var(--orange)"/></Ico></div>
           <div className="upgrade-sub">{t("profile.unlimitedMedsAd")}</div>
@@ -438,9 +441,9 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
             ))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-            {[{p:"pro",l:"Pro"},{p:"family",l:"Family"}].map(({p,l}) => (
+            {["pro","family"].map(p => (
               <div key={p} style={{background:"rgba(255,255,255,.12)",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:16,fontWeight:800}}>{l}</div>
+                <div style={{fontSize:16,fontWeight:800}}>{getTierConfig(p).label}</div>
                 <div style={{fontSize:10,opacity:.8}}>{pricing[p].label} / mo</div>
               </div>
             ))}
@@ -449,7 +452,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
       ) : null}
 
-      {plan === "family" && (
+      {has("familyMembers") && (
     <div className="section" style={{marginBottom:16}}>
       <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}><Ico><Users size={15} strokeWidth={2.2} color="var(--t1)"/></Ico> {t("profile.familyDashboard")}</div>
           <div className="list">

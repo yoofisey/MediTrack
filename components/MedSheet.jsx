@@ -2,11 +2,14 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { sb } from "@/lib/supabase";
-import { canAddMed, TIER_LIMITS } from "@/lib/data";
+import { canAddMed } from "@/lib/data";
+import { getTierConfig } from "@/lib/tiers";
+import { useTier } from "@/components/TierContext";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
 
 export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds }) {
-  const limits = TIER_LIMITS[plan || "free"] || TIER_LIMITS.free;
+  const { tier, config: limits, has } = useTier();
+  const upLabel = getTierConfig(limits.upgradeTarget).label;
   const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
   const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [capHit, setCapHit] = useState(false);
@@ -28,7 +31,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
   }
 
   async function save() {
-    if (!med && !canAddMed(plan || "free", medCount || 0)) {
+    if (!med && !canAddMed(tier, medCount || 0)) {
       setCapHit(true);
       return;
     }
@@ -74,16 +77,16 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         {err && <div style={{margin:"0 16px 8px"}} className="err-msg">{err}</div>}
         {capHit && (
           <div style={{ margin: "0 16px 12px", background: "var(--ib3)", borderRadius: 16, padding: 14 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", marginBottom: 4 }}>You've reached the free limit</div>
-            <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 10 }}>The free plan includes up to {limits.maxMeds} medications. Upgrade to Pro for unlimited medications, weekly insights and shareable reports.</div>
-            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => { onUpgrade?.(); onClose(); }}>Upgrade to Pro →</button>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", marginBottom: 4 }}>You&apos;ve reached the {getTierConfig(tier).label} limit</div>
+            <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 10 }}>The {getTierConfig(tier).label} plan includes up to {limits.maxMeds} medications. Upgrade to {upLabel} for unlimited medications, weekly insights and shareable reports.</div>
+            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => { onUpgrade?.(); onClose(); }}>Upgrade to {upLabel} →</button>
           </div>
         )}
 
         <div className="sheet-section">
           <div className="sheet-label">Medication name</div>
           <input className="sheet-input" placeholder="e.g. Amoxicillin 500mg" value={f.name} onChange={e=>set("name",e.target.value)}/>
-          {limits.interactionCheck && <InteractionBadge interactions={currentInteractions}/>}
+          {has("interactionCheck") && <InteractionBadge interactions={currentInteractions}/>}
         </div>
 
         <div className="sheet-section">

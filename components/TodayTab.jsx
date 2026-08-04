@@ -5,6 +5,8 @@ import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
+import { getTierConfig } from "@/lib/tiers";
+import { useTier } from "@/components/TierContext";
 import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X } from "lucide-react";
 
 const VITAL_LABELS = {
@@ -157,7 +159,8 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const progressLogged = slots.filter(s => s.logged).length;
   const progressPct = progressTotal ? Math.round((progressLogged / progressTotal) * 100) : 0;
 
-  const isPro = ["pro", "family", "enterprise"].includes(plan);
+  const { has, config } = useTier();
+  const upLabel = getTierConfig(config.upgradeTarget).label;
   const adh = selected ? weekAdherence(selected) : null;
   const stk = selected ? streak(selected) : 0;
   const upcomingVisits = getUpcomingVisits(60);
@@ -195,7 +198,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
         </div>
       </div>
 
-      {isPro && adh !== null && (
+      {has("reports") && adh !== null && (
         <div style={{ margin: "14px 20px 4px" }}>
           <div className="card" style={{ padding: 18 }}>
             <div className="hero-label">Adherence this week</div>
@@ -213,11 +216,11 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
         </div>
       )}
 
-      {!isPro && (
+      {config.upsell && (
         <div style={{ margin: "14px 20px 4px" }}>
           <div className="card" style={{ padding: 18, background: "linear-gradient(135deg,#FFFFFF,var(--ib2))", border: "1px solid var(--ib3)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "var(--t1)" }}>Unlock Pro</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "var(--t1)" }}>Unlock {upLabel}</span>
             </div>
             <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.45 }}>
               Track unlimited medications, see weekly adherence insights, and export reports to share with your doctor.
@@ -373,7 +376,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           </span>
         </div>
         <div className="list">
-          {isPro ? (() => {
+          {has("vitals") ? (() => {
             const self = household.find(m => m.kind === "self") || household[0] || {};
             const sum = latestVitals(self);
             const has = sum.length > 0;

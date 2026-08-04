@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { calcStreak, TIER_LIMITS, getVisits } from "@/lib/data";
+import { calcStreak, getVisits } from "@/lib/data";
+import { useTier } from "@/components/TierContext";
 import AdherenceChart from "@/components/AdherenceChart";
 import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { Card, Segmented, InsightCard } from "@/components/ui";
@@ -25,7 +26,7 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
   const [dismissed, setDismissed] = useState(() => {
     try { return JSON.parse(localStorage.getItem("mt_dismissed_insights") || "[]"); } catch { return []; }
   });
-  const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
+  const { config: limits, has } = useTier();
   const today = new Date();
 
   useEffect(() => {
@@ -402,7 +403,7 @@ export default function ReportsTab({ logs, meds, plan, onNavigate }) {
 </div>
 <div class="chart-wrap"><img src="${chart2}" alt="Weekly adherence trend chart"/></div>
 
-${limits.reports ? `
+${has("reports") ? `
 <div class="section-title">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
   Clinical Insights
@@ -604,7 +605,7 @@ ${limits.reports ? `
     <div className="scroll">
       <div className="nav-large">{t("reports.title")}</div>
 
-      {limits.reports ? (
+      {has("reports") ? (
         <div style={{ margin: "0 20px 14px" }}>
           <Segmented options={[["7d","7 days"],["30d","30 days"],["all","All time"]]} value={range} onChange={setRange} style={{ marginBottom: 10 }} />
           <Card style={{ padding: 18 }}>
@@ -642,7 +643,7 @@ ${limits.reports ? `
         <AdherenceCalendar logs={logs} meds={meds}/>
       </div>
 
-      {limits.reports && (
+      {has("reports") && (
         <div className="section">
           <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
             <Ico><TrendingUp size={15} strokeWidth={2.2} color="var(--teal2)"/></Ico> Detailed treatment analytics
@@ -692,7 +693,7 @@ ${limits.reports ? `
         </div>
       )}
 
-      {limits.reports && (() => {
+      {has("reports") && (() => {
         const lowStock = meds.filter(m => {
           if (!m.pills_per_package) return false;
           const lastRefill = m.last_refill_date ? new Date(m.last_refill_date) : new Date(m.start_date);
@@ -742,7 +743,7 @@ ${limits.reports ? `
         );
       })()}
 
-      {!limits.reports && (
+      {!has("reports") && (
         <div className="upgrade-card" style={{margin:"0 20px 16px"}}>
           <div className="upgrade-title">Upgrade for advanced reports</div>
           <div className="upgrade-sub">
@@ -813,8 +814,7 @@ ${limits.reports ? `
           <span style={{marginLeft:"auto",fontSize:12,color:"var(--t3)",transition:"transform .2s",transform:showHistory?"rotate(180deg)":"rotate(0deg)"}}>▼</span>
         </div>
         {showHistory && (() => {
-          const limits2 = { free: { history: 7 }, pro: { history: 999 }, family: { history: 999 } };
-          const maxDays = (limits2[plan] || limits2.free).history;
+          const maxDays = limits.history;
           const grouped2 = {};
           logs.forEach(l => {
             const d = l.taken_at?.split("T")[0];
@@ -861,7 +861,7 @@ ${limits.reports ? `
         })()}
       </div>
 
-      {limits.reports && (
+      {has("reports") && (
         <>
           <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
             <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>

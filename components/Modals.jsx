@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check } from "lucide-react";
 
@@ -111,9 +112,9 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
   const plans = [
     {
       id: "pro",
-      name: "Pro",
-      icon: <Crown size={22} strokeWidth={2.2} color="var(--teal)"/>,
-      color: "var(--teal)",
+      name: getTierConfig("pro").label,
+      icon: <Crown size={22} strokeWidth={2.2} color={getTierConfig("pro").theme.accent}/>,
+      color: getTierConfig("pro").theme.accent,
       price: pricing.pro.label,
       period: "/month",
       tagline: "Everything you need for full adherence",
@@ -129,9 +130,9 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
     },
     {
       id: "family",
-      name: "Family",
-      icon: <Users size={22} strokeWidth={2.2} color="var(--teal2)"/>,
-      color: "var(--teal2)",
+      name: getTierConfig("family").label,
+      icon: <Users size={22} strokeWidth={2.2} color={getTierConfig("family").theme.accent}/>,
+      color: getTierConfig("family").theme.accent,
       price: pricing.family.label,
       period: "/month",
       tagline: "One account for the whole household",

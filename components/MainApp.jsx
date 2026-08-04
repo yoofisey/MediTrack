@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { THEMES, TIER_LIMITS, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
+import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
+import { getTierConfig } from "@/lib/tiers";
+import { TierProvider } from "@/components/TierContext";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
@@ -113,7 +115,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           if (Array.isArray(lr.data)) { setLogs(lr.data); setCache("logs", lr.data); }
           if (Array.isArray(vr.data)) { setVitals(vr.data); setCache("vitals", vr.data); }
           try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch (e) { console.error("journal load:", e); }
-          try { const { checkRefillReminders } = await import("@/lib/notifications"); if ((TIER_LIMITS[profile?.plan || "free"] || TIER_LIMITS.free).refillReminder) checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
+          try { const { checkRefillReminders } = await import("@/lib/notifications"); if (getTierConfig(profile?.plan || "free").refillReminder) checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
           flushQueue();
         }
       } catch (e) {
@@ -155,7 +157,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, [user?.id, loadKey, profile?.plan]);
 
   const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs, vitals }), [user, profile, meds, logs, vitals]);
-  const isFamilyTier = (profile?.plan || "free") === "family";
+  const isFamilyTier = getTierConfig(profile?.plan || "free").features.includes("familyMembers");
   const household = useMemo(() => {
     if (!isFamilyTier) return [selfMember];
     return [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))];
@@ -594,11 +596,12 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     } catch {}
   }
 
-  const isPro = ["pro", "family", "enterprise"].includes(profile?.plan);
+  const tierConfig = getTierConfig(profile?.plan || "free");
+  const hasFeature = (f) => Boolean(tierConfig.features?.includes(f) || tierConfig[f] === true);
   const tabs = [
     { id: "today", label: t("nav.today"), icon: <Home size={23} strokeWidth={1.9} /> },
     { id: "meds", label: t("nav.meds"), icon: <Pill size={23} strokeWidth={1.9} /> },
-    ...(isPro ? [{ id: "vitals", label: t("nav.vitals"), icon: <HeartPulse size={23} strokeWidth={1.9} /> }] : []),
+    ...(hasFeature("vitals") ? [{ id: "vitals", label: t("nav.vitals"), icon: <HeartPulse size={23} strokeWidth={1.9} /> }] : []),
     { id: "reports", label: t("nav.reports"), icon: <BarChart3 size={23} strokeWidth={1.9} /> },
     { id: "me", label: t("nav.profile"), icon: <User size={23} strokeWidth={1.9} /> },
   ];
@@ -652,6 +655,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   );
 
   return (
+    <TierProvider tier={profile?.plan || "free"}>
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
       <style>{CSS}</style>
 
@@ -669,7 +673,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const activeMember = household.find(m => m.key === memberView);
         if (!activeMember) return null;
         return (
-          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={(profile?.plan || "free") === "family"} onChanged={reload} />
+          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={hasFeature("familyMembers")} onChanged={reload} />
         );
       })() : overlayTab ? (
         <div className="scroll">
@@ -684,7 +688,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
             <div className="content-reveal">
               {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => setTab("reports")} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
-              {tab === "vitals" && isPro && <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} />}
+              {tab === "vitals" && hasFeature("vitals") && <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>
@@ -744,5 +748,6 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         />
       )}
     </div>
+    </TierProvider>
   );
 }

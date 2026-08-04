@@ -2,7 +2,7 @@
 
 import { CSS, fmtDate } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { TIER_LIMITS } from "@/lib/data";
+import { useTier } from "@/components/TierContext";
 import { Pill, FileText, Package, Plus, CheckCircle2, Clock } from "lucide-react";
 
 function Ico({ children, ...props }) {
@@ -18,7 +18,7 @@ function rem(med, logs) {
 
 export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill, plan }) {
   const { t } = useLang();
-  const limits = TIER_LIMITS[plan] || TIER_LIMITS.free;
+  const { tier, config: limits } = useTier();
   const medCount = meds.length;
   const today = new Date();
   const active = meds.filter(m=>{const e=new Date(m.start_date);e.setDate(e.getDate()+m.course_duration_days);return e>=today&&m.active;});
@@ -97,7 +97,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
         <div className="chip"><div className="chip-val">{ended.length}</div><div className="chip-lbl">{t("meds.completed")}</div></div>
       </div>
 
-      {plan==="free" ? (
+      {tier === "free" ? (
         <div style={{margin:"0 20px 14px",background:"var(--card)",borderRadius:"var(--rl)",padding:"14px 18px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
             <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>{t("meds.medLimit")}</span>
