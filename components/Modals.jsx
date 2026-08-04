@@ -5,7 +5,7 @@ import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
-import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check } from "lucide-react";
+import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
