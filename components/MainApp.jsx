@@ -127,6 +127,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   useEffect(() => {
     if (!user?.id) return;
+    if ((profile?.plan || "free") !== "family") return;
     let cancelled = false;
     (async () => {
       try {
@@ -151,10 +152,14 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       } catch (e) { console.error("family load:", e); }
     })();
     return () => { cancelled = true; };
-  }, [user?.id, loadKey]);
+  }, [user?.id, loadKey, profile?.plan]);
 
   const selfMember = useMemo(() => makeSelfMember({ user, profile, meds, logs, vitals }), [user, profile, meds, logs, vitals]);
-  const household = useMemo(() => [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))], [selfMember, familyRows, linkedData]);
+  const isFamilyTier = (profile?.plan || "free") === "family";
+  const household = useMemo(() => {
+    if (!isFamilyTier) return [selfMember];
+    return [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))];
+  }, [selfMember, familyRows, linkedData, isFamilyTier]);
   const alertCount = useMemo(() => { try { return buildAlerts(household).today.length; } catch { return 0; } }, [household]);
 
   function openMember(m) { setMemberView(m?.key || null); }
