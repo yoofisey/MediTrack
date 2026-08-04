@@ -386,7 +386,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
   );
 }
 
-export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
+export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoReports }) {
   const { t } = useLang();
   const [logType, setLogType] = useState(null);
   const [historyType, setHistoryType] = useState(null);
@@ -438,11 +438,18 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member }) {
         @keyframes cardIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
       `}</style>
 
-      <div style={{ margin: "16px 16px 8px", display: "flex", alignItems: "center", gap: 10 }}>
-        <Stethoscope size={20} color="var(--teal)" />
-        <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: -.3, color: "var(--t1)" }}>
-          {t("vitals.title")}{member && member.kind !== "self" ? ` — ${member.name}` : ""}
-        </span>
+      <div style={{ margin: "16px 16px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Stethoscope size={20} color="var(--teal)" />
+          <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: -.3, color: "var(--t1)" }}>
+            {t("vitals.title")}{member && member.kind !== "self" ? ` — ${member.name}` : ""}
+          </span>
+        </div>
+        {onGoReports && member?.kind === "self" && (
+          <button onClick={onGoReports} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 99, background: "var(--ib1)", border: "1px solid var(--sep)", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--t2)" }}>
+            <BarChart3 size={14} strokeWidth={2} /> Reports
+          </button>
+        )}
       </div>
 
       <div style={{margin:"0 16px 12px",background:"linear-gradient(145deg,var(--teal),var(--teal2))",borderRadius:16,padding:20,color:"white",position:"relative",overflow:"hidden",animation:"fadeUp .3s ease both"}}>

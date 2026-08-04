@@ -50,18 +50,23 @@ function MedSlot({ slot, onMarkDose, now }) {
   );
 }
 
-export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, user, onRefresh }) {
+export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, user, onRefresh, onScheduleVisitForMember }) {
   const { t } = useLang();
   const { has, config } = useTier();
   const now = useMemo(() => new Date(), []);
   const [selectedKey, setSelectedKey] = useState(null);
-  const [, setVisitsTick] = useState(0);
+  const [visitsTick, setVisitsTick] = useState(0);
   const [showAddMember, setShowAddMember] = useState(false);
 
   const members = useMemo(() => household.filter(m => !m.pending), [household]);
   const selected = selectedKey ? household.find(m => m.key === selectedKey) : null;
 
-  const visits = useMemo(() => getUpcomingVisits(60), []);
+  const allVisits = useMemo(() => getUpcomingVisits(60), [visitsTick]);
+  const visits = useMemo(() => {
+    if (!selected) return allVisits;
+    if (selected.kind === "self") return allVisits.filter(v => !v.member_key || v.member_key === "self");
+    return allVisits.filter(v => v.member_key === selected.key);
+  }, [allVisits, selected]);
 
   function markVisit(id, status) {
     markVisitStatus(id, status);
@@ -206,6 +211,9 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                     <CalendarDays size={15} color="var(--teal)" strokeWidth={2.2} /> Hospital visits
                   </span>
+                  {selected.kind !== "self" && onScheduleVisitForMember && (
+                    <button className="nav-action" onClick={() => onScheduleVisitForMember(selected.key)} style={{ fontSize: 12 }}>+ Schedule</button>
+                  )}
                 </div>
                 {visits.length === 0 ? (
                   <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>

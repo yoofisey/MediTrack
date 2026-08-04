@@ -9,7 +9,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function VisitSheet({ onClose, editingVisit, onSaved, initialView }) {
+export default function VisitSheet({ onClose, editingVisit, onSaved, initialView, memberKey }) {
   const today = new Date().toISOString().split("T")[0];
   const [f, setF] = useState({
     date: editingVisit?.date || today,
@@ -32,13 +32,14 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   function handleSave() {
     if (!f.date) return;
     setBusy(true);
+    const visitData = memberKey ? { ...f, member_key: memberKey } : f;
     let saved;
     if (editingId) {
       cancelVisitReminder(editingId);
-      updateVisit(editingId, f);
+      updateVisit(editingId, visitData);
       saved = getVisits().find(v => v.id === editingId);
     } else {
-      saved = addVisit(f);
+      saved = addVisit(visitData);
     }
     if (saved) scheduleVisitReminder(saved);
     onSaved?.();

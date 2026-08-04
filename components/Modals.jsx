@@ -371,11 +371,60 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
 
 const RELATIONSHIP_OPTIONS = ["Spouse", "Parent", "Child", "Sibling", "Grandparent", "Friend", "Caregiver", "Other"];
 
+const COUNTRY_CODES = [
+  { code: "+233", flag: "🇬🇭", name: "Ghana" },
+  { code: "+234", flag: "🇳🇬", name: "Nigeria" },
+  { code: "+254", flag: "🇰🇪", name: "Kenya" },
+  { code: "+256", flag: "🇺🇬", name: "Uganda" },
+  { code: "+255", flag: "🇹🇿", name: "Tanzania" },
+  { code: "+27", flag: "🇿🇦", name: "South Africa" },
+  { code: "+260", flag: "🇿🇲", name: "Zambia" },
+  { code: "+263", flag: "🇿🇼", name: "Zimbabwe" },
+  { code: "+250", flag: "🇷🇼", name: "Rwanda" },
+  { code: "+257", flag: "🇧🇮", name: "Burundi" },
+  { code: "+251", flag: "🇪🇹", name: "Ethiopia" },
+  { code: "+212", flag: "🇲🇦", name: "Morocco" },
+  { code: "+216", flag: "🇹🇳", name: "Tunisia" },
+  { code: "+20", flag: "🇪🇬", name: "Egypt" },
+  { code: "+971", flag: "🇦🇪", name: "UAE" },
+  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia" },
+  { code: "+44", flag: "🇬🇧", name: "UK" },
+  { code: "+1", flag: "🇺🇸", name: "USA" },
+  { code: "+91", flag: "🇮🇳", name: "India" },
+  { code: "+49", flag: "🇩🇪", name: "Germany" },
+  { code: "+33", flag: "🇫🇷", name: "France" },
+  { code: "+39", flag: "🇮🇹", name: "Italy" },
+  { code: "+86", flag: "🇨🇳", name: "China" },
+  { code: "+81", flag: "🇯🇵", name: "Japan" },
+  { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire" },
+  { code: "+228", flag: "🇹🇬", name: "Togo" },
+  { code: "+229", flag: "🇧🇯", name: "Benin" },
+  { code: "+227", flag: "🇳🇪", name: "Niger" },
+  { code: "+226", flag: "🇧🇫", name: "Burkina Faso" },
+  { code: "+221", flag: "🇸🇳", name: "Senegal" },
+  { code: "+223", flag: "🇲🇱", name: "Mali" },
+  { code: "+245", flag: "🇬🇼", name: "Guinea-Bissau" },
+  { code: "+224", flag: "🇬🇳", name: "Guinea" },
+  { code: "+242", flag: "🇨🇬", name: "Congo" },
+  { code: "+243", flag: "🇨🇩", name: "DR Congo" },
+  { code: "+236", flag: "🇨🇫", name: "Central African Rep." },
+  { code: "+235", flag: "🇹🇩", name: "Chad" },
+  { code: "+237", flag: "🇨🇲", name: "Cameroon" },
+  { code: "+240", flag: "🇬🇶", name: "Equatorial Guinea" },
+  { code: "+241", flag: "🇬🇦", name: "Gabon" },
+  { code: "+262", flag: "🇷🇪", name: "Réunion" },
+  { code: "+269", flag: "🇰🇲", name: "Comoros" },
+  { code: "+261", flag: "🇲🇬", name: "Madagascar" },
+  { code: "+230", flag: "🇲🇺", name: "Mauritius" },
+  { code: "+248", flag: "🇸🇨", name: "Seychelles" },
+];
+
 export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
   const [mode, setMode] = useState(null);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [phoneCode, setPhoneCode] = useState("+233");
   const [phone, setPhone] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -389,8 +438,9 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
 
   function handleAddManaged() {
     if (!name.trim()) return;
-    onAddManaged({ name: name.trim(), relationship, phone: phone.trim() || undefined });
-    setName(""); setRelationship(""); setPhone("");
+    const fullPhone = phone.trim() ? `${phoneCode}${phone.trim()}` : undefined;
+    onAddManaged({ name: name.trim(), relationship, phone: fullPhone });
+    setName(""); setRelationship(""); setPhone(""); setPhoneCode("+233");
     setSaved(true);
     setTimeout(() => { setSaved(false); setMode(null); }, 1200);
   }
@@ -468,7 +518,12 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
           </div>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Phone (optional)</div>
-            <input className="sheet-input" type="tel" placeholder="+234…" value={phone} onChange={e => setPhone(e.target.value)} />
+            <div style={{ display: "flex", gap: 6 }}>
+              <select value={phoneCode} onChange={e => setPhoneCode(e.target.value)} style={{ width: 120, padding: "10px 8px", borderRadius: 12, border: "1px solid var(--sep)", background: "var(--card)", color: "var(--t1)", fontSize: 14, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+                {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+              </select>
+              <input className="sheet-input" type="tel" placeholder="e.g. 24 123 4567" value={phone} onChange={e => setPhone(e.target.value)} style={{ flex: 1 }} />
+            </div>
           </div>
           {saved && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 600, marginBottom: 8 }}>✓ Member added</div>}
           <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleAddManaged} disabled={!name.trim()}>

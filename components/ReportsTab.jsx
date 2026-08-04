@@ -16,7 +16,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function ReportsTab({ logs, meds, plan, onNavigate }) {
+export default function ReportsTab({ logs, meds, plan, onNavigate, onBack }) {
   const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
@@ -603,6 +603,7 @@ ${has("reports") ? `
 
   return (
     <div className="scroll">
+      {onBack && <div style={{ padding: "4px 20px 0" }}><button className="btn btn-ghost" onClick={onBack}>← Back to Vitals</button></div>}
       <div className="nav-large">{t("reports.title")}</div>
 
       {has("reports") ? (
