@@ -692,7 +692,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
               {tab === "vitals" && hasFeature("vitals") && <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={() => setTab("vitals")} onGoReports={() => setTab("reports")} />}
+              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={() => setTab("reports")} onAddMember={() => setTab("me")} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>
           </div>

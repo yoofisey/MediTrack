@@ -5,7 +5,7 @@ import { useLang } from "@/lib/i18n";
 import { useTier } from "@/components/TierContext";
 import { expectedDosesToday, activeMeds, missedDoses, weekAdherence, streak, initials, ringPct, memberStatus } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
-import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock } from "lucide-react";
+import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock, Plus } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -47,7 +47,7 @@ function MedSlot({ slot, onMarkDose, now }) {
   );
 }
 
-export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports }) {
+export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, onAddMember }) {
   const { t } = useLang();
   const { has, config } = useTier();
   const now = useMemo(() => new Date(), []);
@@ -91,7 +91,12 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
             </div>
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", marginBottom: 6 }}>No family members yet</div>
-          <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.5 }}>Add family members from your Profile to start tracking together.</div>
+          <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.5, marginBottom: 16 }}>Add family members to start tracking together.</div>
+          {onAddMember && (
+            <button onClick={onAddMember} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Plus size={16} strokeWidth={2.5} /> Add family member
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -225,7 +230,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <HeartPulse size={15} color="var(--teal)" strokeWidth={2.2} /> Vitals
                     </span>
-                    <button className="nav-action" onClick={() => onOpenVitals?.()} style={{ fontSize: 12 }}>View all</button>
+                    <button className="nav-action" onClick={() => onOpenVitals?.(selected)} style={{ fontSize: 12 }}>View all</button>
                   </div>
                   {(() => {
                     const latest = latestVitals(selected);
