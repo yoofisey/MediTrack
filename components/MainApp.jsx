@@ -19,7 +19,7 @@ import AlertsTab from "@/components/AlertsTab";
 import MeTab from "@/components/MeTab";
 import MemberDetail from "@/components/MemberDetail";
 import MedSheet from "@/components/MedSheet";
-import { DeleteConfirmModal, LogDoseModal } from "@/components/Modals";
+import { DeleteConfirmModal, LogDoseModal, UpgradeModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
 import VisitSheet from "@/components/VisitSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
@@ -55,6 +55,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [overlayTab, setOverlayTab] = useState(null);
   const [vitalsMember, setVitalsMember] = useState(null);
   const [medSheetFor, setMedSheetFor] = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -671,7 +672,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoFamily={() => setTab("family")} onGoReports={() => setTab("reports")} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onOpenVitals={openMemberVitals} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={meds} logs={logs} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={deleteMed} onRefill={logRefill} plan={profile?.plan || "free"} medCount={meds.length} />}
               {tab === "family" && <FamilyTab household={household} plan={profile?.plan || "free"} country={user?.user_metadata?.country} userEmail={user?.email} onSaveProfile={saveProfile} onOpenMember={openMember} onChanged={reload} onGenerateReport={generateFamilyReport} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
@@ -699,6 +700,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           medCount={medSheetFor.member?.meds?.length ?? meds.length}
           onSave={() => { setMedSheetFor(null); reload(); }}
           onClose={() => setMedSheetFor(null)}
+          onUpgrade={() => setShowUpgrade(true)}
           allMeds={medSheetFor.member?.meds?.length ? medSheetFor.member.meds : meds}
         />
       )}
@@ -721,6 +723,15 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
       {showInviteSheet && pendingInvites.length > 0 && (
         <FamilyInviteSheet invites={pendingInvites} onAccept={handleAcceptInvite} onDismiss={() => setShowInviteSheet(false)}/>
+      )}
+      {showUpgrade && (
+        <UpgradeModal
+          country={user?.user_metadata?.country}
+          userEmail={user?.email}
+          currentPlan={profile?.plan || "free"}
+          onClose={() => setShowUpgrade(false)}
+          onUpgrade={p => { saveProfile({ plan: p }); setShowUpgrade(false); }}
+        />
       )}
     </div>
   );

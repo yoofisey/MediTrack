@@ -5,11 +5,11 @@ import { sb } from "@/lib/supabase";
 import { canAddMed, TIER_LIMITS } from "@/lib/data";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
 
-export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, allMeds }) {
+export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds }) {
   const limits = TIER_LIMITS[plan || "free"] || TIER_LIMITS.free;
   const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
   const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [capHit, setCapHit] = useState(false);
   const sheetRef = useRef(null);
   useEffect(() => { if (err) sheetRef.current?.scrollTo?.({ top: 0, behavior: "smooth" }); }, [err]);
   const existingMeds = allMeds || [];
@@ -29,7 +29,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
 
   async function save() {
     if (!med && !canAddMed(plan || "free", medCount || 0)) {
-      setErr("Free plan allows up to 2 medications. Upgrade to Pro for unlimited medications.");
+      setCapHit(true);
       return;
     }
     if (!f.name.trim()||!f.dosage_amount||!f.course_duration_days) { setErr("Please fill in name, dosage, and duration."); return; }
@@ -72,6 +72,13 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         <div className="sheet-handle"/>
         <div className="sheet-title">{med?"Edit Medication":"New Medication"}</div>
         {err && <div style={{margin:"0 16px 8px"}} className="err-msg">{err}</div>}
+        {capHit && (
+          <div style={{ margin: "0 16px 12px", background: "var(--ib3)", borderRadius: 16, padding: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", marginBottom: 4 }}>You've reached the free limit</div>
+            <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 10 }}>The free plan includes up to {limits.maxMeds} medications. Upgrade to Pro for unlimited medications, weekly insights and shareable reports.</div>
+            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => { onUpgrade?.(); onClose(); }}>Upgrade to Pro →</button>
+          </div>
+        )}
 
         <div className="sheet-section">
           <div className="sheet-label">Medication name</div>

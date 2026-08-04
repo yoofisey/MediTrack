@@ -94,6 +94,7 @@ export default function MeTab({ user, profile, household, plan, country, notifPe
           </Row>
           <Row icon={<Ico><Palette size={20} /></Ico>} bg="var(--ib4)" title="Appearance" sub="Accent color" onClick={() => setShowTheme(true)} />
           <Row icon={<Ico><BarChart3 size={20} /></Ico>} bg="var(--ib1)" title="My reports" sub="Adherence charts & history" onClick={() => onOpenReports()} />
+          {plan === "free" && <Row icon={<Ico><Crown size={20} /></Ico>} bg="var(--ib3)" title="Upgrade to Pro" sub="Unlimited meds, insights & advanced reports" onClick={() => setShowUpgrade(true)} />}
           <Row icon={<Ico><HeartPulse size={20} /></Ico>} bg="var(--ib6)" title="Health readings" sub="Blood pressure, glucose & more" onClick={() => onOpenVitals()} />
           <Row icon={<Ico><FileText size={20} /></Ico>} bg="var(--ib3)" title="Family report for the doctor" sub="PDF of everyone's adherence" onClick={onGenerateReport} />
         </div>
