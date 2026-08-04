@@ -51,7 +51,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [editCountryPick, setEditCountryPick] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [showMedicalID, setShowMedicalID] = useState(false);
+  const [medSection, setMedSection] = useState(null);
   const [schedVals, setSchedVals] = useState({ wake: profile?.wake_time || "07:00", sleep: profile?.sleep_time || "22:00" });
   const [familyMembers, setFamilyMembers] = useState([]);
 
@@ -538,10 +538,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     <div className="section" style={{marginBottom:16}}>
       <div className="section-header">Medical ID</div>
         <div className="list">
-          <Row icon={<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Current medications" sub={(medicalID.medication_ids||[]).length ? `${(medicalID.medication_ids||[]).length} listed in Medical ID` : "Not set"} onClick={()=>setShowMedicalID(true)}/>
-          <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Blood type" sub={medicalID.blood_type || "Not set"} onClick={()=>setShowMedicalID(true)}/>
-          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={(medicalID.allergies||[]).length ? medicalID.allergies.join(", ") : "None recorded"} onClick={()=>setShowMedicalID(true)}/>
-          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={medicalID.emergency_name ? `${medicalID.emergency_name}${medicalID.emergency_relation ? ` · ${medicalID.emergency_relation}` : ""}${medicalID.emergency_phone ? ` · ${medicalID.emergency_code || "+233"} ${medicalID.emergency_phone}` : ""}` : "Not set"} onClick={()=>setShowMedicalID(true)}/>
+          <Row icon={<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Current medications" sub={(medicalID.medication_ids||[]).length ? `${(medicalID.medication_ids||[]).length} listed in Medical ID` : "Not set"} onClick={()=>setMedSection("medications")}/>
+          <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Blood type" sub={medicalID.blood_type || "Not set"} onClick={()=>setMedSection("blood_type")}/>
+          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={(medicalID.allergies||[]).length ? medicalID.allergies.join(", ") : "None recorded"} onClick={()=>setMedSection("allergies")}/>
+          <Row icon={<Ico><Info size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title="Medical conditions" sub={(medicalID.conditions||[]).length ? medicalID.conditions.join(", ") : "None recorded"} onClick={()=>setMedSection("conditions")}/>
+          <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={medicalID.emergency_name ? `${medicalID.emergency_name}${medicalID.emergency_relation ? ` · ${medicalID.emergency_relation}` : ""}${medicalID.emergency_phone ? ` · ${medicalID.emergency_code || "+233"} ${medicalID.emergency_phone}` : ""}` : "Not set"} onClick={()=>setMedSection("contact")}/>
         </div>
       </div>
 
@@ -643,7 +644,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         {showPersonalDetails && (
           <PersonalDetailsModal details={personalDetails} onSave={savePersonalDetails} onClose={() => setShowPersonalDetails(false)}/>
         )}
-        {showMedicalID && <MedicalID meds={meds} onClose={() => { setShowMedicalID(false); refreshMedicalID(); }}/>}
+        {medSection && <MedicalID meds={meds} section={medSection} onClose={() => { setMedSection(null); refreshMedicalID(); }}/>}
         {showDeleteAccount && (
           <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
             <div className="sheet" style={{maxHeight:"80vh"}} onClick={e => e.stopPropagation()}>

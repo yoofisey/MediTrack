@@ -37,6 +37,24 @@ function fmtVisitDate(v) {
   return `${d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }
 
+function ProgressRing({ pct, size = 48, stroke = 5 }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const off = c * (1 - Math.min(100, Math.max(0, pct)) / 100);
+  const color = pct === 100 ? "var(--green)" : pct > 0 ? "var(--teal)" : "var(--t4)";
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0, animation: "fadeUp .3s ease both" }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--sep)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} style={{ transition: "stroke-dashoffset .5s ease" }} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontSize: 12, fontWeight: 800, color: "var(--t1)" }}>
+        {pct}%
+      </div>
+    </div>
+  );
+}
+
 function LogButton({ member, slot, allLogged, now, onMarkDose }) {
   if (allLogged || slot?.logged) {
     return (
@@ -103,6 +121,10 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
 
   const overdueTotal = household.reduce((s, m) => s + missedDoses(m, now).length, 0);
 
+  const progressTotal = slots.length;
+  const progressLogged = slots.filter(s => s.logged).length;
+  const progressPct = progressTotal ? Math.round((progressLogged / progressTotal) * 100) : 0;
+
   const isPro = ["pro", "family", "enterprise"].includes(plan);
   const adh = selected ? weekAdherence(selected) : null;
   const stk = selected ? streak(selected) : 0;
@@ -122,6 +144,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <ProgressRing pct={progressPct} />
             <button onClick={onOpenAlerts} aria-label="Alerts"
               style={{ position: "relative", width: 42, height: 42, borderRadius: "50%", background: "var(--card)", border: "2.5px solid var(--card)", boxShadow: "0 4px 12px rgba(0,0,0,.12)", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0 }}>
               <Bell size={19} color="var(--t1)" strokeWidth={2} />
