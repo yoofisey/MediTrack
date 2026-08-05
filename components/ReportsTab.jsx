@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CSS, fmtTime, fmtDateLong } from "@/lib/constants";
+import { CSS, fmtTime, fmtDateLong, currencySymbol } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { calcStreak, getVisits } from "@/lib/data";
 import { useTier } from "@/components/TierContext";
@@ -775,12 +775,13 @@ ${has("reports") ? `
               return <div style={{textAlign:"center",padding:20,color:"var(--t3)",fontSize:13}}>Add cost info to your medications to track spending</div>;
             }
             const totalCost = medsCosted.reduce((s, m) => s + (Number(m.cost_per_package) || 0), 0);
-            const currency = medsCosted[0]?.cost_currency || "GH₵";
+            const currency = medsCosted[0]?.cost_currency || "GHS";
+            const curSym = currencySymbol(currency) || currency;
             return (
               <>
                 <div style={{textAlign:"center",marginBottom:20}}>
                   <div style={{fontSize:11,color:"var(--t3)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Total medication cost</div>
-                  <div style={{fontSize:30,fontWeight:800,color:"var(--t1)",letterSpacing:-.5}}>{currency}{totalCost.toFixed(2)}</div>
+                  <div style={{fontSize:30,fontWeight:800,color:"var(--t1)",letterSpacing:-.5}}>{curSym}{totalCost.toFixed(2)}</div>
                 </div>
                 {medsCosted.map(m => (
                   <div key={m.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"0.5px solid var(--sep)"}}>
@@ -789,7 +790,7 @@ ${has("reports") ? `
                       <div style={{fontSize:13,fontWeight:500,color:"var(--t1)"}}>{m.name}</div>
                       <div style={{fontSize:11,color:"var(--t3)"}}>{m.pills_per_package ? `${m.pills_per_package} units/pkg` : "Per package"}</div>
                     </div>
-                    <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>{m.cost_currency||currency}{Number(m.cost_per_package).toFixed(2)}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>{currencySymbol(m.cost_currency) || curSym}{Number(m.cost_per_package).toFixed(2)}</div>
                   </div>
                 ))}
               </>

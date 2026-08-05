@@ -7,6 +7,7 @@ import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpe
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
+import MedLogButton from "@/components/MedLogButton";
 import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X } from "lucide-react";
 
 const VITAL_LABELS = {
@@ -55,29 +56,6 @@ function ProgressRing({ pct, size = 48, stroke = 5 }) {
         {pct}%
       </div>
     </div>
-  );
-}
-
-function LogButton({ member, slot, allLogged, now, onMarkDose }) {
-  if (allLogged || slot?.logged) {
-    return (
-      <span className="btn btn-sm" style={{ background: "var(--ib2)", color: "var(--green)", border: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4, pointerEvents: "none" }}>
-        <Check size={13} strokeWidth={3} /> Taken
-      </span>
-    );
-  }
-  if (now.getTime() < slot.dueMs) {
-    return (
-      <span className="btn btn-sm" style={{ background: "var(--hover)", color: "var(--t4)", border: "none", display: "flex", alignItems: "center", gap: 4, cursor: "not-allowed", pointerEvents: "none" }}>
-        <Lock size={12} /> {slot.time}
-      </span>
-    );
-  }
-  return (
-    <button className="btn btn-sm" onClick={() => onMarkDose(member, slot)}
-      style={{ background: "var(--teal)", color: "#fff", border: "none", fontWeight: 700, padding: "8px 14px" }}>
-      Log
-    </button>
   );
 }
 
@@ -323,7 +301,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
                   <div className="row-title" style={{ fontWeight: 600 }}>{r.med.name}{r.member.kind !== "self" && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--teal)", marginLeft: 6 }}>· for {r.member.name}</span>}</div>
                   <div className="row-sub">{r.med.dosage_amount}{r.med.dosage_unit}{r.total > 1 ? ` · ${r.loggedCount}/${r.total} doses` : ""}{r.overdue ? " · overdue" : ""}</div>
                 </div>
-                <LogButton member={r.member} slot={r.next} allLogged={r.allLogged} now={now} onMarkDose={onMarkDose} />
+                <MedLogButton member={r.member} med={r.med} now={now} onMarkDose={onMarkDose} />
               </div>
             ))}
           </div>

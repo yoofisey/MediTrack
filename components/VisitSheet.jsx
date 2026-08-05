@@ -9,7 +9,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function VisitSheet({ onClose, editingVisit, onSaved, initialView, memberKey }) {
+export default function VisitSheet({ onClose, editingVisit, onSaved, initialView, memberKey, userId }) {
   const today = new Date().toISOString().split("T")[0];
   const [f, setF] = useState({
     date: editingVisit?.date || today,
@@ -32,7 +32,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   function handleSave() {
     if (!f.date) return;
     setBusy(true);
-    const visitData = memberKey ? { ...f, member_key: memberKey } : f;
+    const visitData = { ...f, ...(memberKey ? { member_key: memberKey } : {}), ...(userId ? { user_id: userId } : {}) };
     let saved;
     if (editingId) {
       cancelVisitReminder(editingId);

@@ -7,6 +7,7 @@ import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
 import { pushManagedMed, updateManagedMed } from "@/lib/household";
+import { CURRENCIES } from "@/lib/constants";
 
 export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds, managed, memberId }) {
   const { tier, config: limits, has } = useTier();
@@ -171,14 +172,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
               <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Currency</div>
               <select className="sheet-input" value={f.cost_currency} onChange={e=>set("cost_currency",e.target.value)}>
                 <option value="">Select</option>
-                <option value="GHS">₵ GHS</option>
-                <option value="NGN">₦ NGN</option>
-                <option value="KES">KSh KES</option>
-                <option value="ZAR">R ZAR</option>
-                <option value="USD">$ USD</option>
-                <option value="EUR">€ EUR</option>
-                <option value="GBP">£ GBP</option>
-                <option value="INR">₹ INR</option>
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
               </select>
             </div>
           </div>

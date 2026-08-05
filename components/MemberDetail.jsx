@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
 import { activeMeds, missedDoses, weekDots, weekAdherence, streak, initials, expectedDosesToday, pushManagedMed } from "@/lib/household";
-import { ChevronLeft, Check, Pill, Plus, Phone, HeartPulse } from "lucide-react";
+import { ChevronLeft, Pill, Plus, Phone, HeartPulse } from "lucide-react";
+import MedLogButton from "@/components/MedLogButton";
 
 function MemberRing({ member, pct, size = 92, stroke = 6 }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
@@ -181,24 +182,33 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
           </div>
         ) : (
           <div className="list">
-            {slots.map((s, i) => {
-              const medRow = meds.find(m => m.id === s.med.id);
-              return (
-                <div key={i} className="row" style={{ cursor: "default" }}>
-                  <div onClick={() => !s.logged && onMarkDose(member, s)}
-                    style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, border: s.logged ? "none" : `2px solid ${s.overdue ? "var(--red)" : "var(--sep)"}`, background: s.logged ? "var(--ib2)" : "transparent", cursor: s.logged ? "default" : "pointer", transition: "transform .15s" }}>
-                    {s.logged ? <Check size={18} strokeWidth={3} color="var(--green)" /> : <span style={{ fontSize: 10, fontWeight: 700, color: s.overdue ? "var(--red)" : "var(--t3)" }}>{s.time}</span>}
+            {(() => {
+              const byMed = {};
+              slots.forEach(s => {
+                if (!byMed[s.med.id]) byMed[s.med.id] = [];
+                byMed[s.med.id].push(s);
+              });
+              return Object.values(byMed).map(ms => {
+                const med = ms[0].med;
+                const next = ms.find(s => !s.logged);
+                const medRow = meds.find(m => m.id === med.id);
+                return (
+                  <div key={med.id} className="row" style={{ cursor: "default" }}>
+                    <div className="row-icon" style={{ background: !next ? "var(--ib2)" : "var(--ib1)" }}>
+                      <Pill size={18} color={!next ? "var(--green)" : "var(--teal)"} strokeWidth={2.2} />
+                    </div>
+                    <div className="row-body">
+                      <div className="row-title" style={{ fontWeight: 500 }}>{med.name} <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}>{med.dosage_amount}{med.dosage_unit}</span></div>
+                      <div className="row-sub">{ms.filter(s => s.logged).length}/{ms.length} doses today</div>
+                    </div>
+                    {medRow && medRow.pills_per_package && (
+                      <button className="btn btn-sm btn-ghost" style={{ flexShrink: 0, fontSize: 11, padding: "5px 10px" }} onClick={() => onRefill(member, medRow)}>Refill</button>
+                    )}
+                    <MedLogButton member={member} med={med} now={now} onMarkDose={onMarkDose} />
                   </div>
-                  <div className="row-body">
-                    <div className="row-title" style={{ fontWeight: 500 }}>{s.med.name} {s.med.dosage_amount}{s.med.dosage_unit}</div>
-                    <div className="row-sub">{s.med.notes || `${s.time} · tap the circle when taken`}</div>
-                  </div>
-                  {medRow && medRow.pills_per_package && (
-                    <button className="btn btn-sm btn-ghost" style={{ flexShrink: 0, fontSize: 11, padding: "5px 10px" }} onClick={() => onRefill(member, medRow)}>Refill</button>
-                  )}
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         )}
       </div>

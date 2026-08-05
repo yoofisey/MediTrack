@@ -9,6 +9,7 @@ import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import { AddMemberModal } from "@/components/Modals";
 import { insertFamilyMember, insertManagedFamilyMember, fetchFamilyMembers } from "@/lib/db";
+import MedLogButton from "@/components/MedLogButton";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -24,30 +25,6 @@ const VITAL_UNITS = {
 function fmtVisitDate(v) {
   const d = new Date(v.date + "T" + (v.time || "09:00"));
   return `${d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
-}
-
-function MedSlot({ slot, onMarkDose, now }) {
-  const isOverdue = !slot.logged && now.getTime() - slot.dueMs > 20 * 60000;
-  return (
-    <div className="row" style={{ cursor: "default", alignItems: "center" }}>
-      <div className="row-icon" style={{ background: slot.logged ? "var(--ib2)" : isOverdue ? "var(--ib6)" : "var(--ib1)" }}>
-        <Pill size={19} color={slot.logged ? "var(--green)" : isOverdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
-      </div>
-      <div className="row-body">
-        <div className="row-title" style={{ fontSize: 14 }}>
-          {slot.med.name}
-          <span style={{ fontSize: 12, color: "var(--t3)", marginLeft: 6 }}>{slot.med.dosage_amount}{slot.med.dosage_unit}</span>
-        </div>
-        <div className="row-sub">{slot.time}{slot.logged ? " · taken" : isOverdue ? " · overdue" : ""}</div>
-      </div>
-      {!slot.logged && (
-        <button onClick={() => onMarkDose?.(slot.member, slot)} style={{ width: 36, height: 36, borderRadius: "50%", background: isOverdue ? "var(--red)" : "var(--teal)", border: "none", display: "grid", placeItems: "center", cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,.15)" }}>
-          <Check size={16} color="white" strokeWidth={3} />
-        </button>
-      )}
-      {slot.logged && <span style={{ fontSize: 12, fontWeight: 600, color: "var(--green)" }}>Done</span>}
-    </div>
-  );
 }
 
 export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, user, onRefresh, onScheduleVisitForMember, onEditMed, onDeleteMed, onRemoveMember }) {
@@ -95,6 +72,23 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
 
   const selectedSlots = useMemo(() => selected ? expectedDosesToday(selected, now) : [], [selected, now]);
   const selectedDone = selectedSlots.filter(s => s.logged).length;
+  const selectedMedRows = useMemo(() => {
+    const byMed = {};
+    selectedSlots.forEach(s => {
+      if (!byMed[s.med.id]) byMed[s.med.id] = [];
+      byMed[s.med.id].push(s);
+    });
+    return Object.values(byMed).map(ms => {
+      const next = ms.find(s => !s.logged);
+      return {
+        med: ms[0].med,
+        next,
+        loggedCount: ms.filter(s => s.logged).length,
+        total: ms.length,
+        overdue: !!(next && now.getTime() - next.dueMs > 20 * 60000),
+      };
+    });
+  }, [selectedSlots, now]);
   const selectedAdh = useMemo(() => selected ? weekAdherence(selected) : null, [selected]);
   const selectedStreak = useMemo(() => selected ? streak(selected) : 0, [selected]);
   const selectedMeds = useMemo(() => selected ? activeMeds(selected) : [], [selected]);
@@ -121,7 +115,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", marginBottom: 6 }}>No family members yet</div>
           <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.5, marginBottom: 16 }}>Add family members to start tracking together.</div>
-          <button onClick={() => setShowAddMember(true)} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <button onClick={() => setShowAddMember(true)} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <Plus size={16} strokeWidth={2.5} /> Add family member
           </button>
         </div>
@@ -160,7 +154,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
             <div style={{ padding: "0 20px 24px" }}>
               {/* Summary card */}
               <div className="card" style={{ padding: 18, marginBottom: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: config.theme.accent, display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: "white", flexShrink: 0 }}>
                     {selected.avatarUrl ? <img src={selected.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(selected)}
                   </div>
@@ -200,24 +194,36 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
               {/* Today's Medications */}
               <div className="section">
                 <div className="section-header">
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                     <Pill size={15} color="var(--teal)" strokeWidth={2.2} /> Today&apos;s medications
                   </span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                     {selected.kind === "managed" && (
-                      <button className="nav-action" onClick={() => onEditMed?.(selected, null)} style={{ fontSize: 12 }}><Plus size={13} strokeWidth={2.5} /> Add</button>
+                      <button className="nav-action" onClick={() => onEditMed?.(selected, null)} style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}><Plus size={13} strokeWidth={2.5} /> Add</button>
                     )}
                     <span style={{ fontSize: 12, color: "var(--t3)" }}>{selectedDone}/{selectedSlots.length} done</span>
                   </span>
                 </div>
-                {selectedSlots.length === 0 ? (
+                {selectedMedRows.length === 0 ? (
                   <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
                     <div className="empty-state-title" style={{ fontSize: 14 }}>No medications scheduled</div>
                   </div>
                 ) : (
                   <div className="list">
-                    {selectedSlots.map((s, i) => (
-                      <MedSlot key={`${s.med.id}-${i}`} slot={s} onMarkDose={onMarkDose} now={now} />
+                    {selectedMedRows.map(r => (
+                      <div key={r.med.id} className="row" style={{ cursor: "default", alignItems: "center" }}>
+                        <div className="row-icon" style={{ background: !r.next ? "var(--ib2)" : r.overdue ? "var(--ib6)" : "var(--ib1)" }}>
+                          <Pill size={19} color={!r.next ? "var(--green)" : r.overdue ? "var(--red)" : "var(--teal)"} strokeWidth={2.2} />
+                        </div>
+                        <div className="row-body">
+                          <div className="row-title" style={{ fontSize: 14 }}>
+                            {r.med.name}
+                            <span style={{ fontSize: 12, color: "var(--t3)", marginLeft: 8 }}>{r.med.dosage_amount}{r.med.dosage_unit}</span>
+                          </div>
+                          <div className="row-sub">{r.loggedCount}/{r.total} doses today{!r.next ? " · taken" : r.overdue ? " · overdue" : ""}</div>
+                        </div>
+                        <MedLogButton member={selected} med={r.med} now={now} onMarkDose={onMarkDose} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -227,10 +233,10 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
               {selected.kind === "managed" && (
                 <div className="section">
                   <div className="section-header">
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <Pill size={15} color="var(--teal)" strokeWidth={2.2} /> Medications
                     </span>
-                    <button className="nav-action" onClick={() => onEditMed?.(selected, null)} style={{ fontSize: 12 }}><Plus size={13} strokeWidth={2.5} /> Add</button>
+                    <button className="nav-action" onClick={() => onEditMed?.(selected, null)} style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}><Plus size={13} strokeWidth={2.5} /> Add</button>
                   </div>
                   {selectedMeds.length === 0 ? (
                     <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
@@ -240,7 +246,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 4px" }}>
                       {selectedMeds.map(med => (
-                        <div key={med.id} style={{ background: "var(--card)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
+                        <div key={med.id} style={{ background: "var(--card)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
                           <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--ib1)", display: "grid", placeItems: "center", flexShrink: 0 }}>
                             <Pill size={17} color="var(--teal)" strokeWidth={2.2} />
                           </div>
@@ -264,7 +270,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
               {/* Upcoming Visits */}
               <div className="section">
                 <div className="section-header">
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                     <CalendarDays size={15} color="var(--teal)" strokeWidth={2.2} /> Hospital visits
                   </span>
                   {selected.kind !== "self" && onScheduleVisitForMember && (
@@ -312,7 +318,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
               {has("vitals") && (
                 <div className="section">
                   <div className="section-header">
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <HeartPulse size={15} color="var(--teal)" strokeWidth={2.2} /> Vitals
                     </span>
                     <button className="nav-action" onClick={() => onOpenVitals?.(selected)} style={{ fontSize: 12 }}>View all</button>
@@ -348,7 +354,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
               {has("reports") && (
                 <div className="section">
                   <div className="section-header">
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <BarChart3 size={15} color="var(--teal)" strokeWidth={2.2} /> Reports
                     </span>
                     <button className="nav-action" onClick={() => onGoReports?.()} style={{ fontSize: 12 }}>Full report</button>

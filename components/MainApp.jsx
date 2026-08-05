@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock } from "@/lib/data";
+import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock, syncVisits } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
@@ -38,6 +38,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [profile, setProfile] = useState(initProfile);
   const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
   const [loadKey, setLoadKey] = useState(0);
+  const [visitsTick, setVisitsTick] = useState(0);
   const [deleteMedId, setDeleteMedId] = useState(null);
   const [logDoseMed, setLogDoseMed] = useState(null);
   const [alarmData, setAlarmData] = useState(null);
@@ -120,6 +121,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch (e) { console.error("journal load:", e); }
           try { const { checkRefillReminders } = await import("@/lib/notifications"); if (getTierConfig(profile?.plan || "free").refillReminder) checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
           flushQueue();
+          try { await syncVisits(user.id); if (!cancelled) setVisitsTick(t => t + 1); } catch (e) { console.error("visit sync:", e); }
         }
       } catch (e) {
         if (!cancelled) console.error("load error:", e?.message || e);
@@ -758,7 +760,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         />
       )}
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
-      {(showVisitSheet||showVisitList) && <VisitSheet memberKey={visitMemberKey} initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); reload(); }}/>}
+      {(showVisitSheet||showVisitList) && <VisitSheet memberKey={visitMemberKey} userId={user?.id} initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); reload(); }}/>}
       {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
       {showInviteSheet && pendingInvites.length > 0 && (
         <FamilyInviteSheet invites={pendingInvites} onAccept={handleAcceptInvite} onDismiss={() => setShowInviteSheet(false)}/>
