@@ -10,7 +10,7 @@ import { TierProvider } from "@/components/TierContext";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
-import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember } from "@/lib/db";
+import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember, removeFamilyMember } from "@/lib/db";
 import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock, buildAlerts, removeManagedMed } from "@/lib/household";
 import TodayTab from "@/components/TodayTab";
 import ReportsTab from "@/components/ReportsTab";
@@ -561,6 +561,20 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     setDeleteMedId(id);
   }
 
+  async function removeMember(member) {
+    if (!user?.id || !member || member.kind === "self") return;
+    try {
+      if (member.kind === "managed") {
+        try { localStorage.removeItem(`mt_managed_${member.rowId}`); } catch {}
+      }
+      const { error } = await removeFamilyMember(member.rowId);
+      if (error) console.error("removeFamilyMember error:", error?.message || error);
+      reload();
+    } catch (e) {
+      console.error("removeMember error:", e?.message || e);
+    }
+  }
+
   async function saveProfile(patch) {
     if (!user?.id) return;
     const updated = { ...profile, ...patch };
@@ -698,7 +712,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               )}
               {tab === "vitals" && !hasFeature("vitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={() => { setTab("vitals"); setVitalsSubTab("reports"); }} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} />}
+              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={() => { setTab("vitals"); setVitalsSubTab("reports"); }} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>
           </div>
@@ -721,6 +735,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           reminderLead={profile?.reminder_lead || 30}
           plan={profile?.plan || "free"}
           medCount={medSheetFor.member?.meds?.length ?? meds.length}
+          managed={medSheetFor.member?.kind === "managed"}
+          memberId={medSheetFor.member?.rowId}
           onSave={() => { setMedSheetFor(null); reload(); }}
           onClose={() => setMedSheetFor(null)}
           onUpgrade={() => setShowUpgrade(true)}

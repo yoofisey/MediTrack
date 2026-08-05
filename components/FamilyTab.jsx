@@ -6,7 +6,7 @@ import { useLang } from "@/lib/i18n";
 import { useTier } from "@/components/TierContext";
 import { expectedDosesToday, activeMeds, missedDoses, weekAdherence, streak, initials, ringPct, memberStatus } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
-import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock, Plus } from "lucide-react";
+import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import { AddMemberModal } from "@/components/Modals";
 import { insertFamilyMember, insertManagedFamilyMember, fetchFamilyMembers } from "@/lib/db";
 
@@ -50,7 +50,7 @@ function MedSlot({ slot, onMarkDose, now }) {
   );
 }
 
-export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, user, onRefresh, onScheduleVisitForMember }) {
+export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoReports, user, onRefresh, onScheduleVisitForMember, onEditMed, onDeleteMed, onRemoveMember }) {
   const { t } = useLang();
   const { has, config } = useTier();
   const now = useMemo(() => new Date(), []);
@@ -173,6 +173,11 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                       <Phone size={18} color="var(--teal)" strokeWidth={2.2} />
                     </a>
                   )}
+                  {selected.kind !== "self" && onRemoveMember && (
+                    <button onClick={() => onRemoveMember(selected)} aria-label="Remove member" title="Remove from plan" style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--ib6)", border: "none", display: "grid", placeItems: "center", flexShrink: 0, cursor: "pointer" }}>
+                      <Trash2 size={18} color="var(--red)" strokeWidth={2.2} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Stats row */}
@@ -198,7 +203,12 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                     <Pill size={15} color="var(--teal)" strokeWidth={2.2} /> Today&apos;s medications
                   </span>
-                  <span style={{ fontSize: 12, color: "var(--t3)" }}>{selectedDone}/{selectedSlots.length} done</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    {selected.kind === "managed" && (
+                      <button className="nav-action" onClick={() => onEditMed?.(selected, null)} style={{ fontSize: 12 }}><Plus size={13} strokeWidth={2.5} /> Add</button>
+                    )}
+                    <span style={{ fontSize: 12, color: "var(--t3)" }}>{selectedDone}/{selectedSlots.length} done</span>
+                  </span>
                 </div>
                 {selectedSlots.length === 0 ? (
                   <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
@@ -212,6 +222,44 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                   </div>
                 )}
               </div>
+
+              {/* Medications list (managed members can add/edit/delete) */}
+              {selected.kind === "managed" && (
+                <div className="section">
+                  <div className="section-header">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <Pill size={15} color="var(--teal)" strokeWidth={2.2} /> Medications
+                    </span>
+                    <button className="nav-action" onClick={() => onEditMed?.(selected, null)} style={{ fontSize: 12 }}><Plus size={13} strokeWidth={2.5} /> Add</button>
+                  </div>
+                  {selectedMeds.length === 0 ? (
+                    <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>
+                      <div className="empty-state-title" style={{ fontSize: 14 }}>No medications yet</div>
+                      <div className="empty-state-sub" style={{ marginBottom: 0 }}>Add {selected.name.split(" ")[0]}&apos;s first medication to start tracking doses.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 4px" }}>
+                      {selectedMeds.map(med => (
+                        <div key={med.id} style={{ background: "var(--card)", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--card-shadow)", border: "var(--card-border)" }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--ib1)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                            <Pill size={17} color="var(--teal)" strokeWidth={2.2} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>{med.name}</div>
+                            <div style={{ fontSize: 12, color: "var(--t3)" }}>{med.dosage_amount}{med.dosage_unit} · {med.times_per_day}×/day</div>
+                          </div>
+                          <button onClick={() => onEditMed?.(selected, med)} style={{ background: "none", border: "none", color: "var(--teal)", padding: 6, cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 }} aria-label="Edit medication">
+                            <Pencil size={16} strokeWidth={2.2} />
+                          </button>
+                          <button onClick={() => onDeleteMed?.(selected, med)} style={{ background: "none", border: "none", color: "var(--red)", padding: 6, cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 }} aria-label="Delete medication">
+                            <Trash2 size={16} strokeWidth={2.2} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Upcoming Visits */}
               <div className="section">

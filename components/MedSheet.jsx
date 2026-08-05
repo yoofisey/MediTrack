@@ -6,8 +6,9 @@ import { canAddMed } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
+import { pushManagedMed, updateManagedMed } from "@/lib/household";
 
-export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds }) {
+export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds, managed, memberId }) {
   const { tier, config: limits, has } = useTier();
   const upLabel = getTierConfig(limits.upgradeTarget).label;
   const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
@@ -48,6 +49,16 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
     if (parseInt(f.course_duration_days) > maxDuration) { setErr(`Duration seems too long (max ${maxDuration} days).`); return; }
     setBusy(true); setErr("");
     const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, cost_per_package:f.cost_per_package?parseFloat(f.cost_per_package):null, cost_currency:f.cost_currency||null, notes:f.notes, active:true };
+    if (managed) {
+      try {
+        if (med?.id) updateManagedMed(memberId, med.id, payload);
+        else pushManagedMed(memberId, { ...payload, id: "mm_" + Date.now() + Math.random().toString(36).slice(2, 6) });
+        onSave();
+      } catch (e) {
+        setErr(e?.message || "Could not save. Check your connection and try again."); setBusy(false);
+      }
+      return;
+    }
     const withTimeout = (p, ms = 20000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("This is taking too long. Check your connection and try again.")), ms))]);
     try {
       const result = med?.id
