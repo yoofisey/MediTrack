@@ -58,7 +58,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
   const [visitsTick, setVisitsTick] = useState(0);
   const [showAddMember, setShowAddMember] = useState(false);
 
-  const members = useMemo(() => household.filter(m => !m.pending), [household]);
+  const members = useMemo(() => household, [household]);
   const selected = selectedKey ? household.find(m => m.key === selectedKey) : null;
 
   const allVisits = useMemo(() => getUpcomingVisits(60), [visitsTick]);
@@ -75,7 +75,15 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
 
   async function handleInviteEmail(email) {
     if (!user?.id || !email) return;
-    await insertFamilyMember(user.id, email);
+    const { error } = await insertFamilyMember(user.id, email);
+    if (error) { console.error("invite insert error:", error?.message || error); return; }
+    try {
+      await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: email, senderName: user?.email || "Adhera Team" }),
+      });
+    } catch (e) { console.error("invite email:", e); }
     onRefresh?.();
   }
 

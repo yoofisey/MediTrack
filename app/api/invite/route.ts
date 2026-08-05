@@ -27,6 +27,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "RESEND_API_KEY not configured" }, { status: 500 });
   }
 
+  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin || "https://medi-track-lemon-pi.vercel.app";
+  const acceptUrl = `${origin}/?invite=1`;
+
   try {
     const { error } = await getResend().emails.send({
       from: `${senderName} <${FROM_EMAIL}>`,
@@ -44,12 +47,13 @@ export async function POST(req: Request) {
             <li>Receive alerts when doses are missed</li>
             <li>Access adherence reports and share them with healthcare providers</li>
           </ul>
-          <p>To accept the invitation and get started:</p>
+          <p>To accept the invitation, sign in or create an account with the email address this invite was sent to:</p>
           <p>
-            <a href="https://useadhera.com/invite" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            <a href="${acceptUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
               Accept Invitation
             </a>
           </p>
+          <p>Once you sign in, your family group invite will appear automatically.</p>
           <p>This invitation will expire in 7 days.</p>
           <p>If you have any questions, please contact support.</p>
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;" />

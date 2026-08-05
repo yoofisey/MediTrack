@@ -169,6 +169,13 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       console.error("invite error:", error?.message || error);
       return;
     }
+    try {
+      await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: email, senderName: user?.email || "Adhera Team" }),
+      });
+    } catch (e) { console.error("invite email:", e); }
     const { data } = await fetchFamilyMembers(user.id);
     if (Array.isArray(data)) setFamilyMembers(data);
   }

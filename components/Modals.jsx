@@ -439,7 +439,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
   function handleAddManaged() {
     if (!name.trim()) return;
     const fullPhone = phone.trim() ? `${phoneCode}${phone.trim()}` : undefined;
-    onAddManaged({ name: name.trim(), relationship, phone: fullPhone });
+    onAddManaged({ member_name: name.trim(), relationship, phone: fullPhone });
     setName(""); setRelationship(""); setPhone(""); setPhoneCode("+233");
     setSaved(true);
     setTimeout(() => { setSaved(false); setMode(null); }, 1200);
