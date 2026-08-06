@@ -9,6 +9,7 @@ import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
 import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
+import { initUrlDeeplinks } from "@/lib/deeplinks";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
 import { fetchPendingFamilyInvites, acceptFamilyInvite, fetchFamilyMembers, updateFamilyMember, removeFamilyMember } from "@/lib/db";
 import { makeSelfMember, buildMemberFromRow, pushManagedLog, nextDoseLock, buildAlerts, removeManagedMed } from "@/lib/household";
@@ -302,6 +303,21 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, [user?.id]);
 
   useEffect(() => { initCapacitorNotifs(); }, []);
+
+  useEffect(() => {
+    initUrlDeeplinks();
+    return () => { import("@/lib/deeplinks").then(m => m.cleanupUrlDeeplinks()).catch(() => {}); };
+  }, []);
+
+  useEffect(() => {
+    function onUrlDeeplink(e) {
+      const { path } = e.detail || {};
+      const tabMap = { reports: "reports", today: "today", meds: "meds", vitals: "vitals", family: "family", profile: "me", me: "me" };
+      if (tabMap[path]) setTab(tabMap[path]);
+    }
+    window.addEventListener("mt-deeplink-url", onUrlDeeplink);
+    return () => window.removeEventListener("mt-deeplink-url", onUrlDeeplink);
+  }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {

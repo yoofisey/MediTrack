@@ -1,3 +1,17 @@
+# Adhera mobile CI/CD — Codemagic
+#
+# Builds the Android AAB/APK and iOS IPA for the Adhera mobile app
+# (Capacitor 8, remote-hosted web app at https://www.useadhera.com).
+#
+# Codemagic secret groups required (create them with these exact names in
+# Codemagic UI: App settings > Environment variables > Global/Application):
+#   android_keystore  -> KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+#   google_services   -> GOOGLE_SERVICES_JSON  (contents of android/app/google-services.json)
+#   appstore_connect  -> APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_ID,
+#                        APP_STORE_CONNECT_ISSUER_ID
+#
+# See docs/mobile-ci.md for how to generate every secret and first-run steps.
+
 workflows:
   web-build:
     name: Web (Vercel)
@@ -15,49 +29,96 @@ workflows:
       scripts:
         - npx vercel deploy --prod --token=$VERCEL_TOKEN
 
-  android-build:
-    name: Android
+  android-release:
+    name: Android Release (AAB + APK)
     instance_type: mac_mini_m2
+    max_build_duration: 45
     environment:
+      java: 17
+      android: latest
       groups:
-        - supabase
-      vars:
-        CAPACITOR_SERVER_URL: https://useadhera.com
-        # GOOGLE_SERVICES_JSON: content of android/app/google-services.json
-        # (set as a secret in a Codemagic environment group; never commit the file)
+        - android_keystore
+        - google_services
     scripts:
-      - npm install
-      - npm run build
-      - echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-      - npx cap sync android
-      - cd android && ./gradlew assembleRelease
+      - name: Install npm dependencies
+        script: npm ci --no-audit --no-fund
+      - name: Prepare Capacitor web directory
+        description: |
+          The app loads the remote site, so the webDir only needs a placeholder
+          for `cap sync` to succeed.
+        script: |
+          mkdir -p out
+          echo "<!doctype html><html><head><meta charset=utf-8></head><body></body></html>" > out/index.html
+      - name: Sync Capacitor Android project
+        script: npx cap sync android
+      - name: Restore google-services.json (FCM)
+        script: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+      - name: Decode release keystore
+        script: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
+          printf 'storeFile=keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+      - name: Build release bundle + APK
+        script: |
+          cd android
+          ./gradlew bundleRelease assembleRelease
     artifacts:
-      - android/app/build/outputs/apk/release/*.apk
       - android/app/build/outputs/bundle/release/*.aab
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/mapping/release/mapping.txt
+    publishing:
+      # Uncomment after connecting the Google Play service account (see docs/mobile-ci.md)
+      # google_play:
+      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      #   track: internal
+      #   submit_as: draft
+      email:
+        recipients:
+          - CI_EMAIL_RECIPIENT
+        notify:
+          success: false
+          failure: true
 
-  ios-build:
-    name: iOS
+  ios-release:
+    name: iOS Release (IPA)
     instance_type: mac_mini_m2
+    max_build_duration: 45
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.useadhera.app
+      app_store_connect:
+        private_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
       groups:
-        - supabase
-        - ios_credentials
-      vars:
-        CAPACITOR_SERVER_URL: https://useadhera.com
+        - appstore_connect
     scripts:
-      - npm install
-      - npm run build
-      - npx cap sync ios
-      - cd ios && xcodebuild -workspace App/App.xcworkspace \
-          -scheme App \
-          -configuration Release \
-          -archivePath build/App.xcarchive \
-          archive
-      - xcodebuild -exportArchive \
-          -archivePath build/App.xcarchive \
-          -exportOptionsPlist export-options.plist \
-          -exportPath build/
+      - name: Install npm dependencies
+        script: npm ci --no-audit --no-fund
+      - name: Prepare Capacitor web directory
+        script: |
+          mkdir -p out
+          echo "<!doctype html><html><head><meta charset=utf-8></head><body></body></html>" > out/index.html
+      - name: Sync Capacitor iOS project
+        script: npx cap sync ios
+      - name: Build IPA (App Store)
+        script: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --archive-method app-store
     artifacts:
-      - ios/build/*.ipa
-    # Publishing skipped — requires active Apple Developer account.
-    # Build artifact (IPA) will be available for download from Codemagic dashboard.
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/**/*.dSYMs.zip
+    publishing:
+      # Uncomment after connecting App Store Connect for automatic uploads
+      # app_store_connect:
+      #   auth: integration
+      #   submit_to_testflight: true
+      email:
+        recipients:
+          - CI_EMAIL_RECIPIENT
+        notify:
+          success: false
+          failure: true

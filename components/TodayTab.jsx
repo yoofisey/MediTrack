@@ -92,6 +92,8 @@ function VisitStatusControl({ v, now, onMark }) {
 
 export default function TodayTab({ household, user, profile, plan, onGoMe, onGoMeds, onGoVitals, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onScheduleVisit, onEditVisit, onOpenVisits, onOpenAlerts, alertCount }) {
   const { t } = useLang();
+  const [, setTick] = useState(0);
+  useEffect(() => { const id = setInterval(() => setTick(n => n + 1), 30000); return () => clearInterval(id); }, []);
   const now = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";

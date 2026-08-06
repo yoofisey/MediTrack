@@ -5,8 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Adhera',
   webDir: 'out',
   server: {
-    url: process.env.CAPACITOR_SERVER_URL || 'https://useadhera.com',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://www.useadhera.com',
     cleartext: true,
+    allowNavigation: ['useadhera.com', 'www.useadhera.com'],
   },
   plugins: {
     SplashScreen: {
