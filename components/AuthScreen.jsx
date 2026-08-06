@@ -26,6 +26,9 @@ export default function AuthScreen({ onAuth }) {
   const [cooldown, setCooldown] = useState(0);
   const [forgotDone, setForgotDone] = useState(false);
 
+  function goWelcome() { setView("welcome"); setErr(""); setObl(""); setSent(false); setOtp(""); }
+  function goSignIn() { setView("signin"); setErr(""); setObl(""); setSent(false); setOtp(""); }
+  function goSignUp() { setView("signup"); setErr(""); setObl(""); setSent(false); setOtp(""); }
   function startCooldown(sec = 60) { setCooldown(sec); const t = setInterval(() => { setCooldown(p => { if (p <= 1) { clearInterval(t); return 0; } return p - 1; }); }, 1000); }
 
   function handleOtpChange(e) { setOtp(e.target.value.replace(RE_DIGITS,"").slice(0,6)); }
@@ -41,11 +44,16 @@ export default function AuthScreen({ onAuth }) {
   async function oauth(provider) {
     setErr(""); setObl(provider);
     await new Promise(r => setTimeout(r, 80));
-    const { error } = await sb.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) { setObl(""); setErr(error.message); }
+    try {
+      const { error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) { setObl(""); setErr(error.message); }
+    } catch (e) {
+      setObl(""); setErr(String(e?.message || "OAuth failed. Please try again."));
+    }
+    setTimeout(() => { if (obl === provider) setObl(""); }, 30000);
   }
 
   async function handleSignIn(e) {
@@ -186,8 +194,8 @@ export default function AuthScreen({ onAuth }) {
           {obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}
         </button>
         <div className="divider">or</div>
-        <button className="auth-btn auth-btn-primary" style={{marginBottom:12}} onClick={()=>setView("signup")}>Create free account</button>
-        <button className="auth-btn auth-btn-ghost" style={{width:"100%"}} onClick={()=>setView("signin")}>Sign in to existing account</button>
+         <button className="auth-btn auth-btn-primary" style={{marginBottom:12}} onClick={goSignUp}>Create free account</button>
+         <button className="auth-btn auth-btn-ghost" style={{width:"100%"}} onClick={goSignIn}>Sign in to existing account</button>
       </div>
     </div>
   );
@@ -198,7 +206,7 @@ export default function AuthScreen({ onAuth }) {
         <SentOtpView
           email={email} otp={otp} onOtpChange={handleOtpChange}
           onOtpVerify={handleOtpVerify} onResend={handleResendOtp}
-          onBack={() => { setSent(false); setOtp(""); setErr(""); }}
+          onBack={() => { goWelcome(); }}
           busy={busy} cooldown={cooldown} err={err}
         />
       </div>
@@ -225,7 +233,7 @@ export default function AuthScreen({ onAuth }) {
           </form>
         )}
         <div className="auth-switch">
-          <button onClick={() => { setView("signin"); setErr(""); setForgotDone(false); }}>Back to sign in</button>
+           <button onClick={() => { goSignIn(); }}>Back to sign in</button>
         </div>
       </div>
     </div>
@@ -257,7 +265,7 @@ export default function AuthScreen({ onAuth }) {
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -8, marginBottom: 2 }}>
-            <button type="button" onClick={() => { setView("forgot"); setErr(""); setForgotDone(false); }}
+            <button type="button" onClick={() => { setView("forgot"); setErr(""); setForgotDone(false); setObl(""); }}
               style={{ background: "none", border: "none", padding: 0, color: "rgba(255,255,255,.5)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
               Forgot password?
             </button>
@@ -265,9 +273,9 @@ export default function AuthScreen({ onAuth }) {
           <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>{busy?"Signing in...":"Sign in"}</button>
         </form>
         <div className="auth-switch">
-          New to Adhera? <button onClick={()=>{setView("signup");setErr("");}}>Create account</button>
+          New to Adhera? <button onClick={()=>{goSignUp();setErr("");}}>Create account</button>
           <span style={{margin:"0 8px",color:"rgba(255,255,255,.2)"}}>·</span>
-          <button onClick={()=>setView("welcome")} style={{color:"rgba(255,255,255,.5)"}}>Back</button>
+          <button onClick={()=>goWelcome()} style={{color:"rgba(255,255,255,.5)"}}>Back</button>
         </div>
       </div>
     </div>
@@ -329,9 +337,9 @@ export default function AuthScreen({ onAuth }) {
           By creating an account you agree to our Terms of Service and Privacy Policy.
         </div>
         <div className="auth-switch">
-          Already have an account? <button onClick={()=>{setView("signin");setErr("");}}>Sign in</button>
+          Already have an account? <button onClick={()=>{goSignIn();setErr("");}}>Sign in</button>
           <span style={{margin:"0 8px",color:"rgba(255,255,255,.2)"}}>·</span>
-          <button onClick={()=>setView("welcome")} style={{color:"rgba(255,255,255,.5)"}}>Back</button>
+          <button onClick={()=>goWelcome()} style={{color:"rgba(255,255,255,.5)"}}>Back</button>
         </div>
       </div>
     </div>

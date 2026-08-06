@@ -7,7 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock, syncVisits } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
-import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform } from "@/lib/notifications";
+import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform, setupForegroundListener } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { initUrlDeeplinks } from "@/lib/deeplinks";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
@@ -24,6 +24,7 @@ import MedSheet from "@/components/MedSheet";
 import FamilyTab from "@/components/FamilyTab";
 import { DeleteConfirmModal, LogDoseModal, UpgradeModal } from "@/components/Modals";
 import AlarmOverlay from "@/components/AlarmOverlay";
+import ForegroundAlert from "@/components/ForegroundAlert";
 import VisitSheet from "@/components/VisitSheet";
 import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
@@ -44,6 +45,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [logDoseMed, setLogDoseMed] = useState(null);
   const [alarmData, setAlarmData] = useState(null);
   const [alarmQueue, setAlarmQueue] = useState([]);
+  const [foregroundAlert, setForegroundAlert] = useState(null);
   const [vitals, setVitals] = useState([]);
   const [showVisitSheet, setShowVisitSheet] = useState(false);
   const [visitMemberKey, setVisitMemberKey] = useState(null);
@@ -358,6 +360,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     function onAlarm(e) { setAlarmData(e.detail); }
     window.addEventListener("mt-alarm", onAlarm);
     return () => window.removeEventListener("mt-alarm", onAlarm);
+  }, []);
+  useEffect(() => {
+    const dismiss = (alert) => { setForegroundAlert(alert); };
+    const cleanup = setupForegroundListener(dismiss);
+    return () => { try { cleanup?.(); } catch {} };
   }, []);
 
   useEffect(() => {
@@ -786,6 +793,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         />
       )}
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
+      <ForegroundAlert alert={foregroundAlert} onDismiss={() => setForegroundAlert(null)} />
       {(showVisitSheet||showVisitList) && <VisitSheet memberKey={visitMemberKey} userId={user?.id} initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); reload(); }}/>}
       {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
       {showInviteSheet && pendingInvites.length > 0 && (

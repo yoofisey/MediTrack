@@ -932,9 +932,11 @@ ${has("reports") ? `
         <AdherenceChart logs={logs} meds={meds}/>
       </div>
 
-      <div style={{padding:"0 20px 16px"}}>
-        <SideEffectSummary meds={meds} logs={logs}/>
-      </div>
+      {has("sideEffects") && (
+        <div style={{padding:"0 20px 16px"}}>
+          <SideEffectSummary meds={meds} logs={logs}/>
+        </div>
+      )}
 
       <div className="section" style={{margin:"0 20px 16px",padding:0}}>
           <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
@@ -971,16 +973,18 @@ ${has("reports") ? `
         </div>
       </div>
 
-      <div className="section">
-        <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
-          <Ico><BookOpen size={15} strokeWidth={2.2} color="var(--purple)"/></Ico> Health journal
+      {has("healthJournal") && (
+        <div className="section">
+          <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
+            <Ico><BookOpen size={15} strokeWidth={2.2} color="var(--purple)"/></Ico> Health journal
+          </div>
+          <div style={{padding:"0"}}>
+            <JournalMiniCalendar entries={journalEntries} selectedDate={journalDate} onSelect={setJournalDate}/>
+            {journalDate && <JournalEntrySheet date={journalDate} entry={getJournalEntry(journalDate)} onSave={() => { try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch {} }} onClose={() => setJournalDate(null)}/>}
+            <JournalTimeline entries={journalEntries}/>
+          </div>
         </div>
-        <div style={{padding:"0"}}>
-          <JournalMiniCalendar entries={journalEntries} selectedDate={journalDate} onSelect={setJournalDate}/>
-          {journalDate && <JournalEntrySheet date={journalDate} entry={getJournalEntry(journalDate)} onSave={() => { try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch {} }} onClose={() => setJournalDate(null)}/>}
-          <JournalTimeline entries={journalEntries}/>
-        </div>
-      </div>
+      )}
 
       <div className="section">
         <div className="section-header" style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}} onClick={() => setShowHistory(!showHistory)}>
