@@ -152,3 +152,60 @@ Record each session:
 - Push and local notifications deliver correctly
 - Offline queue syncs without data loss
 - App survives background → foreground resume
+
+---
+
+## TBD — Remaining Manual (device) Items
+
+Automated web/API checks passed on the local production build (Aug 06 2026): landing/auth/pricing/privacy render, service worker active, `/api/cron/send-reminders` → 401 without secret, `/api/invite` → 400 on bad email, paystack webhook GET → 200. An authenticated browser E2E pass (Playwright + live Supabase session for `adharaqa703166@web-library.net`) verified the web-automatable flows below — **24/24 passed** (see "Automated Results" below). Items still requiring a physical device / real external service are listed here; run on device before store submission:
+
+| # | Test | Why manual |
+|---|------|-----------|
+| 1.1 | Email OTP sign-in | OTP verified via live mail.tm inbox + API; the on-device OTP entry screen was not clicked through |
+| 1.2 | Google OAuth | Requires OAuth browser flow on device |
+| 2.4 | Medication details (full card incl. doctor/pharmacy info) | Visual check on device |
+| 2.5 | Active/inactive toggle | Not exercised in automation |
+| 3.2 | Log with journal note | LogDoseModal not exercised in automation |
+| 3.3 | Dose history | Not exercised in automation |
+| 3.4-3.5 | Progress ring, streak counter | Visual + interaction check on device |
+| 4.1-4.6 | Local notification scheduling / tap / log / snooze / cancel | Requires device notification runtime + permissions |
+| 5.1-5.4 | Push token registration, delivery, logout cleanup, missed-dose push | Requires push runtime + cron trigger |
+| 6.2-6.4 | Log weight, vitals history + chart, delete vital | Only BP log (6.1) verified via automation |
+| 7.2-7.3 | Cost report, CSV/PDF export | Not exercised in automation |
+| 8.2 | View family member data | Requires accepted invite / second account |
+| 9.1-9.4 | Offline cache, queued dose log, sync on reconnect, cache freshness | Requires airplane mode on device |
+| 10.1-10.2 | Medical ID save + view | Needs signed-in account |
+| 11.1-11.3 | Theme, language, dark mode | Visual check on device |
+| 12.1-12.2 | Notification deeplinks + log-dose action | Requires push + deeplink config |
+| 13.1-13.6 | Course ended, multi-dose, custom times, empty state, rapid logging, timezone | Mostly device/interaction-specific |
+| Paystack | Real payment → plan upgrade (verify + webhook) | Live paystack transaction; live deployment URLs sit behind Vercel Deployment Protection |
+
+---
+
+## Automated Results (Aug 06 2026)
+
+Authenticated browser E2E against the local production build (`next start` on :3210) using Playwright-core + Chrome, with a live Supabase session (numeric OTP from mail.tm inbox). Run script: `C:\Users\franc\AppData\Local\Temp\opencode\e2e.mjs`, results in `e2e_results.json`. Result: **24/24 passed**.
+
+| Test | Result | Notes |
+|------|--------|-------|
+| Authenticated state driven by injected session | PASS | App loaded signed-in |
+| 1.3 Onboarding → main app | PASS | Defaults + Skip → main app |
+| 1.4 Session persists across reload | PASS | Reload stays signed in |
+| 2.1 Add medication | PASS | Row persisted to `medications` (DB-verified) |
+| 2.2 Edit medication (dosage 1→2) | PASS | DB-verified `dosage_amount=2` |
+| 2.3 Delete medication | PASS | Row removed (DB-verified) |
+| Dose slot set in past | PASS | Set `reminder_times` to now−10min so a dose is due (UTC machine, 07:00 default slot was in future) |
+| 3.1 Log a dose (Today → Log) | PASS | `dose_logs` row inserted; UI shows "Taken" |
+| Reports data seeded (6 days) | PASS | `dose_logs` seeded at slot time |
+| Plan upgrade to Pro (REST self-update) | PASS | RLS allows profile.plan self-update |
+| Vitals tab appears on Pro | PASS | Tab gated by tier config |
+| 6.1 Log blood pressure 120/80 | PASS | Row persisted to `vitals` (DB-verified) |
+| 7.1 Adherence report renders | PASS | "Adherence Overview" + 100% with seeded data |
+| Plan upgrade to Family (REST) | PASS | |
+| Family tab appears on Family | PASS | |
+| 8.1 Invite family member | PASS* | `family_members` row created via UI; invite email via `/api/invite` returns 500 locally (no Resend key in `.env.local`) — verify email delivery on Vercel where `RESEND_API_KEY` is set |
+| Profile tab renders | PASS | |
+| Sign out → landing, session storage cleared | PASS | Note: app returns to **landing** page (not auth screen) after sign-out |
+
+*8.1: row creation verified; the outbound email depends on `RESEND_API_KEY` (configured on Vercel, missing locally).
+
