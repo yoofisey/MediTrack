@@ -22,7 +22,7 @@ export default function SentOtpView({ email, otp, onOtpChange, onOtpVerify, onRe
             type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
             placeholder="000000" value={otp} onChange={onOtpChange}
             style={{textAlign:"center",fontSize:30,fontWeight:700,letterSpacing:14,padding:"16px",borderRadius:14,fontFamily:"ui-monospace,SFMono-Regular,monospace",width:"100%",boxSizing:"border-box"}}
-            autoFocus required
+            required
           />
         </div>
         <button className="auth-btn auth-btn-primary" type="submit" disabled={busy || otp.length < 6} style={{width:"100%"}}>

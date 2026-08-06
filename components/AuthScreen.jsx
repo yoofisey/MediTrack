@@ -56,7 +56,7 @@ export default function AuthScreen({ onAuth }) {
       if (!data?.user) throw new Error("Login failed.");
       onAuth(data.user, false);
     } catch (e) {
-      setErr(e?.message || "Something went wrong.");
+      setErr(String(e?.message || "") || "Something went wrong.");
     } finally { setBusy(false); }
   }
 
@@ -68,7 +68,7 @@ export default function AuthScreen({ onAuth }) {
       if (error) throw error;
       setForgotDone(true);
     } catch (e2) {
-      setErr(e2?.message || "Something went wrong. Please try again.");
+      setErr(String(e2?.message || "") || "Something went wrong. Please try again.");
     } finally { setBusy(false); }
   }
 
@@ -104,7 +104,7 @@ export default function AuthScreen({ onAuth }) {
       startCooldown(60);
       setSent(true);
     } catch (e) {
-      const m = e?.message || "";
+      const m = String(e?.message || "");
       if (m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") || m.includes("sending magic link")) {
         setErr("Email service not configured. Please try again later.");
       } else {
@@ -118,7 +118,7 @@ export default function AuthScreen({ onAuth }) {
     setErr("");
     const { error } = await sb.auth.signInWithOtp({ email });
     if (error) {
-      const m = error.message || "";
+      const m = String(error.message || "");
       setErr(m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") ? "Email service not configured. Please try again later." : "Failed to resend - " + m);
     } else {
       startCooldown(60);
@@ -131,7 +131,7 @@ export default function AuthScreen({ onAuth }) {
     if (otp.length < 6) { setErr("Enter the 6-digit code from your email."); return; }
     setBusy(true); setErr("");
     try {
-      const { data: vData, error: vErr } = await sb.auth.verifyOtp({ email, token: otp });
+      const { data: vData, error: vErr } = await sb.auth.verifyOtp({ email, token: otp, type: "email" });
       if (vErr) throw vErr;
       if (!vData?.user) throw new Error("Verification failed.");
       const { data: existing } = await sb.from("profiles").select("id").eq("id", vData.user.id);
@@ -142,7 +142,7 @@ export default function AuthScreen({ onAuth }) {
       await sb.auth.updateUser({ password: pwStore });
       onAuth(vData.user, true);
     } catch (e) {
-      setErr(e?.message || "Invalid or expired code.");
+      setErr(String(e?.message || "") || "Invalid or expired code.");
     } finally { setBusy(false); }
   }
 

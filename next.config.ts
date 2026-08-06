@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  allowedDevOrigins: ["10.0.2.2"],
   headers: async () => [
     {
       source: "/(.*)",

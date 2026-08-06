@@ -55,3 +55,5 @@ android/app/google-services.json
 /_dbg_push.mjs
 /_verify_medid.mjs
 /_verify_push_live.mjs
+
+android/build_log.txt
