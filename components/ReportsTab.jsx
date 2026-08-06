@@ -10,13 +10,13 @@ import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { Card, Segmented, InsightCard } from "@/components/ui";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download, Scale, Heart } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function ReportsTab({ logs, meds, plan, onNavigate, onBack }) {
+export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBack, memberName }) {
   const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
@@ -194,6 +194,108 @@ export default function ReportsTab({ logs, meds, plan, onNavigate, onBack }) {
     });
   }
 
+  function drawLineChart(canvas, series, label, colors) {
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    const pad = { t: 40, r: 24, b: 60, l: 56 };
+    const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
+    ctx.clearRect(0, 0, w, h);
+
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, "#FAFBFC");
+    bgGrad.addColorStop(1, "#F0F2F5");
+    ctx.fillStyle = bgGrad;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, w, h, 12);
+    ctx.fill();
+
+    ctx.fillStyle = "#0F172A";
+    ctx.font = "600 15px Inter, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(label, w/2, 24);
+
+    const allVals = series.flatMap(s => s.data.map(d => d.val));
+    const maxVal = Math.max(...allVals, 10);
+    const minVal = Math.min(...allVals, 0);
+    const range = maxVal - minVal || 1;
+    const count = series[0]?.data.length || 0;
+    const gap = count > 1 ? cw / (count - 1) : cw;
+
+    ctx.strokeStyle = "#E2E8F0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, pad.t);
+    ctx.lineTo(pad.l, pad.t + ch);
+    ctx.lineTo(pad.l + cw, pad.t + ch);
+    ctx.stroke();
+
+    const gridSteps = 5;
+    for (let i = 0; i <= gridSteps; i++) {
+      const val = minVal + (range * i / gridSteps);
+      const gy = pad.t + ch - ((val - minVal) / range) * ch;
+      if (i > 0) {
+        ctx.strokeStyle = "#F1F5F9";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, gy);
+        ctx.lineTo(pad.l + cw, gy);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#94A3B8";
+      ctx.font = "10px Inter, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(Math.round(val).toString(), pad.l - 8, gy + 3.5);
+    }
+
+    series.forEach((s, si) => {
+      const color = colors[si] || "#2563EB";
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      s.data.forEach((d, i) => {
+        const x = pad.l + (count > 1 ? gap * i : cw / 2);
+        const y = pad.t + ch - ((d.val - minVal) / range) * ch;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      s.data.forEach((d, i) => {
+        const x = pad.l + (count > 1 ? gap * i : cw / 2);
+        const y = pad.t + ch - ((d.val - minVal) / range) * ch;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      if (s.label) {
+        const last = s.data[s.data.length - 1];
+        const lx = pad.l + (count > 1 ? gap * (s.data.length - 1) : cw / 2);
+        const ly = pad.t + ch - ((last.val - minVal) / range) * ch;
+        ctx.fillStyle = color;
+        ctx.font = "600 10px Inter, system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(`${s.label}: ${last.val}`, lx + 6, ly + 4);
+      }
+    });
+
+    if (count > 1) {
+      const step = Math.max(1, Math.floor(count / 8));
+      ctx.fillStyle = "#475569";
+      ctx.font = "10px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      series[0].data.forEach((d, i) => {
+        if (i % step === 0 || i === count - 1) {
+          const x = pad.l + (count > 1 ? gap * i : cw / 2);
+          ctx.fillText(d.label, x, pad.t + ch + 16);
+        }
+      });
+    }
+  }
+
   async function generatePdfReport() {
     const pm = perMedAdherence();
 
@@ -220,6 +322,30 @@ export default function ReportsTab({ logs, meds, plan, onNavigate, onBack }) {
 
     const chart1 = chartCanvas1.toDataURL("image/png");
     const chart2 = chartCanvas2.toDataURL("image/png");
+
+    const bpLogs = (vitals || []).filter(v => v.type === "blood_pressure").sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const weightLogs = (vitals || []).filter(v => v.type === "weight").sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+    let chart3 = null, chart4 = null;
+    if (bpLogs.length > 1) {
+      const bpCanvas = document.createElement("canvas");
+      bpCanvas.width = 720;
+      bpCanvas.height = 300;
+      drawLineChart(bpCanvas, [
+        { label: "Systolic", data: bpLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value })) },
+        { label: "Diastolic", data: bpLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value_secondary || 0 })) },
+      ], "Blood Pressure (Last 30 Days)", ["#FF3B30", "#FF9500"]);
+      chart3 = bpCanvas.toDataURL("image/png");
+    }
+    if (weightLogs.length > 1) {
+      const wtCanvas = document.createElement("canvas");
+      wtCanvas.width = 720;
+      wtCanvas.height = 300;
+      drawLineChart(wtCanvas, [
+        { label: "Weight", data: weightLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value })) },
+      ], "Weight (Last 30 Days)", ["#007AFF"]);
+      chart4 = wtCanvas.toDataURL("image/png");
+    }
 
     function medStatus(pct) {
       return pct >= 80 ? "Good" : pct >= 50 ? "Fair" : "Poor";
@@ -402,6 +528,15 @@ export default function ReportsTab({ logs, meds, plan, onNavigate, onBack }) {
   Weekly Trend
 </div>
 <div class="chart-wrap"><img src="${chart2}" alt="Weekly adherence trend chart"/></div>
+
+${(chart3 || chart4) ? `
+<div class="section-title">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12H18L15 21 9 3 6 12H2"/></svg>
+  Vitals Trends
+</div>
+${chart3 ? `<div class="chart-wrap"><img src="${chart3}" alt="Blood pressure trend chart"/></div>` : ""}
+${chart4 ? `<div class="chart-wrap"><img src="${chart4}" alt="Weight trend chart"/></div>` : ""}
+` : ""}
 
 ${has("reports") ? `
 <div class="section-title">
@@ -603,8 +738,9 @@ ${has("reports") ? `
 
   return (
     <div className="scroll">
-      {onBack && <div style={{ padding: "4px 20px 0" }}><button className="btn btn-ghost" onClick={onBack}>← Back to Vitals</button></div>}
+      {onBack && <div style={{ padding: "4px 20px 0" }}><button className="btn btn-ghost" onClick={onBack}>{memberName ? "← Back to Family" : "← Back to Vitals"}</button></div>}
       <div className="nav-large">{t("reports.title")}</div>
+      {memberName && <div style={{ margin: "-8px 0 8px", fontSize: 13, fontWeight: 600, color: "var(--accent, #2563eb)" }}>{memberName}&apos;s report</div>}
 
       {has("reports") ? (
         <div style={{ margin: "0 20px 14px" }}>
@@ -625,6 +761,42 @@ ${has("reports") ? `
           <div className="chip purple"><div className="chip-val">{streak}</div><div className="chip-lbl">{t("reports.bestStreak")}</div></div>
         </div>
       )}
+
+      {(memberName && vitals && vitals.length > 0) && (() => {
+        const bpReadings = vitals.filter(v => v.type === "blood_pressure").sort((a, b) => b.created_at.localeCompare(a.created_at));
+        const wtReadings = vitals.filter(v => v.type === "weight").sort((a, b) => b.created_at.localeCompare(a.created_at));
+        const latestBp = bpReadings[0];
+        const latestWt = wtReadings[0];
+        return (
+          <div className="section">
+            <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
+              <Ico><Heart size={15} strokeWidth={2.2} color="var(--red)"/></Ico> {t("vitals.title")}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {latestBp ? (
+                <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",borderLeft:"4px solid #FF3B30"}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"var(--t3)",marginBottom:4}}>Blood Pressure</div>
+                  <div style={{fontSize:22,fontWeight:700,color:"var(--t1)",lineHeight:1}}>{latestBp.value}/{latestBp.value_secondary || "?"} <span style={{fontSize:12,fontWeight:400,color:"var(--t3)"}}>mmHg</span></div>
+                  <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>{new Date(latestBp.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+                </div>
+              ) : null}
+              {latestWt ? (
+                <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",borderLeft:"4px solid #007AFF"}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"var(--t3)",marginBottom:4}}>Weight</div>
+                  <div style={{fontSize:22,fontWeight:700,color:"var(--t1)",lineHeight:1}}>{latestWt.value} <span style={{fontSize:12,fontWeight:400,color:"var(--t3)"}}>kg</span></div>
+                  <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>{new Date(latestWt.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+                </div>
+              ) : null}
+              {!latestBp && !latestWt ? (
+                <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",gridColumn:"1/-1",textAlign:"center",color:"var(--t3)",fontSize:13}}>No vitals recorded</div>
+              ) : null}
+            </div>
+            <div style={{marginTop:10,fontSize:12,color:"var(--t3)"}}>
+              {bpReadings.length} BP reading{bpReadings.length!==1?"s":""} · {wtReadings.length} weight reading{wtReadings.length!==1?"s":""} · {vitals.length} total
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="section">
         <div className="section-header">{t("reports.adherenceByMed")}</div>
@@ -744,7 +916,7 @@ ${has("reports") ? `
         );
       })()}
 
-      {!has("reports") && (
+      {!has("reports") && !has("perMemberReports") && (
         <div className="upgrade-card" style={{margin:"0 20px 16px"}}>
           <div className="upgrade-title">Upgrade for advanced reports</div>
           <div className="upgrade-sub">
@@ -863,11 +1035,11 @@ ${has("reports") ? `
         })()}
       </div>
 
-      {has("reports") && (
-        <>
-          <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
-            <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-              <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Full PDF report
+{(has("reports") || has("perMemberReports")) && (
+         <>
+           <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
+             <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+               <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Full PDF report
             </button>
             <button className="btn" onClick={exportHealthSummary} disabled={meds.length === 0}
               style={{flex:1,background:"var(--teal2)",color:"white",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>

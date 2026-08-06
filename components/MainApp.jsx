@@ -59,6 +59,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [overlayTab, setOverlayTab] = useState(null);
   const [vitalsMember, setVitalsMember] = useState(null);
   const [vitalsSubTab, setVitalsSubTab] = useState("vitals");
+  const [reportMemberKey, setReportMemberKey] = useState(null);
   const [medSheetFor, setMedSheetFor] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -168,10 +169,19 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     return [selfMember, ...familyRows.map(r => buildMemberFromRow(r, linkedData[r.id]))];
   }, [selfMember, familyRows, linkedData, isFamilyTier]);
   const alertCount = useMemo(() => { try { return buildAlerts(household).today.length; } catch { return 0; } }, [household]);
+  const reportMember = useMemo(() => {
+    if (!reportMemberKey) return null;
+    return household.find(m => m.key === reportMemberKey) || null;
+  }, [reportMemberKey, household]);
 
   function openMember(m) { setMemberView(m?.key || null); }
   function closeMember() { setMemberView(null); }
   function openMemberVitals(m) { setVitalsMember(m); }
+  function openMemberReport(m) {
+    setReportMemberKey(m?.key || null);
+    setTab("vitals");
+    setVitalsSubTab("reports");
+  }
   function closeVitals() { setVitalsMember(null); }
 
   async function markDose(member, slot) {
@@ -620,7 +630,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const tabs = [
     { id: "today", label: t("nav.today"), icon: <Home size={23} strokeWidth={1.9} /> },
     { id: "meds", label: t("nav.meds"), icon: <Pill size={23} strokeWidth={1.9} /> },
-    ...(hasFeature("vitals") ? [{ id: "vitals", label: t("nav.vitals"), icon: <HeartPulse size={23} strokeWidth={1.9} /> }] : []),
+    ...(hasFeature("vitals") || hasFeature("perMemberVitals") ? [{ id: "vitals", label: t("nav.vitals"), icon: <HeartPulse size={23} strokeWidth={1.9} /> }] : []),
     ...(hasFeature("familyMembers") ? [{ id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> }] : []),
     { id: "me", label: t("nav.profile"), icon: <User size={23} strokeWidth={1.9} /> },
   ];
@@ -705,23 +715,23 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => { setTab("vitals"); setVitalsSubTab("reports"); }} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => { setReportMemberKey(null); setTab("vitals"); setVitalsSubTab("reports"); }} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
-              {tab === "vitals" && hasFeature("vitals") && (
+              {tab === "vitals" && (hasFeature("vitals") || hasFeature("perMemberVitals")) && (
                 vitalsSubTab === "reports"
-                  ? <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} onBack={() => setVitalsSubTab("vitals")} />
-                  : <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} onGoReports={() => setVitalsSubTab("reports")} />
+                  ? <ReportsTab logs={reportMember ? (reportMember.logs || []) : logs} meds={reportMember ? (reportMember.meds || []) : meds} vitals={reportMember ? (reportMember.vitals || []) : vitals} plan={profile?.plan || "free"} memberName={reportMember?.name} onNavigate={(id) => { if (id === "profile") setTab("me"); }} onBack={reportMember ? () => { setReportMemberKey(null); setTab("family"); } : () => setVitalsSubTab("vitals")} />
+                  : <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} onGoReports={() => { setReportMemberKey(null); setVitalsSubTab("reports"); }} />
               )}
-              {tab === "vitals" && !hasFeature("vitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "reports" && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={() => { setTab("vitals"); setVitalsSubTab("reports"); }} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
+              {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "reports" && (hasFeature("reports") || hasFeature("perMemberReports")) && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={openMemberReport} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>
           </div>
 
           <div className="tabbar">
             {tabs.map(t => (
-              <div key={t.id} className={`tbi${tab === t.id ? " on" : ""}`} onClick={() => { setTab(t.id); setOverlayTab(null); }}>
+              <div key={t.id} className={`tbi${tab === t.id ? " on" : ""}`} onClick={() => { setTab(t.id); setOverlayTab(null); setReportMemberKey(null); }}>
                 {t.icon}
                 {t.label && <span>{t.label}</span>}
               </div>
@@ -771,7 +781,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           userEmail={user?.email}
           currentPlan={profile?.plan || "free"}
           onClose={() => setShowUpgrade(false)}
-          onUpgrade={p => { saveProfile({ plan: p }); setShowUpgrade(false); }}
+          onUpgrade={p => { setShowUpgrade(false); }}
         />
       )}
     </div>

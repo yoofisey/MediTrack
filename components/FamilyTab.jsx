@@ -314,8 +314,8 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                 )}
               </div>
 
-              {/* Vitals (family + pro tiers) */}
-              {has("vitals") && (
+              {/* Vitals (per-member) */}
+              {has("perMemberVitals") && (
                 <div className="section">
                   <div className="section-header">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -350,14 +350,14 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                 </div>
               )}
 
-              {/* Reports / Per-med adherence */}
-              {has("reports") && (
+              {/* Per-Member Reports */}
+              {has("perMemberReports") && (
                 <div className="section">
                   <div className="section-header">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <BarChart3 size={15} color="var(--teal)" strokeWidth={2.2} /> Reports
                     </span>
-                    <button className="nav-action" onClick={() => onGoReports?.()} style={{ fontSize: 12 }}>Full report</button>
+                    <button className="nav-action" onClick={() => onGoReports?.(selected)} style={{ fontSize: 12 }}>Full report</button>
                   </div>
                   {selectedMeds.length === 0 ? (
                     <div className="empty-state" style={{ paddingTop: 16, paddingBottom: 16 }}>

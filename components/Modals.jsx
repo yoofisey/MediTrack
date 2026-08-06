@@ -181,10 +181,28 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
         plan: planCode,
         ref: "ADR" + Date.now() + Math.random().toString(36).slice(2,8).toUpperCase(),
         metadata: { plan: selected, country },
-        callback: function(response) {
-          onUpgrade(selected);
-          setBusy(false);
-        },
+callback: async function(response) {
+           setBusy(true);
+           setErr("");
+           try {
+             const verifyRes = await fetch("/api/paystack/verify", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ reference: response.reference, plan: selected, email: userEmail }),
+             });
+             const verifyData = await verifyRes.json();
+             if (!verifyRes.ok || !verifyData.ok) {
+               setErr("Payment verification failed. Please contact support.");
+               setBusy(false);
+               return;
+             }
+             onUpgrade(selected);
+             setPaystackOpen(false);
+           } catch (e) {
+             setErr("Payment verification failed. Please contact support.");
+           }
+           setBusy(false);
+         },
         onClose: function() {
           setBusy(false);
         },

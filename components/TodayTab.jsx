@@ -176,7 +176,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
         </div>
       </div>
 
-      {has("reports") && adh !== null && (
+      {(has("reports") || has("perMemberReports")) && adh !== null && (
         <div style={{ margin: "14px 20px 4px" }}>
           <div className="card" style={{ padding: 18 }}>
             <div className="hero-label">Adherence this week</div>
@@ -354,7 +354,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           </span>
         </div>
         <div className="list">
-          {has("vitals") ? (() => {
+          {(has("vitals") || has("perMemberVitals")) ? (() => {
             const self = household.find(m => m.kind === "self") || household[0] || {};
             const sum = latestVitals(self);
             const has = sum.length > 0;
