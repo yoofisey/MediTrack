@@ -35,7 +35,6 @@ workflows:
     max_build_duration: 45
     environment:
       java: 17
-      android: latest
       groups:
         - android_keystore
         - google_services
@@ -43,9 +42,6 @@ workflows:
       - name: Install npm dependencies
         script: npm ci --no-audit --no-fund
       - name: Prepare Capacitor web directory
-        description: |
-          The app loads the remote site, so the webDir only needs a placeholder
-          for `cap sync` to succeed.
         script: |
           mkdir -p out
           echo "<!doctype html><html><head><meta charset=utf-8></head><body></body></html>" > out/index.html
@@ -74,7 +70,7 @@ workflows:
       #   submit_as: draft
       email:
         recipients:
-          - CI_EMAIL_RECIPIENT
+          - ${CI_EMAIL_RECIPIENT}
         notify:
           success: false
           failure: true
@@ -87,10 +83,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.useadhera.app
-      app_store_connect:
-        private_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
       groups:
         - appstore_connect
     scripts:
@@ -118,7 +110,7 @@ workflows:
       #   submit_to_testflight: true
       email:
         recipients:
-          - CI_EMAIL_RECIPIENT
+          - ${CI_EMAIL_RECIPIENT}
         notify:
           success: false
           failure: true
