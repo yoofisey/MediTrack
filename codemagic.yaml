@@ -62,12 +62,11 @@ workflows:
       - android/app/build/outputs/bundle/release/*.aab
       - android/app/build/outputs/apk/release/*.apk
       - android/app/build/outputs/mapping/release/mapping.txt
-    publishing:
-      # Uncomment after connecting the Google Play service account (see docs/mobile-ci.md)
-      # google_play:
-      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-      #   track: internal
-      #   submit_as: draft
+    # Publishing (uncomment after connecting the Google Play service account, see docs/mobile-ci.md):
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
+    #     submit_as: draft
 
   ios-release:
     name: iOS Release (IPA)
@@ -97,8 +96,7 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/**/*.dSYMs.zip
-    publishing:
-      # Uncomment after connecting App Store Connect for automatic uploads
-      # app_store_connect:
-      #   auth: integration
-      #   submit_to_testflight: true
+    # Publishing (uncomment after connecting App Store Connect, see docs/mobile-ci.md):
+    #   app_store_connect:
+    #     auth: integration
+    #     submit_to_testflight: true
