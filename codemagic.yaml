@@ -68,12 +68,6 @@ workflows:
       #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       #   track: internal
       #   submit_as: draft
-      email:
-        recipients:
-          - ${CI_EMAIL_RECIPIENT}
-        notify:
-          success: false
-          failure: true
 
   ios-release:
     name: iOS Release (IPA)
@@ -108,9 +102,3 @@ workflows:
       # app_store_connect:
       #   auth: integration
       #   submit_to_testflight: true
-      email:
-        recipients:
-          - ${CI_EMAIL_RECIPIENT}
-        notify:
-          success: false
-          failure: true
