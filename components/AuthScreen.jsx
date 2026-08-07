@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
@@ -25,11 +25,18 @@ export default function AuthScreen({ onAuth }) {
   const [pwShow, setPwShow] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [forgotDone, setForgotDone] = useState(false);
+  const oauthBusyRef = useRef(false);
 
   function goWelcome() { setView("welcome"); setErr(""); setObl(""); setSent(false); setOtp(""); }
   function goSignIn() { setView("signin"); setErr(""); setObl(""); setSent(false); setOtp(""); }
   function goSignUp() { setView("signup"); setErr(""); setObl(""); setSent(false); setOtp(""); }
   function startCooldown(sec = 60) { setCooldown(sec); const t = setInterval(() => { setCooldown(p => { if (p <= 1) { clearInterval(t); return 0; } return p - 1; }); }, 1000); }
+
+  useEffect(() => {
+    const onShow = () => setObl("");
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
 
   function handleOtpChange(e) { setOtp(e.target.value.replace(RE_DIGITS,"").slice(0,6)); }
 
@@ -42,18 +49,24 @@ export default function AuthScreen({ onAuth }) {
   }, []);
 
   async function oauth(provider) {
+    if (oauthBusyRef.current) return;
+    oauthBusyRef.current = true;
     setErr(""); setObl(provider);
-    await new Promise(r => setTimeout(r, 80));
     try {
-      const { error } = await sb.auth.signInWithOAuth({
+      const { data, error } = await sb.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
       });
-      if (error) { setObl(""); setErr(error.message); }
+      if (error) throw new Error(error.message);
+      const authUrl = data?.url;
+      if (!authUrl) throw new Error("OAuth failed. Please try again.");
+      window.location.assign(authUrl);
     } catch (e) {
-      setObl(""); setErr(String(e?.message || "OAuth failed. Please try again."));
+      setErr(String(e?.message || "") || "OAuth failed. Please try again.");
+      setObl("");
+    } finally {
+      setTimeout(() => { setObl(""); oauthBusyRef.current = false; }, 1200);
     }
-    setTimeout(() => { if (obl === provider) setObl(""); }, 30000);
   }
 
   async function handleSignIn(e) {

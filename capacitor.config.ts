@@ -7,7 +7,13 @@ const config: CapacitorConfig = {
   server: {
     url: process.env.CAPACITOR_SERVER_URL || 'https://www.useadhera.com',
     cleartext: true,
-    allowNavigation: ['useadhera.com', 'www.useadhera.com'],
+    allowNavigation: [
+      'useadhera.com',
+      'www.useadhera.com',
+      '*.supabase.co',
+      '*.google.com',
+      '*.googleusercontent.com',
+    ],
   },
   plugins: {
     SplashScreen: {
