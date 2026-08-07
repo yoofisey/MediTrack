@@ -21,12 +21,12 @@ const FEATURES = {
     { label: "Doctor report sharing", ok: true },
     { label: "Refill reminders", ok: true },
     { label: "Interaction checker", ok: true },
-    { label: "Caregiver alerts", ok: true },
+    { label: "Caregiver sharing", ok: true },
   ],
   family: [
-    { label: "Everything in Pro", ok: true },
     { label: "Up to 5 profiles", ok: true },
     { label: "Family dashboard", ok: true },
+    { label: "Per-member vitals & reports", ok: true },
     { label: "Caregiver alerts", ok: true },
   ],
 };
@@ -144,7 +144,7 @@ function PricingFooter({ enterprise, ready, country }) {
             )}
           </div>
         </div>
-        {ready && <a href="/" style={{ background: "#0f172a", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 12, fontFamily: "inherit" }}>Contact sales</a>}
+        {ready && <a href="mailto:sales@useadhera.com?subject=Adhera%20Enterprise%20inquiry" style={{ background: "#0f172a", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 12, fontFamily: "inherit" }}>Contact sales</a>}
       </div>
     </div>
   );

@@ -146,21 +146,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   }
 
   function handleUpgrade(plan) {
-    alert(`Upgraded to ${getTierConfig(plan).label}!`);
     onSaveProfile({ plan });
     setShowUpgrade(false);
     sessionStorage.removeItem("adhera_pending_plan");
   }
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("trxref") || params.get("reference");
-    if (ref) {
-      const pending = sessionStorage.getItem("adhera_pending_plan");
-      if (pending) handleUpgrade(pending);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   async function handleInvite(email) {
     if (!user?.id || !email.trim()) return;
@@ -170,9 +159,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       return;
     }
     try {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
       await fetch("/api/invite", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ to: email, senderName: user?.email || "Adhera Team" }),
       });
     } catch (e) { console.error("invite email:", e); }

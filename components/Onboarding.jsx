@@ -31,7 +31,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
     setSaving(true);
     let tz = "";
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
-    const payload = { ...data };
+    const payload = { ...data, plan: initProfile?.plan || "free" };
     if (!payload.avatar_url) payload.avatar_url = null;
     await sb.from("profiles").upsert([{ id: user.id, ...payload, timezone: tz, onboarded: true }]);
     onDone(data);
@@ -130,9 +130,9 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
         {[
           { value:"free", icon:<Gift size={24} style={{verticalAlign:"middle"}}/>, title:"Free", sub:"Up to 2 medications, basic reminders", price:"Free forever", features:["2 medications","Daily reminders","7-day history"] },
           { value:"pro", icon:<Star size={24} style={{verticalAlign:"middle"}}/>, title:"Pro", sub:"Everything you need for full adherence", price: obPricing.pro.label === "Coming soon" ? "Coming soon" : `${obPricing.pro.label}/mo`, features:["Unlimited medications","Full history & analytics","Caregiver sharing","Refill reminders","Adherence PDF reports"] },
-          { value:"family", icon:<Users size={24} style={{verticalAlign:"middle"}}/>, title:"Family", sub:"One account for the whole household", price: obPricing.family.label === "Coming soon" ? "Coming soon" : `${obPricing.family.label}/mo`, features:["5 family profiles","All Pro features","Shared family dashboard","Doctor-friendly summaries"] },
+          { value:"family", icon:<Users size={24} style={{verticalAlign:"middle"}}/>, title:"Family", sub:"One account for the whole household", price: obPricing.family.label === "Coming soon" ? "Coming soon" : `${obPricing.family.label}/mo`, features:["5 family profiles","Per-member tracking","Shared family dashboard","Per-member vitals & reports","Caregiver alerts"] },
         ].map(p=>(
-          <div key={p.value} className={`ob-option${data.plan===p.value?" sel":""}`} style={{alignItems:"flex-start",padding:"16px"}} onClick={()=>set("plan",p.value)}>
+          <div key={p.value} className={`ob-option${data.plan===p.value?" sel":""}`} style={{alignItems:"flex-start",padding:"16px"}}>
             <div className="ob-option-icon" style={{marginTop:2}}>{p.icon}</div>
             <div className="ob-option-text">
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -145,6 +145,9 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
             <div className={`ob-check${data.plan===p.value?" on":""}`} style={{marginTop:2}}></div>
           </div>
         ))}
+      </div>
+      <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.5,marginTop:-4}}>
+        You&apos;ll start on Free. Pro and Family are activated after payment — upgrade anytime from your profile.
       </div>
     </div>
       );

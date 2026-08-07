@@ -179,7 +179,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   function openMember(m) { setMemberView(m?.key || null); }
   function closeMember() { setMemberView(null); }
-  function openMemberVitals(m) { setVitalsMember(m); }
+  function openMemberVitals(m) {
+    const cfg = getTierConfig(profile?.plan || "free");
+    if (!(cfg.features?.includes("vitals") || cfg.features?.includes("perMemberVitals"))) return;
+    setVitalsMember(m);
+  }
   function openMemberReport(m) {
     setReportMemberKey(m?.key || null);
     setTab("vitals");
@@ -612,10 +616,12 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   async function saveProfile(patch) {
     if (!user?.id) return;
+    const safePatch = { ...patch };
+    delete safePatch.plan;
     const updated = { ...profile, ...patch };
     setProfile(updated);
     try {
-      await sb.from("profiles").update(patch).eq("id", user.id);
+      await sb.from("profiles").update(safePatch).eq("id", user.id);
     } catch (e) {
       console.error("saveProfile error:", e?.message || e);
     }
@@ -725,11 +731,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const activeMember = household.find(m => m.key === memberView);
         if (!activeMember) return null;
         return (
-          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={hasFeature("familyMembers")} onChanged={reload} />
+          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={hasFeature("familyMembers")} hasVitals={hasFeature("vitals") || hasFeature("perMemberVitals")} onChanged={reload} />
         );
       })() : overlayTab ? (
         <div className="scroll">
-          {overlayTab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} />}
+          {overlayTab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} hasRefill={hasFeature("refillReminder")} />}
           <div style={{ padding: "4px 20px 24px" }}>
             <button className="btn btn-ghost" onClick={() => setOverlayTab(null)}>Back</button>
           </div>
@@ -805,7 +811,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           userEmail={user?.email}
           currentPlan={profile?.plan || "free"}
           onClose={() => setShowUpgrade(false)}
-          onUpgrade={p => { setShowUpgrade(false); }}
+          onUpgrade={p => { setProfile(prev => ({ ...prev, plan: p })); setShowUpgrade(false); }}
         />
       )}
     </div>

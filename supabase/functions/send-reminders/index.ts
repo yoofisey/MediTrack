@@ -325,6 +325,11 @@ serve(async (req) => {
 
     if (familyLinks?.length) {
       const ownerIds = [...new Set(familyLinks.map((l: any) => l.owner_id))];
+      const ownerPlansRes = await supabase
+        .from("profiles")
+        .select("id, plan")
+        .in("id", ownerIds);
+      const ownerPlanMap = new Map<string, string>((ownerPlansRes.data || []).map((p: any) => [p.id, p.plan]));
       const ownerSubsRes = await supabase
         .from("push_subscriptions")
         .select("user_id, endpoint, p256dh, auth")
@@ -336,6 +341,7 @@ serve(async (req) => {
       });
 
       for (const link of familyLinks) {
+        if (ownerPlanMap.get(link.owner_id) !== "family") continue;
         const memberMeds = meds.filter((m: any) => m.user_id === link.member_user_id);
         if (!memberMeds.length) continue;
         const ownerSubs = ownerSubMap.get(link.owner_id) || [];

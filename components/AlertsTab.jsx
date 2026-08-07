@@ -4,8 +4,9 @@ import { CSS } from "@/lib/constants";
 import { buildAlerts, callHref } from "@/lib/household";
 import { CheckCircle2, Phone, Package, AlertTriangle, ChevronRight } from "lucide-react";
 
-export default function AlertsTab({ household, onOpenMember }) {
+export default function AlertsTab({ household, onOpenMember, hasRefill = true }) {
   const { today, week } = buildAlerts(household);
+  const visibleWeek = hasRefill ? week : [];
 
   function minsLabel(mins) {
     if (mins < 60) return `${mins}m ago`;
@@ -19,7 +20,7 @@ export default function AlertsTab({ household, onOpenMember }) {
 
       <div className="nav-large" style={{ padding: "10px 16px 0" }}>Alerts</div>
 
-      {today.length === 0 && week.length === 0 ? (
+      {today.length === 0 && visibleWeek.length === 0 ? (
         <div className="empty-state" style={{ paddingTop: 70 }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#E8F7EC", display: "grid", placeItems: "center", margin: "0 auto 14px" }}>
             <CheckCircle2 size={34} color="var(--green2)" strokeWidth={1.8} />
@@ -65,11 +66,11 @@ export default function AlertsTab({ household, onOpenMember }) {
             </>
           )}
 
-          {week.length > 0 && (
+          {visibleWeek.length > 0 && (
             <>
               <div className="section-header" style={{ padding: "18px 20px 8px" }}>This week</div>
               <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-                {week.map((a, i) => (
+                {visibleWeek.map((a, i) => (
                   <div key={i} onClick={() => onOpenMember(a.member)} style={{ background: "#FFF8E7", border: "1px solid #F0DFB8", borderRadius: 20, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
                     <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#F5E6C4", display: "grid", placeItems: "center", flexShrink: 0 }}>
                       <Package size={18} color="#8A6D2F" strokeWidth={2} />

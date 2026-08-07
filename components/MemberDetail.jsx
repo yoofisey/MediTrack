@@ -66,7 +66,7 @@ function ManagedMedForm({ member, onDone }) {
   );
 }
 
-export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onOpenVitals, isFamily, onChanged }) {
+export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onOpenVitals, isFamily, hasVitals, onChanged }) {
   const [showAddMed, setShowAddMed] = useState(false);
   const [editNote, setEditNote] = useState(false);
   const [noteText, setNoteText] = useState(member.careNote || "");
@@ -122,7 +122,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
         ))}
       </div>
 
-      {(member.kind === "self" || isFamily) && (() => {
+      {hasVitals && (member.kind === "self" || isFamily) && (() => {
         const memberVitals = member.vitals || [];
         const latestByType = {};
         memberVitals.forEach(v => { if (v.type && !latestByType[v.type]) latestByType[v.type] = v; });

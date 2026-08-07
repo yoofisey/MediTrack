@@ -137,12 +137,12 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
       period: "/month",
       tagline: "One account for the whole household",
       features: [
-        "Everything in Pro",
         "Up to 5 family profiles",
         "Shared family dashboard",
         "Per-member medication tracking",
-        "Doctor-friendly PDF summaries",
+        "Per-member vitals & reports",
         "Caregiver mode with alerts",
+        "Adherence PDF reports",
       ],
     },
   ];

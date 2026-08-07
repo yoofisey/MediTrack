@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 
 const FROM_EMAIL = "noreply@useadhera.com";
 
@@ -21,6 +22,26 @@ export async function POST(req: Request) {
   const senderName = (body.senderName || "Adhera Team").trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
+  }
+
+  // Family invitations are a Family-tier feature — require an authenticated
+  // sender whose profile is on the family plan.
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co";
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  if (!token || !supabaseAnonKey) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  const sb = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: authData, error: authErr } = await sb.auth.getUser(token);
+  const userId = authData?.user?.id;
+  if (authErr || !userId) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  const { data: profile } = await sb.from("profiles").select("plan").eq("id", userId).maybeSingle();
+  if (profile?.plan !== "family") {
+    return NextResponse.json({ ok: false, error: "Family plan required to send invites" }, { status: 403 });
   }
 
   if (!process.env.RESEND_API_KEY) {
