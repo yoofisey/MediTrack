@@ -218,7 +218,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                         <div className="row-body">
                           <div className="row-title" style={{ fontSize: 14 }}>
                             {r.med.name}
-                            <span style={{ fontSize: 12, color: "var(--t3)", marginLeft: 8 }}>{r.med.dosage_amount}{r.med.dosage_unit}</span>
+                            <span style={{ fontSize: 12, color: "var(--t3)", marginLeft: 8 }}>{r.med.dosage_amount} {r.med.dosage_unit}</span>
                           </div>
                           <div className="row-sub">{r.loggedCount}/{r.total} doses today{!r.next ? " · taken" : r.overdue ? " · overdue" : ""}</div>
                         </div>
@@ -252,7 +252,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>{med.name}</div>
-                            <div style={{ fontSize: 12, color: "var(--t3)" }}>{med.dosage_amount}{med.dosage_unit} · {med.times_per_day}×/day</div>
+                            <div style={{ fontSize: 12, color: "var(--t3)" }}>{med.dosage_amount} {med.dosage_unit} · {med.times_per_day}×/day</div>
                           </div>
                           <button onClick={() => onEditMed?.(selected, med)} style={{ background: "none", border: "none", color: "var(--teal)", padding: 6, cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 }} aria-label="Edit medication">
                             <Pencil size={16} strokeWidth={2.2} />
@@ -379,7 +379,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                             <div style={{ height: 4, borderRadius: 99, background: "var(--sep)", overflow: "hidden" }}>
                               <div style={{ height: "100%", width: `${pct}%`, borderRadius: 99, background: pct >= 80 ? "var(--green)" : pct >= 50 ? "var(--orange)" : "var(--red)", transition: "width .4s ease" }} />
                             </div>
-                            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 4 }}>{weekLogs.length}/{totalExpected} doses this week · {med.dosage_amount}{med.dosage_unit}</div>
+                            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 4 }}>{weekLogs.length}/{totalExpected} doses this week · {med.dosage_amount} {med.dosage_unit}</div>
                           </div>
                         );
                       })}

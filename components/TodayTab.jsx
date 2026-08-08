@@ -230,7 +230,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: .4, opacity: .8 }}>{selMissed.length ? "MISSED DOSE" : "UP NEXT"}</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "var(--t1)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {mostUrgent.time} · {mostUrgent.med.name} {mostUrgent.med.dosage_amount}{mostUrgent.med.dosage_unit}
+                  {mostUrgent.time} · {mostUrgent.med.name} {mostUrgent.med.dosage_amount} {mostUrgent.med.dosage_unit}
                 </div>
               </div>
               {selMissed.length > 0 && (
@@ -301,7 +301,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
                 </div>
                 <div className="row-body">
                   <div className="row-title" style={{ fontWeight: 600 }}>{r.med.name}{r.member.kind !== "self" && <span style={{ fontSize: 12, fontWeight: 700, color: "var(--teal)", marginLeft: 6 }}>· for {r.member.name}</span>}</div>
-                  <div className="row-sub">{r.med.dosage_amount}{r.med.dosage_unit}{r.total > 1 ? ` · ${r.loggedCount}/${r.total} doses` : ""}{r.overdue ? " · overdue" : ""}</div>
+                  <div className="row-sub">{r.med.dosage_amount} {r.med.dosage_unit}{r.total > 1 ? ` · ${r.loggedCount}/${r.total} doses` : ""}{r.overdue ? " · overdue" : ""}</div>
                 </div>
                 <MedLogButton member={r.member} med={r.med} now={now} onMarkDose={onMarkDose} />
               </div>

@@ -198,7 +198,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
                       <Pill size={18} color={!next ? "var(--green)" : "var(--teal)"} strokeWidth={2.2} />
                     </div>
                     <div className="row-body">
-                      <div className="row-title" style={{ fontWeight: 500 }}>{med.name} <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}>{med.dosage_amount}{med.dosage_unit}</span></div>
+                      <div className="row-title" style={{ fontWeight: 500 }}>{med.name} <span style={{ fontSize: 12, color: "var(--t3)", fontWeight: 400 }}>{med.dosage_amount} {med.dosage_unit}</span></div>
                       <div className="row-sub">{ms.filter(s => s.logged).length}/{ms.length} doses today</div>
                     </div>
                     {medRow && medRow.pills_per_package && (

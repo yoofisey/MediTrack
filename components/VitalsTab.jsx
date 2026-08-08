@@ -529,20 +529,25 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
 
       {logType && (
         <LogSheet vitalType={logType} onClose={() => setLogType(null)} onSave={async (reading) => {
-          if (member && member.kind === "managed") {
-            const { pushManagedVital } = await import("@/lib/household");
-            pushManagedVital(member.rowId, {
-              id: "mv_" + Date.now() + Math.random().toString(36).slice(2, 6),
-              user_id: member.rowId,
-              ...reading,
-              created_at: new Date().toISOString(),
-            });
-          } else {
-            const { sb } = await import("@/lib/supabase");
-            await sb.from("vitals").insert({ user_id: member?.userId, ...reading });
+          try {
+            if (member && member.kind === "managed") {
+              const { pushManagedVital } = await import("@/lib/household");
+              pushManagedVital(member.rowId, {
+                id: "mv_" + Date.now() + Math.random().toString(36).slice(2, 6),
+                user_id: member.rowId,
+                ...reading,
+                created_at: new Date().toISOString(),
+              });
+            } else {
+              const { sb } = await import("@/lib/supabase");
+              const { error } = await sb.from("vitals").insert({ user_id: member?.userId, ...reading });
+              if (error) { alert(error.message || "Could not save reading"); return; }
+            }
+            setLogType(null);
+            if (onRefresh) onRefresh();
+          } catch (e) {
+            alert(e?.message || "Could not save reading");
           }
-          setLogType(null);
-          if (onRefresh) onRefresh();
         }}/>
       )}
       {historyType && (
