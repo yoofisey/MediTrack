@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
