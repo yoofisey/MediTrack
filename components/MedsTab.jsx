@@ -62,7 +62,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
         </div>
         <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{t("meds.day")} {prog} {t("meds.of")} {med.course_duration_days}</div>
         <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
-        {med.reminder_times&&<div style={{fontSize:12,color:"var(--t3)",marginTop:6,display:"flex",alignItems:"center",gap:5}}><Ico><Clock size={13} strokeWidth={2.2}/></Ico> {med.reminder_times.split(",").join(" · ")}</div>}
+        {med.dose_interval_hours&&<div style={{fontSize:12,color:"var(--t3)",marginTop:6,display:"flex",alignItems:"center",gap:5}}><Ico><Clock size={13} strokeWidth={2.2}/></Ico> Every {med.dose_interval_hours}h</div>}
         {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8,display:"flex",alignItems:"center",gap:5}}><Ico><FileText size={14} strokeWidth={2.2}/></Ico> {med.notes}</div>}
         {remaining !== null && (
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8,fontSize:13}}>

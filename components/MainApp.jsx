@@ -414,22 +414,9 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     }
   }, [user?.id]);
 
-  function isToday(isoStr) {
-    if (!isoStr) return false;
-    const d = new Date(isoStr);
-    const n = new Date();
-    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-  }
-
-  function makeDate(h, m) {
-    const d = new Date(); d.setHours(h, m || 0, 0, 0); return d;
-  }
-
   useEffect(() => {
     if (loading || !meds.length) return;
     const now = new Date();
-    const wakeTime = profile?.wake_time || "08:00";
-    const wakeHour = parseInt(wakeTime) || 8;
     const streak = calcStreak(logs, meds);
     const overdue = [];
 
@@ -441,35 +428,16 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
       const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
       const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
-      const todayStart = makeDate(wakeHour, 0);
+      if (!lastLog) return;
 
-      let doseTimes = [];
-      if (lastLog && isToday(lastLog.taken_at)) {
-        const next = new Date(new Date(lastLog.taken_at).getTime() + intervalMs);
-        if (next <= now) doseTimes.push(next);
-      } else {
-        const dosesToday = med.times_per_day || 1;
-        for (let i = 0; i < dosesToday; i++) {
-          const dt = new Date(todayStart.getTime() + i * intervalMs);
-          if (dt <= now) doseTimes.push(dt);
-        }
-      }
+      const next = new Date(new Date(lastLog.taken_at).getTime() + intervalMs);
+      if (next > now) return;
 
-      const todayCount = logs.filter(l => l.medication_id === med.id && isToday(l.taken_at)).length;
-      const expectedToday = med.times_per_day || 1;
-      const alreadyDone = todayCount >= expectedToday;
-      if (alreadyDone) return;
-
-      doseTimes.forEach(doseAt => {
-        const alreadyLogged = logs.some(l => l.medication_id === med.id && Math.abs(new Date(l.taken_at).getTime() - doseAt.getTime()) < 3600000);
-        if (!alreadyLogged) {
-          const dayNum = Math.max(1, Math.floor((now - new Date(med.start_date)) / 86400000) + 1);
-          overdue.push({
-            med: { id: med.id, name: med.name, dosage_amount: med.dosage_amount, dosage_unit: med.dosage_unit, notes: med.notes },
-            day: `Day ${dayNum}/${med.course_duration_days}`,
-            streak,
-          });
-        }
+      const dayNum = Math.max(1, Math.floor((now - new Date(med.start_date)) / 86400000) + 1);
+      overdue.push({
+        med: { id: med.id, name: med.name, dosage_amount: med.dosage_amount, dosage_unit: med.dosage_unit, notes: med.notes },
+        day: `Day ${dayNum}/${med.course_duration_days}`,
+        streak,
       });
     });
 
@@ -521,25 +489,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     const takenAtISO = takenAt || new Date().toISOString();
     if (!takenAt) {
       const lastLog = logs.filter(l => l.medication_id === med.id).sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
-      const logsToday = logs.filter(l => l.medication_id === med.id && isToday(l.taken_at));
       let nextDoseTime = null;
-      if (med.reminder_times && med.reminder_times.trim()) {
-        const times = med.reminder_times.split(",").map(t => {
-          const [h, m] = t.trim().split(":");
-          return makeDate(parseInt(h) || 8, parseInt(m) || 0);
-        });
-        const takenClosest = logsToday.map(l => new Date(l.taken_at)).sort((a,b) => b - a);
-        const takenSet = new Set(takenClosest.map(d => d.getHours() * 60 + d.getMinutes()));
-        const remaining = times.filter(dt => !takenSet.has(dt.getHours() * 60 + dt.getMinutes()) && dt > new Date());
-        if (remaining.length === 0) { alert("All doses taken today!"); return; }
-        nextDoseTime = remaining[0];
-      } else {
+      if (lastLog) {
         const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
-        if (lastLog) {
-          nextDoseTime = new Date(new Date(lastLog.taken_at).getTime() + intervalMs);
-        } else {
-          nextDoseTime = new Date();
-        }
+        nextDoseTime = new Date(new Date(lastLog.taken_at).getTime() + intervalMs);
       }
       if (nextDoseTime && nextDoseTime > new Date()) {
         const remainingMs = nextDoseTime - new Date();
