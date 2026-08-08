@@ -7,7 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock, syncVisits } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
-import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform, setupForegroundListener } from "@/lib/notifications";
+import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, getNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform, setupForegroundListener } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { initUrlDeeplinks } from "@/lib/deeplinks";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
@@ -38,7 +38,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => { const t = setTimeout(() => setLoading(false), 5000); return () => clearTimeout(t); }, []);
   const [profile, setProfile] = useState(initProfile);
-  const [notifPerm, setNotifPerm] = useState(() => "Notification" in window ? Notification.permission : "default");
+  const [notifPerm, setNotifPerm] = useState(() => isNativePlatform() ? "default" : "Notification" in window ? Notification.permission : "default");
   const [loadKey, setLoadKey] = useState(0);
   const [visitsTick, setVisitsTick] = useState(0);
   const [deleteMedId, setDeleteMedId] = useState(null);
@@ -309,6 +309,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, [user?.id]);
 
   useEffect(() => { initCapacitorNotifs(); }, []);
+
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    let mounted = true;
+    getNotifPerm().then(p => { if (mounted) setNotifPerm(p); }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     initUrlDeeplinks();
@@ -634,7 +641,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       s?.setItem("mt_notif_on", "0");
       clearAllTimers();
       sendToSW("clear-alarms");
-      setNotifPerm(Notification.permission);
+      getNotifPerm().then(setNotifPerm).catch(() => {});
       return;
     }
     const p = await askNotifPerm();

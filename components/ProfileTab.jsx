@@ -7,7 +7,7 @@ import { useLang } from "@/lib/i18n";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
-import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers } from "@/lib/notifications";
+import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers, getNotifPerm, isNativePlatform } from "@/lib/notifications";
 import { sb } from "@/lib/supabase";
 import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
@@ -42,7 +42,7 @@ function Toggle({ on, onChange, disabled }) {
 
 export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs }) {
   const { t, lang, setLang } = useLang();
-  const [notifPerm, setNotifPerm] = useState(() => { if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
+  const [notifPerm, setNotifPerm] = useState(() => { if (isNativePlatform()) return "default"; if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -66,6 +66,13 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     });
     return () => { mounted = false; };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    let mounted = true;
+    getNotifPerm().then(p => { if (mounted) setNotifPerm(p); }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
   const [uploading, setUploading] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
