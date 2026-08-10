@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useLang } from "@/lib/i18n";
+import { sb } from "@/lib/supabase";
 import { Stethoscope, Scale, Droplets, Heart, Thermometer, Wind, FlaskConical, Ruler, Droplet, Gauge, BarChart3 } from "lucide-react";
 
 const VITAL_TYPES = [
@@ -411,6 +412,28 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
       localStorage.setItem("mt_vital_reminders", JSON.stringify(vitalReminders));
     }
   }, [enabled, frequency, vitalReminders]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!mounted || !user?.id) return;
+        for (const [type, cfg] of Object.entries(vitalReminders)) {
+          const intervalId = cfg?.intervalId || "off";
+          if (intervalId === "off") {
+            await sb.from("vital_reminders").delete().eq("user_id", user.id).eq("type", type);
+          } else {
+            await sb.from("vital_reminders").upsert(
+              { user_id: user.id, type, interval_id: intervalId },
+              { onConflict: "user_id,type" }
+            );
+          }
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, [vitalReminders]);
 
   const toggleVital = useCallback((id) => {
     setEnabled(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);

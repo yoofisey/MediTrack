@@ -53,6 +53,29 @@ function getLocalHour(timezone: string): number {
   catch { return new Date().getHours(); }
 }
 
+// Convert a wall-clock "YYYY-MM-DD" + "HH:MM" (interpreted in `timezone`)
+// into epoch milliseconds. Approximation is fine for ±10 min windows.
+function zonedTimeToEpoch(dateStr: string, timeStr: string, timezone: string): number {
+  const naive = new Date(dateStr + "T" + (timeStr || "09:00") + ":00Z").getTime();
+  try {
+    const asStr = new Date(naive).toLocaleString("en-CA", {
+      timeZone: timezone, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    });
+    const m = asStr.match(/^(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2})/);
+    if (!m) return naive;
+    const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return naive - (wall - naive);
+  } catch { return naive; }
+}
+
+// Next occurrence of the given local wall-clock hour (e.g. 8 or 20) in `timezone`.
+function nextLocalWallTime(hour: number, timezone: string): number {
+  const now = new Date();
+  const todayStr = getLocalTodayStr(timezone);
+  const guess = zonedTimeToEpoch(todayStr, `${String(hour).padStart(2, "0")}:00`, timezone);
+  return guess > now.getTime() ? guess : guess + 86400000;
+}
+
 async function pemToCryptoKey(pem: string): Promise<CryptoKey> {
   const b64 = pem
     .replace(/-----BEGIN [^-]+-----/g, "")
@@ -85,7 +108,20 @@ async function getFCMAccessToken(): Promise<{ token?: string; error?: string }> 
     })
       .setProtectedHeader({ alg: "RS256", typ: "JWT" })
       .sign(signingKey);
-    return { token: jwt };
+
+    const tokRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }),
+    });
+    const tokJson = await tokRes.json();
+    if (!tokRes.ok || !tokJson.access_token) {
+      return { error: `token exchange failed ${tokRes.status}: ${JSON.stringify(tokJson).slice(0, 300)}` };
+    }
+    return { token: tokJson.access_token };
   } catch (e) {
     return { error: `mint failed: ${String(e)}` };
   }
@@ -107,7 +143,16 @@ async function sendFCMPush(token: string, title: string, body: string, tag: stri
           token,
           notification: { title, body },
           data: { tag },
-          android: { priority: "high", ttl: "86400s" },
+          android: {
+            priority: "high",
+            ttl: "86400s",
+            notification: {
+              channel_id: "adhera-doses",
+              sound: "default",
+              icon: "ic_launcher",
+              visibility: "public",
+            },
+          },
           apns: {
             payload: {
               aps: {
@@ -197,11 +242,36 @@ serve(async (req) => {
       .select("*")
       .eq("active", true);
 
-    if (medErr || !meds?.length) {
-      return new Response(JSON.stringify({ ok: true, msg: "No active meds", sent: 0 }), { status: 200 });
+    if (medErr) {
+      return new Response(JSON.stringify({ ok: false, error: `medications query failed: ${medErr.message}` }), { status: 200 });
     }
 
-    const userIds = [...new Set(meds.map(m => m.user_id))];
+    const [visitsRes, vitalRemindersRes] = await Promise.all([
+      supabase.from("visits").select("*"),
+      supabase.from("vital_reminders").select("*"),
+    ]);
+
+    if (visitsRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `visits query failed: ${visitsRes.error.message}` }), { status: 200 });
+    }
+    if (vitalRemindersRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `vital_reminders query failed: ${vitalRemindersRes.error.message}` }), { status: 200 });
+    }
+
+    const visits = (visitsRes.data || []).filter((v: any) => {
+      if (v.status === "attended" || v.status === "missed") return false;
+      return v.reminder_minutes && v.reminder_minutes > 0;
+    });
+    const vitalReminders = (vitalRemindersRes.data || []).filter((r: any) => r.interval_id && r.interval_id !== "off");
+
+    const medUserIds = (meds || []).map((m: any) => m.user_id);
+    const visitUserIds = visits.map((v: any) => v.user_id);
+    const vitalUserIds = vitalReminders.map((r: any) => r.user_id);
+    const userIds = [...new Set([...medUserIds, ...visitUserIds, ...vitalUserIds])];
+
+    if (!userIds.length) {
+      return new Response(JSON.stringify({ ok: true, msg: "No users", sent: 0 }), { status: 200 });
+    }
 
     const [profilesRes, logsRes, subsRes] = await Promise.all([
       supabase.from("profiles").select("id, timezone, country, wake_time, reminder_lead, last_checkin_date").in("id", userIds),
@@ -243,7 +313,9 @@ serve(async (req) => {
     const now = new Date();
     const nowMs = Date.now();
 
-    for (const med of meds) {
+    const medList = meds || [];
+
+    for (const med of medList) {
       const tz = tzFor(med.user_id);
       const prof = profiles.find(p => p.id === med.user_id);
       const leadMin = prof?.reminder_lead ?? 30;
@@ -297,6 +369,101 @@ serve(async (req) => {
       }
     }
 
+    // Hospital visit reminders
+    for (const visit of visits) {
+      const visitMs = zonedTimeToEpoch(visit.date, visit.time || "09:00", tzFor(visit.user_id));
+      const reminderMs = visitMs - (visit.reminder_minutes || 0) * 60000;
+      const diff = reminderMs - nowMs;
+      if (diff > 600000 || diff < -600000) continue;
+
+      const tag = `mt-visit-${visit.id}-${reminderMs}`;
+      if (!(await claimTag(supabase, tag))) continue;
+
+      const title = `Visit: ${visit.reason || "Doctor appointment"}`;
+      const body = `${visit.facility || visit.doctor || ""} at ${visit.time || "09:00"}${visit.notes ? "\n" + visit.notes : ""}`;
+      const payload = JSON.stringify({ title, body, tag });
+      const userSubs = subMap.get(visit.user_id) || [];
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    // Vital check reminders
+    const VITAL_INTERVALS: Record<string, number> = {
+      "4h": 4, "6h": 6, "8h": 8, "12h": 12, "24h": 24, "morning_evening": 12,
+    };
+    const VITAL_LABELS: Record<string, string> = {
+      blood_pressure: "Blood Pressure",
+      glucose: "Blood Sugar",
+      weight: "Weight",
+      heart_rate: "Heart Rate",
+      temperature: "Temperature",
+      spo2: "Oxygen Level",
+      cholesterol: "Total Cholesterol",
+      bmi: "BMI",
+      hba1c: "HbA1c",
+      water_intake: "Water Intake",
+      peak_flow: "Peak Flow",
+    };
+
+    const { data: allVitals } = await supabase
+      .from("vitals")
+      .select("user_id, type, created_at")
+      .in("user_id", userIds)
+      .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+
+    const lastVitalMap = new Map<string, string>();
+    (allVitals || []).forEach((v: any) => {
+      const key = `${v.user_id}|${v.type}`;
+      const cur = lastVitalMap.get(key);
+      if (!cur || v.created_at > cur) lastVitalMap.set(key, v.created_at);
+    });
+
+    for (const reminder of vitalReminders) {
+      const tz = tzFor(reminder.user_id);
+      const intervalHours = VITAL_INTERVALS[reminder.interval_id];
+      if (!intervalHours) continue;
+      const label = VITAL_LABELS[reminder.type];
+      if (!label) continue;
+
+      const last = lastVitalMap.get(`${reminder.user_id}|${reminder.type}`);
+      let scheduledMs: number;
+      if (last) {
+        scheduledMs = new Date(last).getTime() + intervalHours * 3600000;
+      } else if (reminder.interval_id === "morning_evening") {
+        scheduledMs = nextLocalWallTime(8, tz);
+        if (scheduledMs - nowMs > 12 * 3600000) scheduledMs = nextLocalWallTime(20, tz);
+      } else {
+        scheduledMs = nextLocalWallTime(8, tz);
+      }
+
+      const diff = scheduledMs - nowMs;
+      if (diff > 600000 || diff < -600000) continue;
+
+      const tag = `mt-vital-${reminder.user_id}-${reminder.type}-${scheduledMs}`;
+      if (!(await claimTag(supabase, tag))) continue;
+
+      const title = `Time to check your ${label}`;
+      const body = `Your ${label} is due. Regular monitoring helps you stay on top of your health. Tap to log now.`;
+      const payload = JSON.stringify({ title, body, tag });
+      const userSubs = subMap.get(reminder.user_id) || [];
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
     // Evening check-in reminder (7-9 PM local)
     for (const userId of userIds) {
       const tz = tzFor(userId);
@@ -307,7 +474,7 @@ serve(async (req) => {
       if (lastCheckin === todayStr) continue;
       const userSubs = subMap.get(userId);
       if (!userSubs?.length) continue;
-      const userMeds = meds.filter((m: any) => m.user_id === userId);
+      const userMeds = medList.filter((m: any) => m.user_id === userId);
       const streak = userMeds.length ? calcStreakForMed(allLogs.filter((l: any) => l.user_id === userId), userMeds[0].start_date, tz) : 0;
       const tag = `mt-checkin-${userId}-${todayStr}`;
       if (!(await claimTag(supabase, tag))) continue;
@@ -330,7 +497,7 @@ serve(async (req) => {
       const userLogs = allLogs.filter((l: any) => l.user_id === userId);
       const userSubs = subMap.get(userId);
       if (!userSubs?.length) continue;
-      const userMeds = meds.filter((m: any) => m.user_id === userId);
+      const userMeds = medList.filter((m: any) => m.user_id === userId);
       if (!userMeds.length) continue;
       const med = userMeds[0];
       const streak = calcStreakForMed(userLogs, med.start_date, tz);
@@ -376,7 +543,7 @@ serve(async (req) => {
 
       for (const link of familyLinks) {
         if (ownerPlanMap.get(link.owner_id) !== "family") continue;
-        const memberMeds = meds.filter((m: any) => m.user_id === link.member_user_id);
+        const memberMeds = medList.filter((m: any) => m.user_id === link.member_user_id);
         if (!memberMeds.length) continue;
         const ownerSubs = ownerSubMap.get(link.owner_id) || [];
         if (!ownerSubs.length) continue;
