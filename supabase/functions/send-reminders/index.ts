@@ -10,7 +10,6 @@ const VAPID_SUBJECT = "mailto:support@adhera.app";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") || "";
-const FCM_SERVICE_ACCOUNT_B64 = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "";
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
@@ -26,22 +25,25 @@ function getLocalHour(timezone: string): number {
 }
 
 async function getFCMAccessToken(): Promise<string | null> {
-  if (!FCM_SERVICE_ACCOUNT_B64) return null;
+  const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "";
   try {
-    const raw = atob(FCM_SERVICE_ACCOUNT_B64);
-    const key = JSON.parse(raw);
+    let key: any = null;
+    try { key = JSON.parse(raw); } catch {}
+    if (!key) {
+      try { key = JSON.parse(atob(raw)); } catch {}
+    }
     const { client_email, private_key } = key;
-    if (!client_email || !private_key) return null;
     const now = Math.floor(Date.now() / 1000);
-    return new SignJWT({
+    const jwt = await new SignJWT({
       iss: client_email,
       scope: "https://www.googleapis.com/auth/firebase.messaging",
-      aud: client_email,
+      aud: "https://oauth2.googleapis.com/token",
       iat: now,
       exp: now + 3600,
     })
       .setProtectedHeader({ alg: "RS256", typ: "JWT" })
       .sign(private_key);
+    return jwt;
   } catch {
     return null;
   }
