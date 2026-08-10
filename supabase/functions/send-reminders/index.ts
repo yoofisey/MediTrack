@@ -53,16 +53,29 @@ function getLocalHour(timezone: string): number {
   catch { return new Date().getHours(); }
 }
 
-async function getFCMAccessToken(): Promise<string | null> {
+async function pemToCryptoKey(pem: string): Promise<CryptoKey> {
+  const b64 = pem
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey("pkcs8", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+}
+
+async function getFCMAccessToken(): Promise<{ token?: string; error?: string }> {
   const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "";
+  if (!raw) return { error: "env FIREBASE_SERVICE_ACCOUNT_JSON not set" };
   try {
     let key: any = null;
     try { key = JSON.parse(raw); } catch {}
     if (!key) {
       try { key = JSON.parse(atob(raw)); } catch {}
     }
+    if (!key) return { error: "cannot parse secret (raw JSON or base64)" };
     const { client_email, private_key } = key;
+    if (!client_email || !private_key) return { error: "missing client_email/private_key" };
     const now = Math.floor(Date.now() / 1000);
+    const signingKey = await pemToCryptoKey(private_key);
     const jwt = await new SignJWT({
       iss: client_email,
       scope: "https://www.googleapis.com/auth/firebase.messaging",
@@ -71,22 +84,22 @@ async function getFCMAccessToken(): Promise<string | null> {
       exp: now + 3600,
     })
       .setProtectedHeader({ alg: "RS256", typ: "JWT" })
-      .sign(private_key);
-    return jwt;
-  } catch {
-    return null;
+      .sign(signingKey);
+    return { token: jwt };
+  } catch (e) {
+    return { error: `mint failed: ${String(e)}` };
   }
 }
 
-async function sendFCMPush(token: string, title: string, body: string, tag: string): Promise<boolean> {
-  if (!FCM_PROJECT_ID) return false;
-  const accessToken = await getFCMAccessToken();
-  if (!accessToken) return false;
+async function sendFCMPush(token: string, title: string, body: string, tag: string): Promise<{ ok: boolean; statusCode?: number; detail?: string }> {
+  if (!FCM_PROJECT_ID) return { ok: false, detail: "FCM_PROJECT_ID not set" };
+  const auth = await getFCMAccessToken();
+  if (!auth.token) return { ok: false, detail: auth.error || "no access token" };
   try {
     const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${accessToken}`,
+        "Authorization": `Bearer ${auth.token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -108,18 +121,28 @@ async function sendFCMPush(token: string, title: string, body: string, tag: stri
         },
       }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    const txt = await res.text();
+    console.log(`FCM send ${res.status}: ${txt.slice(0, 300)}`);
+    if (!res.ok) return { ok: false, statusCode: res.status, detail: txt.slice(0, 300) };
+    return { ok: true, statusCode: res.status };
+  } catch (e) {
+    console.log("FCM send error", String(e));
+    return { ok: false, detail: String(e) };
   }
 }
 
-async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string) {
+async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string): Promise<{ ok: boolean; type: string; statusCode?: number; detail?: string }> {
   if (sub.endpoint?.startsWith("fcm:")) {
     const { title, body, tag } = JSON.parse(payload);
-    return sendFCMPush(sub.endpoint.slice(4), title, body, tag);
+    const r = await sendFCMPush(sub.endpoint.slice(4), title, body, tag);
+    return { ok: r.ok, type: "fcm", statusCode: r.statusCode, detail: r.detail };
   }
-  return webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, { TTL: 86400 });
+  try {
+    await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, { TTL: 86400 });
+    return { ok: true, type: "web" };
+  } catch (e: any) {
+    return { ok: false, type: "web", statusCode: e?.statusCode, detail: String(e) };
+  }
 }
 
 async function claimTag(supabase: any, tag: string): Promise<boolean> {
@@ -216,6 +239,7 @@ serve(async (req) => {
     });
 
     let sent = 0;
+    const results: any[] = [];
     const now = new Date();
     const nowMs = Date.now();
 
@@ -264,13 +288,11 @@ serve(async (req) => {
       const userSubs = subMap.get(med.user_id) || [];
 
       for (const sub of userSubs) {
-        try {
-          await sendPush(sub, payload);
-          sent++;
-        } catch (e: any) {
-          if (e.statusCode === 404 || e.statusCode === 410) {
-            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-          }
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
         }
       }
     }
@@ -295,8 +317,10 @@ serve(async (req) => {
         tag,
       });
       for (const sub of userSubs) {
-        try { await sendPush(sub, payload); sent++; }
-        catch (e: any) { if (e.statusCode === 404 || e.statusCode === 410) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint); }
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
       }
     }
 
@@ -317,13 +341,11 @@ serve(async (req) => {
       const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\nCurrent streak: ${streak} days`, tag });
 
       for (const sub of userSubs) {
-        try {
-          await sendPush(sub, payload);
-          sent++;
-        } catch (e: any) {
-          if (e.statusCode === 404 || e.statusCode === 410) {
-            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-          }
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
         }
       }
     }
@@ -396,11 +418,11 @@ serve(async (req) => {
         const payload = JSON.stringify({ title, body, tag });
 
         for (const sub of ownerSubs) {
-          try { await sendPush(sub, payload); sent++; }
-          catch (e: any) {
-            if (e.statusCode === 404 || e.statusCode === 410) {
-              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-            }
+          const r = await sendPush(sub, payload);
+          results.push(r);
+          if (r.ok) sent++;
+          else if (r.statusCode === 404 || r.statusCode === 410) {
+            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
           }
         }
       }
@@ -413,7 +435,7 @@ serve(async (req) => {
         .lt("sent_at", new Date(Date.now() - 7 * 86400000).toISOString());
     } catch {}
 
-    return new Response(JSON.stringify({ ok: true, sent }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, sent, native: results.filter(r => r.type === "fcm" && r.ok).length, results }), { status: 200 });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
