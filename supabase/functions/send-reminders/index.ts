@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 import { SignJWT } from "npm:jose@5.9.6";
+import { getCountry } from "npm:countries-and-timezones@3.10.0";
 
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
@@ -12,6 +13,34 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") || "";
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+// countries-and-timezones orders multi-zone countries by tzdb key order,
+// so pin the main zone for the ones where that order is unhelpful.
+const COUNTRY_TZ_OVERRIDE: Record<string, string> = {
+  US: "America/New_York",
+  CA: "America/Toronto",
+  AU: "Australia/Sydney",
+  MX: "America/Mexico_City",
+  BR: "America/Sao_Paulo",
+  ES: "Europe/Madrid",
+  RU: "Europe/Moscow",
+};
+
+function countryTimezone(country: string | null | undefined): string {
+  if (!country) return "";
+  const code = country.toUpperCase();
+  const override = COUNTRY_TZ_OVERRIDE[code];
+  if (override) return override;
+  try {
+    const c = getCountry(code);
+    if (c?.timezones?.length) return c.timezones[0];
+  } catch {}
+  return "";
+}
+
+function userTimezone(tz: string | null | undefined, country: string | null | undefined): string {
+  return tz && tz.trim() ? tz : (countryTimezone(country) || "UTC");
+}
 
 function getLocalTodayStr(timezone: string): string {
   try {
@@ -152,7 +181,7 @@ serve(async (req) => {
     const userIds = [...new Set(meds.map(m => m.user_id))];
 
     const [profilesRes, logsRes, subsRes] = await Promise.all([
-      supabase.from("profiles").select("id, timezone, wake_time, reminder_lead, last_checkin_date").in("id", userIds),
+      supabase.from("profiles").select("id, timezone, country, wake_time, reminder_lead, last_checkin_date").in("id", userIds),
       supabase.from("dose_logs").select("medication_id, taken_at, user_id").in("user_id", userIds).gte("taken_at", new Date(Date.now() - 86400000 * 7).toISOString()),
       supabase.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds),
     ]);
@@ -166,11 +195,15 @@ serve(async (req) => {
     const subs = subsRes.data || [];
 
     const profileTz = new Map<string, string>();
+    const profileCountry = new Map<string, string>();
     const profileCheckinDate = new Map<string, string>();
     profiles.forEach((p: any) => {
-      profileTz.set(p.id, p.timezone || "UTC");
+      profileTz.set(p.id, p.timezone || "");
+      profileCountry.set(p.id, p.country || "");
       if (p.last_checkin_date) profileCheckinDate.set(p.id, p.last_checkin_date);
     });
+
+    const tzFor = (userId: string): string => userTimezone(profileTz.get(userId), profileCountry.get(userId));
 
     if (!subs.length) {
       return new Response(JSON.stringify({ ok: true, msg: "No subscriptions", sent: 0 }), { status: 200 });
@@ -187,7 +220,7 @@ serve(async (req) => {
     const nowMs = Date.now();
 
     for (const med of meds) {
-      const tz = profileTz.get(med.user_id) || "UTC";
+      const tz = tzFor(med.user_id);
       const prof = profiles.find(p => p.id === med.user_id);
       const leadMin = prof?.reminder_lead ?? 30;
       const medLogs = allLogs.filter((l: any) => l.user_id === med.user_id && l.medication_id === med.id);
@@ -244,7 +277,7 @@ serve(async (req) => {
 
     // Evening check-in reminder (7-9 PM local)
     for (const userId of userIds) {
-      const tz = profileTz.get(userId) || "UTC";
+      const tz = tzFor(userId);
       const todayStr = getLocalTodayStr(tz);
       const localHour = getLocalHour(tz);
       if (localHour < 19 || localHour > 21) continue;
@@ -326,7 +359,7 @@ serve(async (req) => {
         const ownerSubs = ownerSubMap.get(link.owner_id) || [];
         if (!ownerSubs.length) continue;
 
-        const tz = profileTz.get(link.member_user_id) || "UTC";
+        const tz = tzFor(link.member_user_id);
         const memberProf = profiles.find((p: any) => p.id === link.member_user_id);
         const todayStr = getLocalTodayStr(tz);
 

@@ -114,9 +114,10 @@ export default function AuthScreen({ onAuth }) {
     if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
     if (pwScore(pw) < 3) { setErr("Password is too weak — use a mix of upper/lowercase, numbers, and symbols."); setBusy(false); return; }
     try {
+      const deviceTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { return ""; } })();
       const { error } = await sb.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: true, data: { full_name: cleanName, country, plan: "free" } },
+        options: { shouldCreateUser: true, data: { full_name: cleanName, country, plan: "free", timezone: deviceTz } },
       });
       if (error) throw error;
       setPwStore(pw);
