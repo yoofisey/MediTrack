@@ -390,6 +390,36 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, [meds]);
 
   useEffect(() => {
+    function onOpenVisit(e) {
+      const { visitId } = e.detail || {};
+      if (!visitId) return;
+      import("@/lib/data").then(async ({ getVisits }) => {
+        let visit = getVisits().find(v => v.id === visitId);
+        if (!visit) {
+          try {
+            const { data } = await sb.from("visits").select("*").eq("id", visitId).single();
+            if (data) visit = data;
+          } catch {}
+        }
+        if (visit) {
+          setEditVisit(visit);
+          setShowVisitSheet(true);
+        }
+      }).catch(() => {});
+    }
+    window.addEventListener("mt-open-visit", onOpenVisit);
+    return () => window.removeEventListener("mt-open-visit", onOpenVisit);
+  }, []);
+
+  useEffect(() => {
+    function onOpenVitals() {
+      setTab("vitals");
+    }
+    window.addEventListener("mt-open-vitals", onOpenVitals);
+    return () => window.removeEventListener("mt-open-vitals", onOpenVitals);
+  }, []);
+
+  useEffect(() => {
     async function onLogDose(e) {
       const { medId, doseTimeMs } = e.detail || {};
       if (!medId) return;

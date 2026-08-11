@@ -127,7 +127,7 @@ async function getFCMAccessToken(): Promise<{ token?: string; error?: string }> 
   }
 }
 
-async function sendFCMPush(token: string, title: string, body: string, tag: string): Promise<{ ok: boolean; statusCode?: number; detail?: string }> {
+async function sendFCMPush(token: string, title: string, body: string, tag: string, data: Record<string, string> = {}): Promise<{ ok: boolean; statusCode?: number; detail?: string }> {
   if (!FCM_PROJECT_ID) return { ok: false, detail: "FCM_PROJECT_ID not set" };
   const auth = await getFCMAccessToken();
   if (!auth.token) return { ok: false, detail: auth.error || "no access token" };
@@ -142,7 +142,7 @@ async function sendFCMPush(token: string, title: string, body: string, tag: stri
         message: {
           token,
           notification: { title, body },
-          data: { tag },
+          data: { tag, ...data },
           android: {
             priority: "high",
             ttl: "86400s",
@@ -178,8 +178,8 @@ async function sendFCMPush(token: string, title: string, body: string, tag: stri
 
 async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string): Promise<{ ok: boolean; type: string; statusCode?: number; detail?: string }> {
   if (sub.endpoint?.startsWith("fcm:")) {
-    const { title, body, tag } = JSON.parse(payload);
-    const r = await sendFCMPush(sub.endpoint.slice(4), title, body, tag);
+    const { title, body, tag, ...rest } = JSON.parse(payload);
+    const r = await sendFCMPush(sub.endpoint.slice(4), title, body, tag, rest);
     return { ok: r.ok, type: "fcm", statusCode: r.statusCode, detail: r.detail };
   }
   try {
@@ -381,7 +381,7 @@ serve(async (req) => {
 
       const title = `Visit: ${visit.reason || "Doctor appointment"}`;
       const body = `${visit.facility || visit.doctor || ""} at ${visit.time || "09:00"}${visit.notes ? "\n" + visit.notes : ""}`;
-      const payload = JSON.stringify({ title, body, tag });
+      const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
       const userSubs = subMap.get(visit.user_id) || [];
 
       for (const sub of userSubs) {
@@ -451,7 +451,7 @@ serve(async (req) => {
 
       const title = `Time to check your ${label}`;
       const body = `Your ${label} is due. Regular monitoring helps you stay on top of your health. Tap to log now.`;
-      const payload = JSON.stringify({ title, body, tag });
+      const payload = JSON.stringify({ title, body, tag, vitalType: reminder.type });
       const userSubs = subMap.get(reminder.user_id) || [];
 
       for (const sub of userSubs) {
