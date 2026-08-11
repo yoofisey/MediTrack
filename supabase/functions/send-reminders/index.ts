@@ -202,50 +202,64 @@ async function claimTag(supabase: any, tag: string): Promise<boolean> {
   }
 }
 
-function calcStreakForMed(medLogs: any[], startDate: string, timezone: string): number {
-  const sorted = medLogs
-    .filter(l => new Date(l.taken_at) >= new Date(startDate))
-    .sort((a: any, b: any) => b.taken_at.localeCompare(a.taken_at));
-
-  let count = 0;
-  const d = new Date();
-  const tz = timezone || "UTC";
-
-  while (d >= new Date(startDate)) {
-    const dayStr = d.toLocaleDateString("en-CA", { timeZone: tz });
-    const took = sorted.some((l: any) => l.taken_at.startsWith(dayStr));
-    if (took) { count++; d.setDate(d.getDate() - 1); }
-    else if (count === 0) { d.setDate(d.getDate() - 1); continue; }
-    else break;
-  }
-  return count;
+function activeOnDay(m: any, day: Date): boolean {
+  const s = new Date(m.start_date), e = new Date(m.start_date);
+  e.setDate(e.getDate() + m.course_duration_days);
+  return s <= day && e >= day && m.active;
 }
 
-function calcStreakEndingAt(endDate: Date, medLogs: any[], startDate: string, timezone: string): number {
-  const sorted = medLogs
-    .filter(l => new Date(l.taken_at) >= new Date(startDate))
-    .sort((a: any, b: any) => b.taken_at.localeCompare(a.taken_at));
-
-  let count = 0;
-  const d = new Date(endDate.getTime());
+// Mirrors lib/data.js calcStreak (all active meds fully logged each day).
+function calcStreakAll(medLogs: any[], meds: any[], timezone: string): number {
+  if (!medLogs.length || !meds.length) return 0;
+  let streak = 0;
+  const now = new Date();
   const tz = timezone || "UTC";
+  for (let d = 0; d <= 180; d++) {
+    const day = new Date(now);
+    day.setDate(now.getDate() - d);
+    const ds = day.toLocaleDateString("en-CA", { timeZone: tz });
+    const active = meds.filter(m => activeOnDay(m, day));
+    if (!active.length) { if (d === 0) continue; break; }
+    const full = active.every((m: any) => {
+      const need = m.times_per_day || 1;
+      return medLogs.filter((l: any) => l.medication_id === m.id && l.taken_at.startsWith(ds)).length >= need;
+    });
+    if (full) streak++;
+    else if (d > 0) break;
+  }
+  return streak;
+}
 
-  while (d >= new Date(startDate)) {
-    const dayStr = d.toLocaleDateString("en-CA", { timeZone: tz });
-    if (sorted.some((l: any) => l.taken_at.startsWith(dayStr))) { count++; d.setDate(d.getDate() - 1); }
+// Like calcStreakAll but counts consecutive fully-logged days ending on endDate.
+function streakEndingAtAll(endDate: Date, medLogs: any[], meds: any[], timezone: string): number {
+  if (!medLogs.length || !meds.length) return 0;
+  let streak = 0;
+  const tz = timezone || "UTC";
+  for (let d = 0; d <= 180; d++) {
+    const day = new Date(endDate.getTime());
+    day.setDate(day.getDate() - d);
+    const ds = day.toLocaleDateString("en-CA", { timeZone: tz });
+    const active = meds.filter(m => activeOnDay(m, day));
+    if (!active.length) break;
+    const full = active.every((m: any) => {
+      const need = m.times_per_day || 1;
+      return medLogs.filter((l: any) => l.medication_id === m.id && l.taken_at.startsWith(ds)).length >= need;
+    });
+    if (full) streak++;
     else break;
   }
-  return count;
+  return streak;
 }
 
 const DAILY_MSGS = [
-  { min: 0,  title: "Good morning!", body: "Start your day right — take your medication and log how you feel." },
-  { min: 4,  title: "4-day streak!", body: "You're building a great habit. Keep the momentum going!" },
-  { min: 7,  title: "One week strong!", body: "Seven days of consistency! You're proving your dedication." },
-  { min: 14, title: "Two-week warrior!", body: "14 days in a row! Your body thanks you for the commitment." },
-  { min: 30, title: "Month champion!", body: "30 days of adherence! This is the kind of dedication that changes lives." },
-  { min: 60, title: "Unstoppable!", body: "60 days! You're in the top tier of medication adherence worldwide." },
-  { min: 90, title: "Legendary!", body: "90 days! You've made health a non-negotiable part of your life." },
+  { min: 0,   title: "Good morning!", body: "Start your day right — take your medication and log how you feel." },
+  { min: 3,   title: "3-Day Streak!", body: "You've completed 3 days in a row! You're building momentum." },
+  { min: 7,   title: "One Week Strong!", body: "7 consecutive days! Consistency is key to better health." },
+  { min: 14,  title: "Two-Week Streak!", body: "14 days on track! Your routine is becoming a habit." },
+  { min: 30,  title: "30-Day Club!", body: "A full month of adherence! This is incredible dedication." },
+  { min: 60,  title: "60 Days Strong!", body: "Two months of unwavering commitment. You're a champion!" },
+  { min: 90,  title: "90-Day Warrior!", body: "Quarter-year streak! Most people dream of this consistency." },
+  { min: 180, title: "Half-Year Legend!", body: "180 days of perfect adherence. Absolutely legendary!" },
 ];
 
 serve(async (req) => {
@@ -292,7 +306,7 @@ serve(async (req) => {
 
     const [profilesRes, logsRes, subsRes] = await Promise.all([
       supabase.from("profiles").select("id, timezone, country, wake_time, reminder_lead, last_checkin_date").in("id", userIds),
-      supabase.from("dose_logs").select("medication_id, taken_at, user_id").in("user_id", userIds).gte("taken_at", new Date(Date.now() - 86400000 * 7).toISOString()),
+      supabase.from("dose_logs").select("medication_id, taken_at, user_id").in("user_id", userIds).gte("taken_at", new Date(Date.now() - 86400000 * 180).toISOString()),
       supabase.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds),
     ]);
 
@@ -356,7 +370,7 @@ serve(async (req) => {
       const isReminderTime = leadMin > 0 && reminderDiff > -600000 && reminderDiff < 600000;
       if (!isDoseTime && !isReminderTime) continue;
 
-      const streak = calcStreakForMed(allLogs.filter((l: any) => l.user_id === med.user_id), med.start_date, tz);
+      const streak = calcStreakAll(allLogs.filter((l: any) => l.user_id === med.user_id), medList.filter((m: any) => m.user_id === med.user_id), tz);
       const dayNum = Math.max(1, Math.floor((now.getTime() - new Date(med.start_date).getTime()) / 86400000) + 1);
       const day = `Day ${dayNum}/${med.course_duration_days}`;
       const doseInfo = `${med.dosage_amount} ${med.dosage_unit}`;
@@ -492,7 +506,7 @@ serve(async (req) => {
       const userSubs = subMap.get(userId);
       if (!userSubs?.length) continue;
       const userMeds = medList.filter((m: any) => m.user_id === userId);
-      const streak = userMeds.length ? calcStreakForMed(allLogs.filter((l: any) => l.user_id === userId), userMeds[0].start_date, tz) : 0;
+      const streak = userMeds.length ? calcStreakAll(allLogs.filter((l: any) => l.user_id === userId), userMeds, tz) : 0;
       const tag = `mt-checkin-${userId}-${todayStr}`;
       if (!(await claimTag(supabase, tag))) continue;
       const payload = JSON.stringify({
@@ -518,12 +532,15 @@ serve(async (req) => {
       if (!userSubs?.length) continue;
       const userMeds = medList.filter((m: any) => m.user_id === userId);
       if (!userMeds.length) continue;
-      const med = userMeds[0];
-      const streak = calcStreakForMed(userLogs, med.start_date, tz);
-      const msg = [...DAILY_MSGS].reverse().find(m => streak >= m.min) || DAILY_MSGS[0];
+      const streak = calcStreakAll(userLogs, userMeds, tz);
       const todayStr = getLocalTodayStr(tz);
       const tag = `mt-daily-${userId}-${todayStr}`;
       if (!(await claimTag(supabase, tag))) continue;
+      let msg = [...DAILY_MSGS].reverse().find(m => streak >= m.min) || DAILY_MSGS[0];
+      if (msg.min > 0) {
+        const celebrated = await claimTag(supabase, `mt-milestone-${userId}-${msg.min}`);
+        if (!celebrated) msg = DAILY_MSGS[0];
+      }
       const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\nCurrent streak: ${streak} days`, tag });
 
       for (const sub of userSubs) {
@@ -544,7 +561,6 @@ serve(async (req) => {
       if (!userSubs?.length) continue;
       const userMeds = medList.filter((m: any) => m.user_id === userId);
       if (!userMeds.length) continue;
-      const med = userMeds[0];
       const userLogs = allLogs.filter((l: any) => l.user_id === userId);
       const dayHasLog = (ds: string) => userLogs.some((l: any) => l.taken_at.startsWith(ds));
       const yesterday = new Date(now.getTime() - 86400000);
@@ -553,7 +569,8 @@ serve(async (req) => {
       const dayBeforeStr = dayBefore.toLocaleDateString("en-CA", { timeZone: tz });
       if (dayHasLog(yesterdayStr)) continue;
       if (!dayHasLog(dayBeforeStr)) continue;
-      const streakEnded = calcStreakEndingAt(dayBefore, userLogs, med.start_date, tz);
+      if (dayHasLog(getLocalTodayStr(tz))) continue;
+      const streakEnded = streakEndingAtAll(dayBefore, userLogs, userMeds, tz);
       if (streakEnded < STREAK_BREAK_MIN) continue;
       const localHour = getLocalHour(tz);
       if (localHour < 7 || localHour > 21) continue;
