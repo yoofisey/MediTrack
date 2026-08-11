@@ -221,6 +221,23 @@ function calcStreakForMed(medLogs: any[], startDate: string, timezone: string): 
   return count;
 }
 
+function calcStreakEndingAt(endDate: Date, medLogs: any[], startDate: string, timezone: string): number {
+  const sorted = medLogs
+    .filter(l => new Date(l.taken_at) >= new Date(startDate))
+    .sort((a: any, b: any) => b.taken_at.localeCompare(a.taken_at));
+
+  let count = 0;
+  const d = new Date(endDate.getTime());
+  const tz = timezone || "UTC";
+
+  while (d >= new Date(startDate)) {
+    const dayStr = d.toLocaleDateString("en-CA", { timeZone: tz });
+    if (sorted.some((l: any) => l.taken_at.startsWith(dayStr))) { count++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  return count;
+}
+
 const DAILY_MSGS = [
   { min: 0,  title: "Good morning!", body: "Start your day right — take your medication and log how you feel." },
   { min: 4,  title: "4-day streak!", body: "You're building a great habit. Keep the momentum going!" },
@@ -491,9 +508,11 @@ serve(async (req) => {
       }
     }
 
-    // Streak milestone encouragements (morning)
+    // Streak milestone encouragements (morning, 7-10 AM local)
     for (const userId of userIds) {
-      const tz = profileTz.get(userId) || "UTC";
+      const tz = tzFor(userId);
+      const localHour = getLocalHour(tz);
+      if (localHour < 7 || localHour > 10) continue;
       const userLogs = allLogs.filter((l: any) => l.user_id === userId);
       const userSubs = subMap.get(userId);
       if (!userSubs?.length) continue;
@@ -507,6 +526,44 @@ serve(async (req) => {
       if (!(await claimTag(supabase, tag))) continue;
       const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\nCurrent streak: ${streak} days`, tag });
 
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    // Missed-streak motivation (day after a streak breaks)
+    const STREAK_BREAK_MIN = 3;
+    for (const userId of userIds) {
+      const tz = tzFor(userId);
+      const userSubs = subMap.get(userId);
+      if (!userSubs?.length) continue;
+      const userMeds = medList.filter((m: any) => m.user_id === userId);
+      if (!userMeds.length) continue;
+      const med = userMeds[0];
+      const userLogs = allLogs.filter((l: any) => l.user_id === userId);
+      const dayHasLog = (ds: string) => userLogs.some((l: any) => l.taken_at.startsWith(ds));
+      const yesterday = new Date(now.getTime() - 86400000);
+      const dayBefore = new Date(now.getTime() - 2 * 86400000);
+      const yesterdayStr = yesterday.toLocaleDateString("en-CA", { timeZone: tz });
+      const dayBeforeStr = dayBefore.toLocaleDateString("en-CA", { timeZone: tz });
+      if (dayHasLog(yesterdayStr)) continue;
+      if (!dayHasLog(dayBeforeStr)) continue;
+      const streakEnded = calcStreakEndingAt(dayBefore, userLogs, med.start_date, tz);
+      if (streakEnded < STREAK_BREAK_MIN) continue;
+      const localHour = getLocalHour(tz);
+      if (localHour < 7 || localHour > 21) continue;
+      const tag = `mt-streakbreak-${userId}-${dayBeforeStr}`;
+      if (!(await claimTag(supabase, tag))) continue;
+      const payload = JSON.stringify({
+        title: "Let's get back on track",
+        body: `You kept a ${streakEnded}-day streak going. Missing a day happens — today is a fresh start. Take your medication and rebuild it one day at a time.`,
+        tag,
+      });
       for (const sub of userSubs) {
         const r = await sendPush(sub, payload);
         results.push(r);
