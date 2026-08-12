@@ -292,7 +292,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     } catch (e) { console.error("family report:", e); alert("Could not generate the report. Please try again."); }
   }
 
-  useEffect(() => { if (notifOn() && (meds.length || logs.length)) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30); return () => { clearAllTimers(); }; }, [meds, profile?.reminder_lead, profile?.wake_time, logs]);
+  useEffect(() => { if (notifOn() && (meds.length || logs.length)) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30, profile?.timezone); return () => { clearAllTimers(); }; }, [meds, profile?.reminder_lead, profile?.wake_time, profile?.timezone, logs]);
   useEffect(() => {
     try {
       const vitalReminders = JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}");
@@ -349,7 +349,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState === "visible" && notifOn()) {
-        if (meds.length) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30);
+        if (meds.length) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30, profile?.timezone);
         try {
           const vitalReminders = JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}");
           if (vitals.length) scheduleVitalReminders(vitalReminders, vitals);
@@ -360,7 +360,17 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [meds, logs, profile?.wake_time, profile?.reminder_lead]);
   useEffect(() => {
-    function onMsg(e) { if (e.data?.type === "alarm-ack") stopAlarmSound(); }
+    function onMsg(e) {
+      const d = e.data || {};
+      if (d.type === "alarm-ack") stopAlarmSound();
+      if (d.type === "mt-open-checkin") {
+        window.dispatchEvent(new CustomEvent("mt-open-checkin", {}));
+      } else if (d.type === "mt-open-vitals") {
+        window.dispatchEvent(new CustomEvent("mt-open-vitals", {}));
+      } else if (d.type === "mt-open-visit" && d.visitId) {
+        window.dispatchEvent(new CustomEvent("mt-open-visit", { detail: { visitId: d.visitId } }));
+      }
+    }
     if (typeof navigator !== "undefined" && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", onMsg);
       navigator.serviceWorker.ready.then(r => { window._mt_swReady = true; }).catch(() => {});
@@ -420,6 +430,33 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   }, []);
 
   useEffect(() => {
+    function onOpenCheckin() {
+      const today = new Date().toLocaleDateString("en-CA");
+      setJournalDate(today);
+      setJournalEntry(getJournalEntry(today));
+      setTab("today");
+    }
+    window.addEventListener("mt-open-checkin", onOpenCheckin);
+    return () => window.removeEventListener("mt-open-checkin", onOpenCheckin);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const mt = params.get("mt");
+      if (!mt) return;
+      const dispatch = (type, detail) => setTimeout(() => window.dispatchEvent(new CustomEvent(type, detail || {})), 900);
+      if (mt === "checkin") dispatch("mt-open-checkin");
+      else if (mt === "vitals") dispatch("mt-open-vitals");
+      else if (mt === "visit") {
+        const visitId = params.get("visitId");
+        if (visitId) dispatch("mt-open-visit", { detail: { visitId } });
+      }
+      history.replaceState({}, "", window.location.pathname);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     async function onLogDose(e) {
       const { medId, doseTimeMs } = e.detail || {};
       if (!medId) return;
@@ -447,7 +484,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useEffect(() => {
     if (loading || !meds.length) return;
     const now = new Date();
-    const streak = calcStreak(logs, meds);
+    const streak = calcStreak(logs, meds, profile?.timezone);
     const overdue = [];
 
     meds.forEach(med => {
@@ -632,7 +669,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     if (p === "granted") {
       s?.setItem("mt_notif_on", "1");
       await subscribeToPush(user.id);
-      scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30);
+      scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30, profile?.timezone);
     } else if (p === "denied") {
       s?.setItem("mt_notif_on", "0");
     }
@@ -738,11 +775,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
               {tab === "vitals" && (hasFeature("vitals") || hasFeature("perMemberVitals")) && (
                 vitalsSubTab === "reports"
-                  ? <ReportsTab logs={reportMember ? (reportMember.logs || []) : logs} meds={reportMember ? (reportMember.meds || []) : meds} vitals={reportMember ? (reportMember.vitals || []) : vitals} plan={profile?.plan || "free"} memberName={reportMember?.name} onNavigate={(id) => { if (id === "profile") setTab("me"); }} onBack={reportMember ? () => { setReportMemberKey(null); setTab("family"); } : () => setVitalsSubTab("vitals")} />
+                  ? <ReportsTab logs={reportMember ? (reportMember.logs || []) : logs} meds={reportMember ? (reportMember.meds || []) : meds} vitals={reportMember ? (reportMember.vitals || []) : vitals} plan={profile?.plan || "free"} memberName={reportMember?.name} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} onBack={reportMember ? () => { setReportMemberKey(null); setTab("family"); } : () => setVitalsSubTab("vitals")} />
                   : <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} onGoReports={() => { setReportMemberKey(null); setTab("reports"); }} />
               )}
-              {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "reports" && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "reports" && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
               {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={openMemberReport} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
             </div>

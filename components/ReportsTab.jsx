@@ -16,7 +16,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBack, memberName }) {
+export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBack, memberName, tz }) {
   const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
@@ -35,7 +35,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 
   const cutoff = range === "7d" ? new Date(Date.now() - 6 * 86400000) : range === "30d" ? new Date(Date.now() - 29 * 86400000) : null;
   const rangedLogs = cutoff ? logs.filter(l => new Date(l.taken_at) >= cutoff) : logs;
-  const streak = calcStreak(logs, meds);
+  const streak = calcStreak(logs, meds, tz);
   const grouped = {};
   rangedLogs.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); } });
   const daysTracked = Object.keys(grouped).length;

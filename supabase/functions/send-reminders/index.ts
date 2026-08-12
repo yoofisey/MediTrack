@@ -543,6 +543,29 @@ serve(async (req) => {
       }
       const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\nCurrent streak: ${streak} days`, tag });
 
+      if (msg.min > 0) {
+        // Server owns native milestone pushes. The web app celebrates milestones
+        // locally (lib/notifications.js checkMilestones), so web subs keep getting
+        // the plain daily greeting to avoid double celebration on the same device.
+        type Sub = { endpoint: string; p256dh: string; auth: string };
+        const nativeSubs = userSubs.filter((s: Sub) => s.endpoint?.startsWith("fcm:"));
+        const webSubs = userSubs.filter((s: Sub) => !s.endpoint?.startsWith("fcm:"));
+        const gmPayload = JSON.stringify({ title: DAILY_MSGS[0].title, body: `${DAILY_MSGS[0].body}\nCurrent streak: ${streak} days`, tag });
+        const deliver = async (subs: Sub[], p: string) => {
+          for (const sub of subs) {
+            const r = await sendPush(sub, p);
+            results.push(r);
+            if (r.ok) sent++;
+            else if (r.statusCode === 404 || r.statusCode === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            }
+          }
+        };
+        await deliver(nativeSubs, payload);
+        await deliver(webSubs, gmPayload);
+        continue;
+      }
+
       for (const sub of userSubs) {
         const r = await sendPush(sub, payload);
         results.push(r);

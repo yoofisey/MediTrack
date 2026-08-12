@@ -11,13 +11,38 @@ self.addEventListener("activate", e => e.waitUntil(
 
 const doseDB = {};
 
+function deepLinkFromTag(tag) {
+  const t = String(tag || "");
+  if (t.startsWith("mt-visit-")) {
+    const visitId = t.slice("mt-visit-".length, t.lastIndexOf("-"));
+    if (visitId) return { type: "mt-open-visit", data: { visitId } };
+    return null;
+  }
+  if (t.startsWith("mt-vital-")) return { type: "mt-open-vitals" };
+  if (t.startsWith("mt-checkin-")) return { type: "mt-open-checkin" };
+  return null;
+}
+
 self.addEventListener("notificationclick", e => {
   e.notification.close();
+  const dl = deepLinkFromTag(e.notification.tag);
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(cls => {
-      cls.forEach(c => c.postMessage?.({ type: "alarm-ack" }));
+      if (dl) {
+        cls.forEach(c => c.postMessage?.({ type: dl.type, ...(dl.data || {}) }));
+      } else {
+        cls.forEach(c => c.postMessage?.({ type: "alarm-ack" }));
+      }
       if (cls.length > 0) { cls[0].focus(); return; }
-      clients.openWindow("/");
+      if (dl?.type === "mt-open-visit") {
+        clients.openWindow(`/?mt=visit&visitId=${encodeURIComponent(dl.data.visitId)}`);
+      } else if (dl?.type === "mt-open-vitals") {
+        clients.openWindow("/?mt=vitals");
+      } else if (dl?.type === "mt-open-checkin") {
+        clients.openWindow("/?mt=checkin");
+      } else {
+        clients.openWindow("/");
+      }
     })
   );
 });
