@@ -98,20 +98,6 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         <div className="sheet-section">
           <div className="sheet-label">Medication name</div>
           <input className="sheet-input" placeholder="e.g. Amoxicillin 500mg" value={f.name} onChange={e=>set("name",e.target.value)}/>
-          {(has("barcodeScan") || has("prescriptionScan")) && (
-            <div style={{display:"flex",gap:8,marginTop:8}}>
-              {has("barcodeScan") && (
-                <button type="button" onClick={() => {}} style={{flex:1,padding:"8px 12px",borderRadius:10,border:"1.5px solid var(--sep)",background:"var(--card)",color:"var(--t2)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-                  Scan barcode
-                </button>
-              )}
-              {has("prescriptionScan") && (
-                <button type="button" onClick={() => {}} style={{flex:1,padding:"8px 12px",borderRadius:10,border:"1.5px solid var(--sep)",background:"var(--card)",color:"var(--t2)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-                  Scan prescription
-                </button>
-              )}
-            </div>
-          )}
           {has("interactionCheck") && <InteractionBadge interactions={currentInteractions}/>}
         </div>
 
