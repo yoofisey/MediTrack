@@ -9,6 +9,7 @@ import Onboarding from "@/components/Onboarding";
 import MainApp from "@/components/MainApp";
 import LandingPage from "@/components/LandingPage";
 import OfflineScreen from "@/components/OfflineScreen";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { isOnline } from "@/lib/offline";
 
 if (typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -128,21 +129,23 @@ export default function App() {
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 
-  if (screen === "loading")    return <LanguageProvider><TransitionScreen showMessages={hasSession} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
+  if (screen === "loading")    return <LanguageProvider><ErrorBoundary><TransitionScreen showMessages={hasSession} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
   if (screen === "fading")     return (
     <LanguageProvider>
-      {destScreen === "app" && user && <MainApp user={user} profile={profile} onSignOut={handleSignOut} />}
-      {destScreen === "onboarding" && user && <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />}
-      {destScreen === "reset" && <ResetPassword onDone={() => { setUser(null); setProfile(null); setHasSession(false); setScreen("auth"); }} />}
-      {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("auth")} />}
-      <TransitionScreen showMessages={hasSession} fadeOut />
-      {offline && <OfflineScreen onClose={() => setOffline(false)} />}
+      <ErrorBoundary>
+        {destScreen === "app" && user && <MainApp user={user} profile={profile} onSignOut={handleSignOut} />}
+        {destScreen === "onboarding" && user && <Onboarding user={user} profile={profile} onDone={handleOnboardDone} />}
+        {destScreen === "reset" && <ResetPassword onDone={() => { setUser(null); setProfile(null); setHasSession(false); setScreen("auth"); }} />}
+        {destScreen === "landing" && <LandingPage onGetStarted={() => setScreen("auth")} />}
+        <TransitionScreen showMessages={hasSession} fadeOut />
+        {offline && <OfflineScreen onClose={() => setOffline(false)} />}
+      </ErrorBoundary>
     </LanguageProvider>
   );
-  if (screen === "landing")    return <LanguageProvider><LandingPage onGetStarted={() => setScreen("auth")} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
-  if (screen === "auth")       return <LanguageProvider><AuthScreen onAuth={handleAuth} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
-  if (screen === "reset")      return <LanguageProvider><ResetPassword onDone={() => { setUser(null); setProfile(null); setHasSession(false); setScreen("auth"); }} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
-  if (screen === "onboarding") return <LanguageProvider><Onboarding user={user} profile={profile} onDone={handleOnboardDone} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
-  if (!user)                   return <LanguageProvider><TransitionScreen />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
-  return <LanguageProvider><MainApp user={user} profile={profile} onSignOut={handleSignOut} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</LanguageProvider>;
+  if (screen === "landing")    return <LanguageProvider><ErrorBoundary><LandingPage onGetStarted={() => setScreen("auth")} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
+  if (screen === "auth")       return <LanguageProvider><ErrorBoundary><AuthScreen onAuth={handleAuth} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
+  if (screen === "reset")      return <LanguageProvider><ErrorBoundary><ResetPassword onDone={() => { setUser(null); setProfile(null); setHasSession(false); setScreen("auth"); }} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
+  if (screen === "onboarding") return <LanguageProvider><ErrorBoundary><Onboarding user={user} profile={profile} onDone={handleOnboardDone} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
+  if (!user)                   return <LanguageProvider><ErrorBoundary><TransitionScreen />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
+  return <LanguageProvider><ErrorBoundary><MainApp user={user} profile={profile} onSignOut={handleSignOut} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
 }

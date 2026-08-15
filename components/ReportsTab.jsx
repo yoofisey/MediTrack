@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { CSS, fmtTime, fmtDateLong, currencySymbol } from "@/lib/constants";
+import { CSS, fmtTime, fmtDateLong, currencySymbol, escapeHtml } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
 import { calcStreak, getVisits } from "@/lib/data";
 import { useTier } from "@/components/TierContext";
@@ -468,7 +468,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 <div class="patient-badge">
   <div class="patient-badge-item">
     <span class="patient-badge-label">Plan</span>
-    <span class="patient-badge-value">${plan.charAt(0).toUpperCase()+plan.slice(1)}</span>
+     <span class="patient-badge-value">${escapeHtml(plan.charAt(0).toUpperCase()+plan.slice(1))}</span>
   </div>
   <div class="patient-badge-item">
     <span class="patient-badge-label">Active Medications</span>
@@ -514,12 +514,12 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     <tr><th>Medication</th><th>Dosage</th><th>Doses</th><th>Adherence</th></tr>
   </thead>
   <tbody>
-    ${pm.map(m => `<tr>
-      <td style="font-weight:600">${m.name}</td>
-      <td>${m.dosage_amount} ${m.dosage_unit}</td>
-      <td>${m.taken}/${m.expected}</td>
-      <td>${m.pct}% <span class="badge badge-${medStatus(m.pct).toLowerCase()}">${medStatus(m.pct)}</span></td>
-    </tr>`).join("")}
+     ${pm.map(m => `<tr>
+       <td style="font-weight:600">${escapeHtml(m.name)}</td>
+       <td>${escapeHtml(m.dosage_amount)} ${escapeHtml(m.dosage_unit)}</td>
+       <td>${m.taken}/${m.expected}</td>
+       <td>${m.pct}% <span class="badge badge-${medStatus(m.pct).toLowerCase()}">${medStatus(m.pct)}</span></td>
+     </tr>`).join("")}
   </tbody>
 </table>
 
@@ -568,7 +568,7 @@ ${has("reports") ? `
 
 <div class="clinical-note">
   <div class="clinical-note-title">For the Medical Professional</div>
-  <p>This report summarizes the patient's self-reported medication adherence data tracked through Adhera. The patient has ${meds.length} medication${meds.length!==1?"s":""} on record with an overall adherence rate of <strong>${adherence}%</strong> across ${daysTracked} tracked days. ${pm.filter(m => m.pct < 80).length > 0 ? `Medications requiring attention: ${pm.filter(m => m.pct < 80).map(m => m.name).join(", ")}.` : "All medications are at or above the 80% adherence threshold."} The most consistent dosing occurs during the <strong>${timeAnalysis.best}</strong> period. Data is self-reported and may not reflect actual consumption. This report is intended to support clinical discussions and should not replace professional medical judgment.</p>
+     <p>This report summarizes the patient's self-reported medication adherence data tracked through Adhera. The patient has ${meds.length} medication${meds.length!==1?"s":""} on record with an overall adherence rate of <strong>${adherence}%</strong> across ${daysTracked} tracked days. ${pm.filter(m => m.pct < 80).length > 0 ? `Medications requiring attention: ${pm.filter(m => m.pct < 80).map(m => escapeHtml(m.name)).join(", ")}.` : "All medications are at or above the 80% adherence threshold."} The most consistent dosing occurs during the <strong>${timeAnalysis.best}</strong> period. Data is self-reported and may not reflect actual consumption. This report is intended to support clinical discussions and should not replace professional medical judgment.</p>
 </div>
 ` : ""}
 
