@@ -30,7 +30,7 @@ export default function App() {
   const [profile,setProfile]  = useState(null);
   const [hasSession, setHasSession] = useState(false);
   const [destScreen, setDestScreen] = useState(null);
-  const [offline, setOffline] = useState(() => isOnline());
+  const [offline, setOffline] = useState(() => !isOnline());
 
   useEffect(() => {
     function goOffline() { setOffline(true); }
