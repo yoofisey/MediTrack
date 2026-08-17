@@ -63,5 +63,9 @@
 		<string>applinks:useadhera.com</string>
 		<string>applinks:www.useadhera.com</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>
