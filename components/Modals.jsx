@@ -86,16 +86,21 @@ export function TermsModal({ onClose }) {
 }
 
 export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgrade }) {
-  const [selected, setSelected] = useState(currentPlan === "pro" || currentPlan === "family" ? currentPlan : "pro");
+  const upgradeTarget = getTierConfig(currentPlan || "free").upgradeTarget || "pro";
+  const [selected, setSelected] = useState(
+    currentPlan === "pro" || currentPlan === "family" ? (currentPlan === "pro" ? "family" : "family") : upgradeTarget
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [paystackOpen, setPaystackOpen] = useState(false);
+  const [paystackLoading, setPaystackLoading] = useState(false);
 
   function closePaystack() {
     document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('iframe[src*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('.paystack-iframe-modal, .paystack-overlay, .paystack-backdrop').forEach(el => el.remove());
     setPaystackOpen(false);
+    setPaystackLoading(false);
     setBusy(false);
   }
 
@@ -188,9 +193,11 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
 
       sessionStorage.setItem("adhera_pending_plan", selected);
       setPaystackOpen(true);
+      setPaystackLoading(true);
       const popup = new window.PaystackPop();
       popup.resumeTransaction(initData.access_code, {
         onSuccess: async function(transaction) {
+          setPaystackLoading(false);
           setBusy(true);
           setErr("");
           try {
@@ -213,6 +220,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
           setBusy(false);
         },
         onCancel: function() {
+          setPaystackLoading(false);
           setBusy(false);
           setPaystackOpen(false);
         },
@@ -228,8 +236,40 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
       {paystackOpen && (
         <div style={{
           position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:99999,
-          pointerEvents:"none",
+          background: paystackLoading ? "rgba(0,0,0,.5)" : "transparent",
+          backdropFilter: paystackLoading ? "blur(12px)" : "none",
+          WebkitBackdropFilter: paystackLoading ? "blur(12px)" : "none",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all .3s ease",
         }}>
+          {paystackLoading && (
+            <div style={{
+              textAlign: "center", color: "white",
+              animation: "fadeIn .4s ease",
+            }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: "50%",
+                background: "rgba(255,255,255,.12)", border: "2px solid rgba(255,255,255,.2)",
+                display: "grid", placeItems: "center", margin: "0 auto 20px",
+                position: "relative",
+              }}>
+                <div style={{
+                  position: "absolute", inset: -4, borderRadius: "50%",
+                  border: "2px solid transparent", borderTopColor: plan.color,
+                  animation: "spin .8s linear infinite",
+                }} />
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={plan.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+              </div>
+              <div style={{fontSize: 18, fontWeight: 700, marginBottom: 6, letterSpacing: "-.3px" }}>
+                Opening secure checkout
+              </div>
+              <div style={{fontSize: 13, opacity: .7, lineHeight: 1.5 }}>
+                Connecting to Paystack...
+              </div>
+            </div>
+          )}
           <button onClick={closePaystack}
             style={{
               position:"absolute", top:14, left:14, width:44, height:44,
@@ -237,7 +277,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
               background:"rgba(0,0,0,.06)", backdropFilter:"blur(8px)",
               WebkitBackdropFilter:"blur(8px)",
               display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:22, color:"white", pointerEvents:"auto",
+              fontSize:22, color: paystackLoading ? "white" : "var(--t1)", pointerEvents:"auto",
               boxShadow:"0 2px 8px rgba(0,0,0,.15)",
             }}
             aria-label="Back to app"
@@ -248,9 +288,14 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
           <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Upgrade Adhera</div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>
+            {currentPlan === "pro" ? "Upgrade to Family" : "Upgrade Adhera"}
+          </div>
           <div style={{fontSize:14,color:"var(--t3)"}}>
-            <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={13}/> {selCountry.name} · Paystack <Check size={11} strokeWidth={3}/></span>
+            <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
+              {currentPlan === "pro" && <span style={{background:"var(--teal)",color:"white",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:99,letterSpacing:".3px"}}>PRO</span>}
+              <Globe size={13}/> {selCountry.name} · Paystack <Check size={11} strokeWidth={3}/>
+            </span>
           </div>
         </div>
 
@@ -310,7 +355,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
               }}
               onClick={handlePayment}
             >
-              {busy ? "Processing…" : selected === currentPlan ? `You're on ${plan.name}` : `Unlock ${plan.name} · ${plan.price}/month`}
+              {busy ? "Processing…" : selected === currentPlan ? `You're on ${plan.name}` : currentPlan === "pro" ? `Upgrade to ${plan.name} · ${plan.price}/month` : `Unlock ${plan.name} · ${plan.price}/month`}
             </button>
           ) : (
             <div style={{

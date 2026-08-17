@@ -436,24 +436,28 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
       )}
 
-      {config.upsell ? (
+      {(config.upsell || plan === "pro") ? (
         <div className="upgrade-card" style={{margin:"0 20px 20px"}}>
-          <div className="upgrade-title" style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>{t("profile.unlockPro")} <Ico><Sparkles size={16} strokeWidth={2.2} color="var(--orange)"/></Ico></div>
-          <div className="upgrade-sub">{t("profile.unlimitedMedsAd")}</div>
+          <div className="upgrade-title" style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>{plan === "pro" ? "Upgrade to Family" : t("profile.unlockPro")} <Ico><Sparkles size={16} strokeWidth={2.2} color="var(--orange)"/></Ico></div>
+          <div className="upgrade-sub">{plan === "pro" ? "Track up to 5 family members with shared dashboards" : t("profile.unlimitedMedsAd")}</div>
           <div className="upgrade-features">
-            {[t("profile.unlimitedMeds"),t("profile.fullHistory"),t("profile.refillReminders"),t("profile.adherenceReports"),t("profile.drugCheck")].map(f => (
+            {(plan === "pro"
+              ? [t("profile.unlimitedMeds"),t("profile.fullHistory"),"Up to 5 family profiles",t("profile.adherenceReports"),"Caregiver mode with alerts"]
+              : [t("profile.unlimitedMeds"),t("profile.fullHistory"),t("profile.refillReminders"),t("profile.adherenceReports"),t("profile.drugCheck")]
+            ).map(f => (
               <div key={f} className="upgrade-feature"><Check size={13} color="var(--teal)" strokeWidth={3} style={{verticalAlign:"-2px"}}/> {f}</div>
             ))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
-            {["pro","family"].map(p => (
-              <div key={p} style={{background:"rgba(255,255,255,.12)",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+            {(plan === "pro" ? ["family"] : ["pro","family"]).map(p => (
+              <div key={p} style={{background:"rgba(255,255,255,.12)",borderRadius:10,padding:"10px 6px",textAlign:"center",position:"relative"}}>
+                {p === plan && <div style={{position:"absolute",top:-8,left:"50%",transform:"translateX(-50%)",background:"var(--teal)",color:"white",fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:99,letterSpacing:".3px"}}>CURRENT</div>}
                 <div style={{fontSize:16,fontWeight:800}}>{getTierConfig(p).label}</div>
                 <div style={{fontSize:10,opacity:.8}}>{pricing[p].label} / mo</div>
               </div>
             ))}
           </div>
-          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>{t("profile.seeUpgrade")} →</button>
+          <button className="upgrade-btn" onClick={() => setShowUpgrade(true)}>{plan === "pro" ? "Upgrade to Family →" : t("profile.seeUpgrade")} →</button>
         </div>
       ) : null}
 
