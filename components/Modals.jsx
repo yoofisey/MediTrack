@@ -160,10 +160,22 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
     }
 
     try {
+      const initRes = await fetch("/api/paystack/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: selected, email: userEmail, country }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok || !initData.ok || !initData.access_code) {
+        setErr(initData.error || "Failed to start payment. Please try again.");
+        setBusy(false);
+        return;
+      }
+
       await new Promise((resolve, reject) => {
         if (typeof window.PaystackPop === "undefined") {
           const s = document.createElement("script");
-          s.src = "https://js.paystack.co/v1/inline.js";
+          s.src = "https://js.paystack.co/v2/inline.js";
           s.onload = () => { setTimeout(resolve, 300); };
           s.onerror = () => reject(new Error("Failed to load Paystack. Check your internet connection."));
           document.head.appendChild(s);
@@ -172,51 +184,39 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
         }
       });
 
-      if (typeof window.PaystackPop?.setup !== "function") throw new Error("Paystack SDK not ready. Please try again.");
+      if (typeof window.PaystackPop === "undefined") throw new Error("Paystack SDK not ready. Please try again.");
 
-      const planCode = pay.plans[selected];
-      const handler = window.PaystackPop.setup({
-        key: pay.key,
-        email: userEmail || "patient@example.com",
-        plan: planCode,
-        ref: "ADR" + Date.now() + Math.random().toString(36).slice(2,8).toUpperCase(),
-        metadata: { plan: selected, country },
-callback: async function(response) {
-           setBusy(true);
-           setErr("");
-           try {
-             const verifyRes = await fetch("/api/paystack/verify", {
-               method: "POST",
-               headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({ reference: response.reference, plan: selected, email: userEmail }),
-             });
-             const verifyData = await verifyRes.json();
-             if (!verifyRes.ok || !verifyData.ok) {
-               setErr("Payment verification failed. Please contact support.");
-               setBusy(false);
-               return;
-             }
-             onUpgrade(selected);
-             setPaystackOpen(false);
-           } catch (e) {
-             setErr("Payment verification failed. Please contact support.");
-           }
-           setBusy(false);
-         },
-        onClose: function() {
+      sessionStorage.setItem("adhera_pending_plan", selected);
+      setPaystackOpen(true);
+      const popup = new window.PaystackPop();
+      popup.resumeTransaction(initData.access_code, {
+        onSuccess: async function(transaction) {
+          setBusy(true);
+          setErr("");
+          try {
+            const verifyRes = await fetch("/api/paystack/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reference: transaction.reference, plan: selected, email: userEmail }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.ok) {
+              setErr("Payment verification failed. Please contact support.");
+              setBusy(false);
+              return;
+            }
+            onUpgrade(selected);
+            setPaystackOpen(false);
+          } catch (e) {
+            setErr("Payment verification failed. Please contact support.");
+          }
           setBusy(false);
         },
+        onCancel: function() {
+          setBusy(false);
+          setPaystackOpen(false);
+        },
       });
-      sessionStorage.setItem("adhera_pending_plan", selected);
-      if (handler?.openPopup) {
-        handler.openPopup();
-        setPaystackOpen(true);
-      } else if (handler?.openIframe) {
-        handler.openIframe();
-        setPaystackOpen(true);
-      } else {
-        throw new Error("Paystack failed to initialize.");
-      }
     } catch (e) {
       setErr(e.message || "Payment failed. Please try again.");
       setBusy(false);
