@@ -9,6 +9,7 @@ import { checkInteractions, InteractionBadge } from "@/components/InteractionChe
 import { pushManagedMed, updateManagedMed } from "@/lib/household";
 import { CURRENCIES } from "@/lib/constants";
 import { useSwipe } from "@/lib/useSwipe";
+import { FormControl, FormRow } from "@/components/FormControls";
 
 export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds, managed, memberId }) {
   const { tier, config: limits, has } = useTier();
@@ -99,92 +100,91 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         )}
 
         <div className="sheet-section">
-          <div className="sheet-label">Medication name</div>
-          <input className="sheet-input" placeholder="e.g. Amoxicillin 500mg" value={f.name} onChange={e=>set("name",e.target.value)}/>
-          {has("interactionCheck") && <InteractionBadge interactions={currentInteractions}/>}
+          <FormControl label="Medication name">
+            <input className="sheet-input" placeholder="e.g. Amoxicillin 500mg" value={f.name} onChange={e=>set("name",e.target.value)}/>
+            {has("interactionCheck") && <InteractionBadge interactions={currentInteractions}/>}
+          </FormControl>
         </div>
 
         <div className="sheet-section">
-          <div className="sheet-label">Dosage</div>
-          <div className="sheet-row">
-            <input className="sheet-input" type="number" inputMode="decimal" enterKeyHint="next" min="0.1" step="0.1" placeholder="Amount (e.g. 2)" value={f.dosage_amount} onChange={e=>set("dosage_amount",e.target.value)}/>
-            <select className="sheet-input" value={f.dosage_unit} onChange={e=>set("dosage_unit",e.target.value)}>
-              {units.map(u=><option key={u}>{u}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="sheet-section">
-          <div className="sheet-label">Schedule</div>
-          <div className="sheet-row" style={{marginBottom:10}}>
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Times per day</div>
-              <input className="sheet-input" type="number" inputMode="numeric" enterKeyHint="next" min="1" max="24" step="1" placeholder="e.g. 3" value={f.times_per_day} onChange={e=>set("times_per_day",e.target.value)}/>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Hours between doses</div>
-              <input className="sheet-input" type="number" inputMode="decimal" enterKeyHint="next" min="0.5" step="0.5" value={f.dose_interval_hours} onChange={e=>set("dose_interval_hours",e.target.value)}/>
-            </div>
-          </div>
-          <div className="sheet-row">
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Duration (days)</div>
-              <input className="sheet-input" type="number" inputMode="numeric" enterKeyHint="done" min="1" step="1" placeholder="e.g. 7" value={f.course_duration_days} onChange={e=>set("course_duration_days",e.target.value)}/>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Start date</div>
-              <input className="sheet-input" type="date" value={f.start_date} onChange={e=>set("start_date",e.target.value)}/>
-            </div>
-          </div>
-        </div>
-
-        <div className="sheet-section">
-          <div className="sheet-label">Remind me</div>
-          <select className="sheet-input" value={f.reminder_minutes} onChange={e=>set("reminder_minutes",e.target.value)}>
-            <option value="0">At dose time</option>
-            <option value="15">15 minutes before</option>
-            <option value="30">30 minutes before</option>
-            <option value="60">1 hour before</option>
-            <option value="120">2 hours before</option>
-          </select>
-        </div>
-
-        <div className="sheet-section">
-          <div className="sheet-label">Stock & refill tracking</div>
-          <div className="sheet-row">
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Pills/doses per package</div>
-              <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 30" value={f.pills_per_package} onChange={e=>set("pills_per_package",e.target.value)}/>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Alert when ≤</div>
-              <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 5" value={f.refill_reminder_at} onChange={e=>set("refill_reminder_at",e.target.value)}/>
-            </div>
-          </div>
-          <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>Set your package size and Adhera will alert you when stock is running low.</div>
-        </div>
-
-        <div className="sheet-section">
-          <div className="sheet-label">Cost tracking</div>
-          <div className="sheet-row">
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Cost per package</div>
-              <input className="sheet-input" type="number" inputMode="decimal" min="0" step="0.01" placeholder="e.g. 50" value={f.cost_per_package} onChange={e=>set("cost_per_package",e.target.value)}/>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"var(--t3)",marginBottom:5}}>Currency</div>
-              <select className="sheet-input" value={f.cost_currency} onChange={e=>set("cost_currency",e.target.value)}>
-                <option value="">Select</option>
-                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+          <FormControl label="Dosage">
+            <FormRow>
+              <input className="sheet-input" type="number" inputMode="decimal" enterKeyHint="next" min="0.1" step="0.1" placeholder="Amount (e.g. 2)" value={f.dosage_amount} onChange={e=>set("dosage_amount",e.target.value)}/>
+              <select className="sheet-input" value={f.dosage_unit} onChange={e=>set("dosage_unit",e.target.value)}>
+                {units.map(u=><option key={u}>{u}</option>)}
               </select>
-            </div>
-          </div>
-          <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>Track how much you spend on medications. Cost per dose calculated automatically.</div>
+            </FormRow>
+          </FormControl>
         </div>
 
         <div className="sheet-section">
-          <div className="sheet-label">Notes (optional)</div>
-          <textarea className="sheet-input" rows={2} placeholder="e.g. Take with food" value={f.notes} onChange={e=>set("notes",e.target.value)} style={{resize:"vertical"}}/>
+          <FormControl label="Schedule">
+            <FormRow>
+              <FormControl label="Times per day" className="!mb-0">
+                <input className="sheet-input" type="number" inputMode="numeric" enterKeyHint="next" min="1" max="24" step="1" placeholder="e.g. 3" value={f.times_per_day} onChange={e=>set("times_per_day",e.target.value)}/>
+              </FormControl>
+              <FormControl label="Hours between" className="!mb-0">
+                <input className="sheet-input" type="number" inputMode="decimal" enterKeyHint="next" min="0.5" step="0.5" value={f.dose_interval_hours} onChange={e=>set("dose_interval_hours",e.target.value)}/>
+              </FormControl>
+            </FormRow>
+            <FormRow>
+              <FormControl label="Duration (days)" className="!mb-0">
+                <input className="sheet-input" type="number" inputMode="numeric" enterKeyHint="done" min="1" step="1" placeholder="e.g. 7" value={f.course_duration_days} onChange={e=>set("course_duration_days",e.target.value)}/>
+              </FormControl>
+              <FormControl label="Start date" className="!mb-0">
+                <input className="sheet-input" type="date" value={f.start_date} onChange={e=>set("start_date",e.target.value)}/>
+              </FormControl>
+            </FormRow>
+          </FormControl>
+        </div>
+
+        <div className="sheet-section">
+          <FormControl label="Remind me">
+            <select className="sheet-input" value={f.reminder_minutes} onChange={e=>set("reminder_minutes",e.target.value)}>
+              <option value="0">At dose time</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+              <option value="120">2 hours before</option>
+            </select>
+          </FormControl>
+        </div>
+
+        <div className="sheet-section">
+          <FormControl label="Stock & refill tracking">
+            <FormRow>
+              <FormControl label="Pills per package" className="!mb-0">
+                <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 30" value={f.pills_per_package} onChange={e=>set("pills_per_package",e.target.value)}/>
+              </FormControl>
+              <FormControl label="Alert when ≤" className="!mb-0">
+                <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 5" value={f.refill_reminder_at} onChange={e=>set("refill_reminder_at",e.target.value)}/>
+              </FormControl>
+            </FormRow>
+            <div className="form-hint">Adhera alerts you when stock is running low.</div>
+          </FormControl>
+        </div>
+
+        <div className="sheet-section">
+          <FormControl label="Cost tracking">
+            <FormRow>
+              <FormControl label="Cost per package" className="!mb-0">
+                <input className="sheet-input" type="number" inputMode="decimal" min="0" step="0.01" placeholder="e.g. 50" value={f.cost_per_package} onChange={e=>set("cost_per_package",e.target.value)}/>
+              </FormControl>
+              <FormControl label="Currency" className="!mb-0">
+                <select className="sheet-input" value={f.cost_currency} onChange={e=>set("cost_currency",e.target.value)}>
+                  <option value="">Select</option>
+                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                </select>
+              </FormControl>
+            </FormRow>
+            <div className="form-hint">Cost per dose is calculated automatically.</div>
+          </FormControl>
+        </div>
+
+        <div className="sheet-section">
+          <FormControl label="Notes (optional)">
+            <textarea className="sheet-input" rows={2} placeholder="e.g. Take with food" value={f.notes} onChange={e=>set("notes",e.target.value)}/>
+          </FormControl>
         </div>
 
         <div className="sheet-actions">

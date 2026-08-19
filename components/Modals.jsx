@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { useSwipe } from "@/lib/useSwipe";
+import { FormControl, FormRow } from "@/components/FormControls";
 import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
@@ -641,30 +642,26 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
       <div className="sheet" style={{maxHeight:"75vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
-        <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4,display:"flex",alignItems:"center",gap:6}}><Ico><Pill size={20} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
-          <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>
+        <div className="sheet-title" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico><Pill size={18} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
+        <div style={{padding:"8px 20px calc(16px + var(--safe-bottom))"}}>
+          <div style={{fontSize:15,color:"var(--t3)",marginBottom:16,textAlign:"center"}}>
             {med.name} · {med.dosage_amount} {med.dosage_unit}
           </div>
 
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Date & time taken</div>
+          <FormControl label="Date & time taken">
             <input className="sheet-input" type="datetime-local" value={takenAt}
               max={`${todayStr}T23:59`}
-              onChange={e => setTakenAt(e.target.value)}
-              style={{fontSize:16}}/>
-          </div>
+              onChange={e => setTakenAt(e.target.value)}/>
+          </FormControl>
 
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Journal (optional)</div>
+          <FormControl label="Journal (optional)">
             <textarea className="sheet-input" rows={3}
               placeholder="How are you feeling? Any side effects?"
-              value={journal} onChange={e => setJournal(e.target.value)}
-              style={{resize:"vertical",fontSize:16,background:"var(--bg)"}}/>
-          </div>
+              value={journal} onChange={e => setJournal(e.target.value)}/>
+          </FormControl>
 
-          <div className="sheet-actions" style={{gap:8}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={handleConfirm}>Log dose</button>
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={handleConfirm}>Log dose</button>
             <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
           </div>
         </div>

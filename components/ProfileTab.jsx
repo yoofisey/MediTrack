@@ -8,6 +8,7 @@ import { COUNTRIES, getPricing } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers, getNotifPerm, isNativePlatform } from "@/lib/notifications";
+import { FormControl } from "@/components/FormControls";
 import { sb } from "@/lib/supabase";
 import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
@@ -705,45 +706,38 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Age &amp; Demographics</div>
-          <div style={{fontSize:14,color:"var(--t3)",marginBottom:20}}>Help us personalise your health experience.</div>
+        <div className="sheet-title">Age &amp; Demographics</div>
+        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 80px)"}}>
+          <FormControl label="Date of birth">
+            <input className="sheet-input" type="date" value={f.dob || ""} onChange={e => set("dob", e.target.value)}/>
+          </FormControl>
 
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Date of birth</div>
-            <input className="sheet-input" type="date" value={f.dob || ""} onChange={e => set("dob", e.target.value)} style={{fontSize:16}}/>
-          </div>
-
-          <div style={{display:"flex",gap:8,marginBottom:16}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Age</div>
-              <input className="sheet-input" type="number" inputMode="numeric" placeholder="e.g. 35" value={f.age || ""} onChange={e => set("age", e.target.value)} style={{fontSize:16}}/>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Gender</div>
-              <select className="sheet-input" value={f.gender || ""} onChange={e => set("gender", e.target.value)} style={{fontSize:16}}>
+          <FormRow>
+            <FormControl label="Age" className="!mb-0">
+              <input className="sheet-input" type="number" inputMode="numeric" placeholder="e.g. 35" value={f.age || ""} onChange={e => set("age", e.target.value)}/>
+            </FormControl>
+            <FormControl label="Gender" className="!mb-0">
+              <select className="sheet-input" value={f.gender || ""} onChange={e => set("gender", e.target.value)}>
                 <option value="">Select</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="non-binary">Non-binary</option>
                 <option value="prefer-not">Prefer not to say</option>
               </select>
-            </div>
-          </div>
+            </FormControl>
+          </FormRow>
 
-          <div style={{display:"flex",gap:8,marginBottom:16}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Height (cm)</div>
-              <input className="sheet-input" type="number" inputMode="decimal" placeholder="e.g. 170" value={f.height || ""} onChange={e => set("height", e.target.value)} style={{fontSize:16}}/>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Weight (kg)</div>
-              <input className="sheet-input" type="number" inputMode="decimal" placeholder="e.g. 70" value={f.weight || ""} onChange={e => set("weight", e.target.value)} style={{fontSize:16}}/>
-            </div>
-          </div>
+          <FormRow>
+            <FormControl label="Height (cm)" className="!mb-0">
+              <input className="sheet-input" type="number" inputMode="decimal" placeholder="e.g. 170" value={f.height || ""} onChange={e => set("height", e.target.value)}/>
+            </FormControl>
+            <FormControl label="Weight (kg)" className="!mb-0">
+              <input className="sheet-input" type="number" inputMode="decimal" placeholder="e.g. 70" value={f.weight || ""} onChange={e => set("weight", e.target.value)}/>
+            </FormControl>
+          </FormRow>
 
-          <div className="sheet-actions" style={{gap:8}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={handleSave}>Save details</button>
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={handleSave}>Save details</button>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           </div>
         </div>

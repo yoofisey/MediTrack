@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Laugh, Smile, Meh, Frown, CloudRain, MoonStar, CircleAlert, Zap, Moon, Waves, Biohazard, Wind, Droplets, Thermometer, AlertTriangle, Utensils, NotebookPen } from "lucide-react";
 import { useSwipe } from "@/lib/useSwipe";
+import { FormControl } from "@/components/FormControls";
 
 const MOODS = [
   { id:"great", label:"Great", icon:Laugh, color:"#30D158" },
@@ -147,70 +148,60 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
-        <div style={{padding:"0 24px 24px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:6}}>Health Journal</div>
-          <div style={{fontSize:14,color:"var(--t3)",marginBottom:24}}>{date}</div>
+        <div className="sheet-title">Health Journal</div>
+        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 80px)"}}>
+          <div style={{fontSize:14,color:"var(--t3)",marginBottom:20,textAlign:"center"}}>{date}</div>
 
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",marginBottom:10}}>How are you feeling?</div>
-            <div style={{display:"flex",gap:10}}>
+          <FormControl label="How are you feeling?">
+            <div style={{display:"flex",gap:8}}>
               {MOODS.map(m => (
                 <div key={m.id} onClick={() => setMood(m.id)} style={{
                   flex:1,padding:"14px 8px",borderRadius:14,textAlign:"center",cursor:"pointer",
                   background: mood === m.id ? `${m.color}18` : "var(--hover)",
-                  border:`1.5px solid ${mood === m.id ? `${m.color}40` : "transparent"}`,
-                  transition:"all .15s",
+                  border:`1.5px solid ${mood === m.id ? `${m.color}40` : "var(--sep)"}`,
+                  transition:"all .2s cubic-bezier(.25,.1,.25,1)",
                 }}>
                   <div style={{display:"grid",placeItems:"center",marginBottom:2}}><m.icon size={24}/></div>
-                  <div style={{fontSize:11,fontWeight:500,color:mood === m.id ? m.color : "var(--t3)"}}>{m.label}</div>
+                  <div style={{fontSize:11,fontWeight:600,color:mood === m.id ? m.color : "var(--t3)"}}>{m.label}</div>
                 </div>
               ))}
             </div>
-          </div>
+          </FormControl>
 
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",marginBottom:10}}>Sleep quality</div>
+          <FormControl label="Sleep quality">
             <div style={{display:"flex",gap:8}}>
               {SLEEP_QUALITY.map(sq => (
                 <div key={sq.id} onClick={() => setSleep(sq.id)} style={{
-                  flex:1,padding:"12px 6px",borderRadius:12,textAlign:"center",cursor:"pointer",fontSize:12,fontWeight:500,
-                  background: sleep === sq.id ? "var(--sel)" : "var(--hover)",
-                  border:`1.5px solid ${sleep === sq.id ? "var(--teal)" : "transparent"}`,
+                  flex:1,padding:"12px 6px",borderRadius:12,textAlign:"center",cursor:"pointer",fontSize:12,fontWeight:600,
+                  background: sleep === sq.id ? "rgba(0,122,255,.08)" : "var(--hover)",
+                  border:`1.5px solid ${sleep === sq.id ? "var(--teal)" : "var(--sep)"}`,
                   color: sleep === sq.id ? "var(--teal)" : "var(--t3)",
-                  transition:"all .15s",
+                  transition:"all .2s cubic-bezier(.25,.1,.25,1)",
                 }}>
                   <div style={{display:"grid",placeItems:"center",marginBottom:2}}><sq.icon size={18}/></div>
                   {sq.label}
                 </div>
               ))}
             </div>
-          </div>
+          </FormControl>
 
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",marginBottom:10}}>Any symptoms?</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+          <FormControl label="Any symptoms?">
+            <div className="chip-group">
               {SYMPTOMS.map(s => (
-                <div key={s.id} onClick={() => toggleSymptom(s.id)} style={{
-                  padding:"8px 14px",borderRadius:12,fontSize:13,fontWeight:500,cursor:"pointer",
-                  background: symptoms.includes(s.id) ? "var(--sel)" : "var(--hover)",
-                  border:`1.5px solid ${symptoms.includes(s.id) ? "var(--teal)" : "transparent"}`,
-                  color: symptoms.includes(s.id) ? "var(--teal)" : "var(--t2)",
-                  transition:"all .15s",
-                }}>
+                <div key={s.id} onClick={() => toggleSymptom(s.id)} className={`chip${symptoms.includes(s.id) ? " on" : ""}`}>
                   <span style={{display:"inline-flex",alignItems:"center",gap:4}}><s.icon size={14}/> {s.label}</span>
                 </div>
               ))}
             </div>
-          </div>
+          </FormControl>
 
-          <div style={{marginBottom:24}}>
-            <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",marginBottom:8}}>Notes (optional)</div>
+          <FormControl label="Notes (optional)">
             <textarea className="sheet-input" rows={3} placeholder="How was your day? Any changes in how you feel?"
-              value={notes} onChange={e => setNotes(e.target.value)} style={{resize:"vertical",fontSize:16}}/>
-          </div>
+              value={notes} onChange={e => setNotes(e.target.value)}/>
+          </FormControl>
 
-          <div className="sheet-actions" style={{gap:8}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={handleSave} disabled={!mood}>Save entry</button>
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={handleSave} disabled={!mood}>Save entry</button>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           </div>
         </div>

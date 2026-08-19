@@ -5,6 +5,7 @@ import { addVisit, updateVisit, deleteVisit, getVisits } from "@/lib/data";
 import { scheduleVisitReminder, cancelVisitReminder } from "@/lib/notifications";
 import { Building2, ClipboardList } from "lucide-react";
 import { useSwipe } from "@/lib/useSwipe";
+import { FormControl, FormRow } from "@/components/FormControls";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -146,54 +147,45 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
-          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>{editingId ? "Edit visit" : "Schedule a visit"}</div>
-          <div style={{fontSize:14,color:"var(--t3)",marginBottom:24}}>Track upcoming hospital or clinic appointments.</div>
+        <div className="sheet-title">{editingId ? "Edit visit" : "Schedule a visit"}</div>
+        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 80px)"}}>
+          <FormRow>
+            <FormControl label="Date" className="!mb-0">
+              <input className="sheet-input" type="date" value={f.date} onChange={e => set("date", e.target.value)}/>
+            </FormControl>
+            <FormControl label="Time" className="!mb-0">
+              <input className="sheet-input" type="time" value={f.time} onChange={e => set("time", e.target.value)}/>
+            </FormControl>
+          </FormRow>
 
-          <div style={{display:"flex",gap:10,marginBottom:18}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Date</div>
-              <input className="sheet-input" type="date" value={f.date} onChange={e => set("date", e.target.value)} style={{fontSize:16}}/>
-            </div>
-            <div style={{width:110}}>
-              <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Time</div>
-              <input className="sheet-input" type="time" value={f.time} onChange={e => set("time", e.target.value)} style={{fontSize:16}}/>
-            </div>
-          </div>
+          <FormControl label="Doctor / Specialist">
+            <input className="sheet-input" type="text" placeholder="e.g. Dr. Mensah" value={f.doctor} onChange={e => set("doctor", e.target.value)}/>
+          </FormControl>
 
-          <div style={{marginBottom:18}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Doctor / Specialist</div>
-            <input className="sheet-input" type="text" placeholder="e.g. Dr. Mensah" value={f.doctor} onChange={e => set("doctor", e.target.value)} style={{fontSize:16}}/>
-          </div>
+          <FormControl label="Hospital / Facility">
+            <input className="sheet-input" type="text" placeholder="e.g. Korle Bu Teaching Hospital" value={f.facility} onChange={e => set("facility", e.target.value)}/>
+          </FormControl>
 
-          <div style={{marginBottom:18}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Hospital / Facility</div>
-            <input className="sheet-input" type="text" placeholder="e.g. Korle Bu Teaching Hospital" value={f.facility} onChange={e => set("facility", e.target.value)} style={{fontSize:16}}/>
-          </div>
+          <FormControl label="Reason for visit">
+            <input className="sheet-input" type="text" placeholder="e.g. Routine checkup, blood work" value={f.reason} onChange={e => set("reason", e.target.value)}/>
+          </FormControl>
 
-          <div style={{marginBottom:18}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Reason for visit</div>
-            <input className="sheet-input" type="text" placeholder="e.g. Routine checkup, blood work" value={f.reason} onChange={e => set("reason", e.target.value)} style={{fontSize:16}}/>
-          </div>
-
-          <div style={{marginBottom:18}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Remind me</div>
-            <select className="sheet-input" value={f.reminder_minutes} onChange={e => set("reminder_minutes", e.target.value)} style={{fontSize:16}}>
+          <FormControl label="Remind me">
+            <select className="sheet-input" value={f.reminder_minutes} onChange={e => set("reminder_minutes", e.target.value)}>
               {reminderOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-          </div>
+          </FormControl>
 
-          <div style={{marginBottom:24}}>
-            <div style={{fontSize:13,color:"var(--t3)",marginBottom:6,fontWeight:500}}>Notes (optional)</div>
-            <textarea className="sheet-input" rows={2} placeholder="e.g. Bring previous lab results" value={f.notes} onChange={e => set("notes", e.target.value)} style={{resize:"vertical",fontSize:16}}/>
-          </div>
+          <FormControl label="Notes (optional)">
+            <textarea className="sheet-input" rows={2} placeholder="e.g. Bring previous lab results" value={f.notes} onChange={e => set("notes", e.target.value)}/>
+          </FormControl>
 
-          <div className="sheet-actions" style={{gap:10}}>
-            <button className="btn btn-primary" style={{flex:1}} onClick={handleSave} disabled={busy || !f.date}>{busy ? "Saving..." : editingId ? "Save changes" : "Add visit"}</button>
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={handleSave} disabled={busy || !f.date}>{busy ? "Saving..." : editingId ? "Save changes" : "Add visit"}</button>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           </div>
 
-          <div style={{textAlign:"center",marginTop:20}}>
+          <div style={{textAlign:"center",marginTop:16}}>
             <button className="btn btn-sm" style={{background:"none",border:"none",color:"var(--teal)",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:4,margin:"0 auto"}} onClick={() => setShowList(true)}>
               <Ico><ClipboardList size={14} strokeWidth={2.2}/></Ico> View all visits ({getVisits().length})
             </button>
