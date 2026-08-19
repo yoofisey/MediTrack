@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
+import { useSwipe } from "@/lib/useSwipe";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock, syncVisits } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
@@ -690,6 +691,28 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     ...(hasFeature("familyMembers") ? [{ id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> }] : []),
     { id: "reports", label: t("nav.reports"), icon: <BarChart3 size={23} strokeWidth={1.9} /> },
   ];
+  const tabIds = useMemo(() => tabs.map(t => t.id), [tabs]);
+
+  const swipeTab = useCallback((dir) => {
+    if (memberView || vitalsMember || overlayTab || medSheetFor || showVisitSheet || showUpgrade || deleteMedId || logDoseMed || alarmData || journalDate || showInviteSheet) return;
+    const idx = tabIds.indexOf(tab);
+    if (idx === -1) return;
+    const next = dir === "left" ? idx + 1 : idx - 1;
+    if (next >= 0 && next < tabIds.length) {
+      setTab(tabIds[next]);
+      setReportMemberKey(null);
+    }
+  }, [tab, tabIds, memberView, vitalsMember, overlayTab, medSheetFor, showVisitSheet, showUpgrade, deleteMedId, logDoseMed, alarmData, journalDate, showInviteSheet]);
+
+  const goBack = useCallback(() => {
+    if (vitalsMember) { closeVitals(); return; }
+    if (memberView) { closeMember(); return; }
+    if (overlayTab) { setOverlayTab(null); return; }
+  }, [vitalsMember, memberView, overlayTab]);
+
+  const mainSwipe = useSwipe({ onSwipeLeft: () => swipeTab("left"), onSwipeRight: () => swipeTab("right") });
+  const backSwipe = useSwipe({ onSwipeRight: goBack });
+  const activeSubView = vitalsMember || memberView || overlayTab;
 
   if (loading) return (
     <div style={{background:"var(--bg)",minHeight:"100vh"}}>
@@ -747,7 +770,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       {vitalsMember ? (() => {
         const live = vitalsMember.kind === "self" ? selfMember : (household.find(m => m.key === vitalsMember.key) || vitalsMember);
         return (
-          <div className="scroll">
+          <div className="scroll" {...backSwipe}>
             <VitalsTab vitals={live.vitals || []} onRefresh={reload} member={live} />
             <div style={{ padding: "4px 20px 24px" }}>
               <button className="btn btn-ghost" onClick={closeVitals}>Back</button>
@@ -758,10 +781,12 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         const activeMember = household.find(m => m.key === memberView);
         if (!activeMember) return null;
         return (
-          <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={hasFeature("familyMembers")} hasVitals={hasFeature("vitals") || hasFeature("perMemberVitals")} onChanged={reload} />
+          <div {...backSwipe}>
+            <MemberDetail member={activeMember} onBack={closeMember} onMarkDose={markDose} onEditMed={openMedSheet} onRefill={memberRefill} onSaveNote={saveCareNote} onOpenVitals={openMemberVitals} isFamily={hasFeature("familyMembers")} hasVitals={hasFeature("vitals") || hasFeature("perMemberVitals")} onChanged={reload} />
+          </div>
         );
       })() : overlayTab ? (
-        <div className="scroll">
+        <div className="scroll" {...backSwipe}>
           {overlayTab === "alerts" && <AlertsTab household={household} onOpenMember={openMember} hasRefill={hasFeature("refillReminder")} />}
           <div style={{ padding: "4px 20px 24px" }}>
             <button className="btn btn-ghost" onClick={() => setOverlayTab(null)}>Back</button>
@@ -769,7 +794,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         </div>
       ) : (
         <>
-          <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }}>
+          <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }} {...mainSwipe}>
             <div className="content-reveal">
               {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => { setReportMemberKey(null); setTab("reports"); }} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}

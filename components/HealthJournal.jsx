@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Laugh, Smile, Meh, Frown, CloudRain, MoonStar, CircleAlert, Zap, Moon, Waves, Biohazard, Wind, Droplets, Thermometer, AlertTriangle, Utensils, NotebookPen } from "lucide-react";
+import { useSwipe } from "@/lib/useSwipe";
 
 const MOODS = [
   { id:"great", label:"Great", icon:Laugh, color:"#30D158" },
@@ -114,6 +115,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
   const [symptoms, setSymptoms] = useState(entry?.symptoms || []);
   const [notes, setNotes] = useState(entry?.notes || "");
   const [saved, setSaved] = useState(false);
+  const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
   function toggleSymptom(id) {
     setSymptoms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -144,7 +146,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"0 24px 24px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:6}}>Health Journal</div>
           <div style={{fontSize:14,color:"var(--t3)",marginBottom:24}}>{date}</div>

@@ -8,6 +8,7 @@ import { useTier } from "@/components/TierContext";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
 import { pushManagedMed, updateManagedMed } from "@/lib/household";
 import { CURRENCIES } from "@/lib/constants";
+import { useSwipe } from "@/lib/useSwipe";
 
 export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds, managed, memberId }) {
   const { tier, config: limits, has } = useTier();
@@ -81,10 +82,12 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
 
   const units = ["tablet(s)","capsule(s)","ml","mg","mcg","IU","drop(s)","puff(s)","patch(es)","injection(s)"];
 
+  const handleSwipe = useSwipe({ onSwipeDown: onClose });
+
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="sheet" ref={sheetRef} onClick={e=>e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title">{med?"Edit Medication":"New Medication"}</div>
         {err && <div style={{margin:"0 16px 8px"}} className="err-msg">{err}</div>}
         {capHit && (

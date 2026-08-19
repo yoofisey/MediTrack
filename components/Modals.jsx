@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { useSwipe } from "@/lib/useSwipe";
 import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
@@ -94,6 +95,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
   const [err, setErr] = useState("");
   const [paystackOpen, setPaystackOpen] = useState(false);
   const [paystackLoading, setPaystackLoading] = useState(false);
+  const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
   function closePaystack() {
     document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
@@ -285,7 +287,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
         </div>
       )}
       <div className="sheet" style={{maxHeight:"95vh"}} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
           <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>
@@ -600,10 +602,11 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
 }
 
 export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
+  const handleSwipe = useSwipe({ onSwipeDown: onCancel });
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
       <div className="sheet" style={{maxHeight:"50vh"}} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
           <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><Trash2 size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Delete medication?</div>
@@ -626,6 +629,7 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
   const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   const [takenAt, setTakenAt] = useState(localISO);
   const todayStr = now.toISOString().split("T")[0];
+  const handleSwipe = useSwipe({ onSwipeDown: onCancel });
 
   function handleConfirm() {
     const selected = new Date(takenAt);
@@ -636,7 +640,7 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
       <div className="sheet" style={{maxHeight:"75vh"}} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4,display:"flex",alignItems:"center",gap:6}}><Ico><Pill size={20} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
           <div style={{fontSize:15,color:"var(--t3)",marginBottom:16}}>

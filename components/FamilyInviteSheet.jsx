@@ -1,13 +1,15 @@
 "use client";
 
 import { Users } from "lucide-react";
+import { useSwipe } from "@/lib/useSwipe";
 
 export default function FamilyInviteSheet({ invites, onAccept, onDismiss }) {
+  const handleSwipe = useSwipe({ onSwipeDown: onDismiss });
   if (!invites?.length) return null;
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onDismiss()}>
       <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
           <div style={{marginBottom:10,display:"flex",justifyContent:"center"}}>
             <span style={{width:52,height:52,borderRadius:"50%",background:"var(--ib4)",display:"grid",placeItems:"center",color:"var(--t1)"}}><Users size={24}/></span>

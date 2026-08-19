@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { addVisit, updateVisit, deleteVisit, getVisits } from "@/lib/data";
 import { scheduleVisitReminder, cancelVisitReminder } from "@/lib/notifications";
 import { Building2, ClipboardList } from "lucide-react";
+import { useSwipe } from "@/lib/useSwipe";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -63,11 +64,13 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
     { value: "2880", label: "2 days before" },
   ];
 
+  const handleSwipe = useSwipe({ onSwipeDown: onClose });
+
   if (showList) {
     return (
       <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
-          <div className="sheet-handle"/>
+          <div className="sheet-handle" {...handleSwipe}/>
           <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <div style={{fontSize:20,fontWeight:700}}>All visits</div>
@@ -142,7 +145,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle"/>
+        <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>{editingId ? "Edit visit" : "Schedule a visit"}</div>
           <div style={{fontSize:14,color:"var(--t3)",marginBottom:24}}>Track upcoming hospital or clinic appointments.</div>
