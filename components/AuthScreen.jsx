@@ -84,7 +84,7 @@ export default function AuthScreen({ onAuth }) {
     e.preventDefault(); setBusy(true); setErr("");
     if (!RE_EMAIL.test(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
     try {
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: "https://www.useadhera.com/reset-password" });
       if (error) throw error;
       setForgotDone(true);
     } catch (e2) {
