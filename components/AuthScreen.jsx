@@ -69,6 +69,7 @@ export default function AuthScreen({ onAuth }) {
 
   async function handleSignIn(e) {
     e.preventDefault(); setBusy(true); setErr("");
+    if (!RE_EMAIL.test(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
     try {
       const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
       if (error) throw new Error(error?.message || "Login failed.");
