@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Heart, Phone, AlertTriangle, Droplets, Info, Pill, X } from "lucide-react";
+import { fetchMedicalProfile, saveMedicalProfile } from "@/lib/healthData";
 
 function Ico({ children, ...props }) {
   return <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}} {...props}>{children}</span>;
@@ -15,6 +16,7 @@ function load() {
 
 function save(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  saveMedicalProfile(data).catch(() => {});
 }
 
 const SECTION_TITLES = {

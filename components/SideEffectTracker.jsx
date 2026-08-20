@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Biohazard, CircleAlert, Waves, Moon, MoonStar, TriangleAlert, Zap, Droplets, CircleDot, Utensils, Droplet, Dumbbell, Meh, HelpCircle, CheckCircle2 } from "lucide-react";
+import { fetchSideEffects, saveSideEffect } from "@/lib/healthData";
 
 const SIDE_EFFECT_TYPES = [
   { id:"nausea", label:"Nausea", icon:Biohazard },
@@ -36,8 +37,10 @@ function saveSideEffects(data) {
 
 export function logSideEffect(entry) {
   const all = getSideEffects();
-  all.push({ id: "se_" + Date.now() + Math.random().toString(36).slice(2,5), createdAt: new Date().toISOString(), ...entry });
+  const saved = { id: "se_" + Date.now() + Math.random().toString(36).slice(2,5), createdAt: new Date().toISOString(), ...entry };
+  all.push(saved);
   saveSideEffects(all);
+  saveSideEffect(saved).catch(() => {});
 }
 
 export function getSideEffectSummary(meds, logs) {

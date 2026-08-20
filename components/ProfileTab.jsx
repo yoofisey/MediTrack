@@ -15,6 +15,7 @@ import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/com
 import MedicalID from "@/components/MedicalID";
 import AvatarPicker from "@/components/AvatarPicker";
 import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Info, Check, Trophy, MessageCircle } from "lucide-react";
+import { savePersonalDetails as savePersonalToServer, fetchPersonalDetails as fetchPersonalFromServer } from "@/lib/healthData";
 import { avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
@@ -110,6 +111,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   function savePersonalDetails(details) {
     setPersonalDetails(details);
     try { localStorage.setItem("adhera_personal", JSON.stringify(details)); } catch {}
+    savePersonalToServer(details).catch(() => {});
   }
 
   async function enableNotifs() {

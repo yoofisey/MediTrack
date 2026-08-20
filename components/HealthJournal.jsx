@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Laugh, Smile, Meh, Frown, CloudRain, MoonStar, CircleAlert, Zap, Moon, Waves, Biohazard, Wind, Droplets, Thermometer, AlertTriangle, Utensils, NotebookPen, BarChart3, ArrowLeft } from "lucide-react";
 import { useSwipe } from "@/lib/useSwipe";
 import { FormControl } from "@/components/FormControls";
+import { fetchJournal, saveJournalEntry } from "@/lib/healthData";
 
 const MOODS = [
   { id:"great", label:"Great", icon:Laugh, color:"#30D158" },
@@ -50,12 +51,16 @@ export function addJournalEntry(entry) {
   const todayStr = new Date().toISOString().split("T")[0];
   if (dateStr > todayStr) return;
   const existing = journal.findIndex(e => e.date === dateStr);
+  let saved;
   if (existing >= 0) {
-    journal[existing] = { ...journal[existing], ...entry, updatedAt: new Date().toISOString() };
+    saved = { ...journal[existing], ...entry, updatedAt: new Date().toISOString() };
+    journal[existing] = saved;
   } else {
-    journal.push({ id: "j_" + Date.now(), date: dateStr, createdAt: new Date().toISOString(), ...entry });
+    saved = { id: "j_" + Date.now(), date: dateStr, createdAt: new Date().toISOString(), ...entry };
+    journal.push(saved);
   }
   saveJournal(journal);
+  saveJournalEntry(saved).catch(() => {});
 }
 
 export function getJournalEntry(dateStr) {
