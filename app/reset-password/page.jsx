@@ -16,15 +16,34 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const hash = window.location.hash;
-    if (!hash || !hash.includes("type=recovery")) {
+    const search = window.location.search;
+    
+    let params = new URLSearchParams(hash.substring(1));
+    let type = params.get("type");
+    
+    if (!type) {
+      params = new URLSearchParams(search);
+      type = params.get("type");
+    }
+    
+    if (type !== "recovery") {
       setSessionErr("Invalid or expired reset link. Please request a new one from the app.");
       return;
     }
-    const params = new URLSearchParams(hash.substring(1));
+    
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
+    const tokenHash = params.get("token_hash");
+    
     if (accessToken && refreshToken) {
       sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) throw error;
+          setReady(true);
+        })
+        .catch(() => setSessionErr("Invalid or expired reset link. Please request a new one from the app."));
+    } else if (tokenHash) {
+      sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
         .then(({ error }) => {
           if (error) throw error;
           setReady(true);
