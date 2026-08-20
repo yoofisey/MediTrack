@@ -152,7 +152,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const hasAnyMeds = household.some(m => !m.pending && (m.meds || []).length);
 
   return (
-    <div className="scroll" style={{ paddingTop: 0 }}>
+    <div className="scroll">
       <style>{CSS}</style>
 
       <div style={{ padding: "20px 20px 4px" }}>

@@ -663,7 +663,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         {medSection && <MedicalID meds={meds} section={medSection} onClose={() => { setMedSection(null); refreshMedicalID(); }}/>}
         {showDeleteAccount && (
           <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
-            <div className="sheet" style={{maxHeight:"80vh"}} onClick={e => e.stopPropagation()}>
+            <div className="sheet" style={{maxHeight:"80dvh"}} onClick={e => e.stopPropagation()}>
               <div className="sheet-handle"/>
               <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
                 <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><ShieldAlert size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
@@ -704,10 +704,10 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div className="sheet-title">Age &amp; Demographics</div>
-        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 80px)"}}>
+        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 80px)"}}>
           <FormControl label="Date of birth">
             <input className="sheet-input" type="date" value={f.dob || ""} onChange={e => set("dob", e.target.value)}/>
           </FormControl>

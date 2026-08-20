@@ -123,9 +123,9 @@ export default function InteractionChecker({ meds, currentName, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"85vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"85dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(85vh - 40px)"}}>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(85dvh - 40px)"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Drug Interactions</div>
           <div style={{fontSize:14,color:"var(--t3)",marginBottom:16}}>
             {currentName ? `Checking "${currentName}" against your medications` : "Checking all your medications against each other"}

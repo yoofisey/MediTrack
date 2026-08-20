@@ -194,7 +194,7 @@ function LogSheet({ vitalType, onSave, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"85vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"85dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
@@ -252,7 +252,7 @@ function HistorySheet({ vitalType, entries, onClose }) {
   const { t } = useLang();
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
@@ -299,7 +299,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
   const { t } = useLang();
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"70dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
         <div style={{fontSize:18,fontWeight:700,marginBottom:16}}>{t("vitals.configureTitle")}</div>
@@ -455,7 +455,7 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
     .filter(x => x.vt && x.latest);
 
   return (
-    <div className="scroll" style={{paddingTop:0}}>
+    <div className="scroll">
       <style>{`
         @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes cardIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}

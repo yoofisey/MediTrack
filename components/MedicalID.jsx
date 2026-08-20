@@ -207,9 +207,9 @@ export default function MedicalID({ meds = [], onClose, section }) {
 
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e=>e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
             <div style={{fontSize:20,fontWeight:700}}>{showFull ? "Medical ID" : SECTION_TITLES[section] || "Medical ID"}</div>
             <button onClick={onClose} style={{background:"none",border:"none",color:"var(--t3)",cursor:"pointer",display:"grid",placeItems:"center",padding:6}}>

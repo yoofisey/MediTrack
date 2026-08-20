@@ -16,9 +16,9 @@ function Ico({ children, ...props }) {
 export function PrivacyModal({ onClose }) {
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e=>e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Privacy Policy</div>
           <div style={{fontSize:14,color:"var(--t2)",lineHeight:1.7,display:"flex",flexDirection:"column",gap:14}}>
             <p><strong>Effective date:</strong> July 1, 2026</p>
@@ -52,9 +52,9 @@ export function PrivacyModal({ onClose }) {
 export function TermsModal({ onClose }) {
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e=>e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Terms of Service</div>
           <div style={{fontSize:14,color:"var(--t2)",lineHeight:1.7,display:"flex",flexDirection:"column",gap:14}}>
             <p><strong>Effective date:</strong> July 1, 2026</p>
@@ -287,7 +287,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
           >←</button>
         </div>
       )}
-      <div className="sheet" style={{maxHeight:"95vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"95dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
           <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
@@ -395,7 +395,7 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"80vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"80dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
           <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Family members</div>
@@ -514,7 +514,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
   if (mode === null) {
     return (
       <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="sheet" style={{ maxHeight: "70vh" }} onClick={e => e.stopPropagation()}>
+        <div className="sheet" style={{ maxHeight: "70dvh" }} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" />
           <div style={{ padding: "0 20px 20px" }}>
             <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Add family member</div>
@@ -545,7 +545,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
   if (mode === "invite") {
     return (
       <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="sheet" style={{ maxHeight: "70vh" }} onClick={e => e.stopPropagation()}>
+        <div className="sheet" style={{ maxHeight: "70dvh" }} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" />
           <div style={{ padding: "0 20px 20px" }}>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Invite by email</div>
@@ -565,10 +565,10 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{ maxHeight: "80vh" }} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div style={{ padding: "0 20px 20px" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Add member manually</div>
+        <div className="sheet" style={{ maxHeight: "80dvh" }} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Add member manually</div>
           <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 16 }}>You&apos;ll track their medications & vitals on their behalf.</div>
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Name *</div>
@@ -606,7 +606,7 @@ export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
   const handleSwipe = useSwipe({ onSwipeDown: onCancel });
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
-      <div className="sheet" style={{maxHeight:"50vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"50dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
           <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><Trash2 size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
@@ -640,7 +640,7 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
-      <div className="sheet" style={{maxHeight:"75vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"75dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico><Pill size={18} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
         <div style={{padding:"8px 20px calc(16px + var(--safe-bottom))"}}>

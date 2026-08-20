@@ -83,7 +83,7 @@ export function SideEffectLogSheet({ medId, medName, onClose }) {
   if (saved) {
     return (
       <div className="sheet-overlay" onClick={onClose}>
-        <div className="sheet" style={{maxHeight:"60vh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet" style={{maxHeight:"60dvh"}} onClick={e => e.stopPropagation()}>
           <div style={{padding:32,textAlign:"center"}}>
             <div style={{display:"grid",placeItems:"center",marginBottom:12}}><CheckCircle2 size={48} strokeWidth={1.5}/></div>
             <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Side effects logged</div>
@@ -96,9 +96,9 @@ export function SideEffectLogSheet({ medId, medName, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"85vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"85dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
-        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(85vh - 40px)"}}>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(85dvh - 40px)"}}>
           <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Log side effects</div>
           <div style={{fontSize:13,color:"var(--t3)",marginBottom:16}}>for {medName}</div>
 

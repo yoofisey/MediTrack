@@ -133,7 +133,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
   if (saved) {
     return (
       <div className="sheet-overlay" onClick={onClose}>
-        <div className="sheet" style={{maxHeight:"50vh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet" style={{maxHeight:"50dvh"}} onClick={e => e.stopPropagation()}>
           <div style={{padding:32,textAlign:"center"}}>
             <div style={{display:"grid",placeItems:"center",marginBottom:12}}><NotebookPen size={48} strokeWidth={1.5}/></div>
             <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Journal saved</div>
@@ -146,10 +146,10 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title">Health Journal</div>
-        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 80px)"}}>
+        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 80px)"}}>
           <div style={{fontSize:14,color:"var(--t3)",marginBottom:20,textAlign:"center"}}>{date}</div>
 
           <FormControl label="How are you feeling?">

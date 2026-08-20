@@ -70,9 +70,9 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   if (showList) {
     return (
       <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" {...handleSwipe}/>
-          <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 40px)"}}>
+          <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <div style={{fontSize:20,fontWeight:700}}>All visits</div>
               <button className="btn btn-sm" style={{background:"var(--hover)",border:"none",fontSize:13}} onClick={()=>setShowList(false)}>← Back</button>
@@ -145,10 +145,10 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" style={{maxHeight:"90vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title">{editingId ? "Edit visit" : "Schedule a visit"}</div>
-        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90vh - 80px)"}}>
+        <div style={{padding:"8px 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 80px)"}}>
           <FormRow>
             <FormControl label="Date" className="!mb-0">
               <input className="sheet-input" type="date" value={f.date} onChange={e => set("date", e.target.value)}/>

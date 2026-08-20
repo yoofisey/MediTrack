@@ -715,9 +715,9 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const activeSubView = vitalsMember || memberView || overlayTab;
 
   if (loading) return (
-    <div style={{background:"var(--bg)",minHeight:"100vh"}}>
+    <div style={{background:"var(--bg)",minHeight:"100dvh"}}>
       <style>{CSS}</style>
-      <div className="scroll" style={{paddingTop:0}}>
+      <div className="scroll">
         <div className="skel-hero">
           <div className="skel-line skel-pulse" style={{width:"40%",height:14,marginBottom:14}}/>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -764,7 +764,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
 
   return (
     <TierProvider tier={profile?.plan || "free"}>
-    <div style={{background:"var(--bg)",minHeight:"100vh"}}>
+    <div style={{background:"var(--bg)",minHeight:"100dvh"}}>
       <style>{CSS}</style>
 
       {vitalsMember ? (() => {
@@ -794,7 +794,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         </div>
       ) : (
         <>
-          <div style={{ paddingBottom: "calc(49px + env(safe-area-inset-bottom,0px))" }} {...mainSwipe}>
+          <div {...mainSwipe}>
             <div className="content-reveal">
               {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => { setReportMemberKey(null); setTab("reports"); }} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}

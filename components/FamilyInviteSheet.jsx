@@ -8,7 +8,7 @@ export default function FamilyInviteSheet({ invites, onAccept, onDismiss }) {
   if (!invites?.length) return null;
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onDismiss()}>
-      <div className="sheet" style={{maxHeight:"70vh"}} onClick={e => e.stopPropagation()}>
+      <div className="sheet" style={{maxHeight:"70dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
           <div style={{marginBottom:10,display:"flex",justifyContent:"center"}}>
