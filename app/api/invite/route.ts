@@ -19,7 +19,8 @@ export async function POST(req: Request) {
   }
 
   const to = (body.to || "").toLowerCase().trim();
-  const senderName = (body.senderName || "Adhera Team").trim();
+  const senderName = (body.senderName || "Adhera Team").trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const senderNameRaw = (body.senderName || "Adhera Team").trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
   }
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
   // sender whose profile is on the family plan.
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   if (!token || !supabaseAnonKey) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -48,14 +49,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "RESEND_API_KEY not configured" }, { status: 500 });
   }
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin || "https://medi-track-lemon-pi.vercel.app";
+  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
   const acceptUrl = `${origin}/?invite=1`;
 
   try {
     const { error } = await getResend().emails.send({
-      from: `${senderName} <${FROM_EMAIL}>`,
+      from: `${senderNameRaw} <${FROM_EMAIL}>`,
       to: [to],
-      subject: `You've been invited to join ${senderName}'s family group on Adhera`,
+      subject: `You've been invited to join ${senderNameRaw}'s family group on Adhera`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">You've been invited to join a family group</h2>

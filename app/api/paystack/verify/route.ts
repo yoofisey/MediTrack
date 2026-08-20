@@ -1,79 +1,80 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
+const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 
 function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co";
-  const key = SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
+  if (!sbUrl || !serviceKey) return null;
+  return createClient(sbUrl, serviceKey);
 }
 
 export async function POST(req: Request) {
   const sb = getAdminClient();
-  if (!sb) {
-    return NextResponse.json({ ok: false, error: "Supabase not configured" }, { status: 500 });
+  if (!sb) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
+  if (!anonKey || !PAYSTACK_SECRET_KEY) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
+
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.replace("Bearer ", "");
+  if (!token || token === anonKey) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { reference?: string; plan?: string; email?: string };
-  try {
-    body = await req.json();
-  } catch {
+  const { data: { user }, error: authErr } = await sb.auth.getUser(token);
+  if (authErr || !user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: { reference?: string };
+  try { body = await req.json(); } catch {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
 
-  const { reference, plan, email } = body;
-
-  if (!reference || !["pro", "family"].includes(plan || "")) {
-    return NextResponse.json({ ok: false, error: "Invalid parameters" }, { status: 400 });
-  }
-
-  if (!PAYSTACK_SECRET_KEY) {
-    return NextResponse.json({ ok: false, error: "Paystack secret not configured" }, { status: 500 });
+  const { reference } = body;
+  if (!reference || !/^[a-zA-Z0-9_-]+$/.test(reference)) {
+    return NextResponse.json({ ok: false, error: "Invalid reference" }, { status: 400 });
   }
 
   try {
-    const verifyRes = await fetch(
-      `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`, "Content-Type": "application/json" },
+    });
 
     if (!verifyRes.ok) {
       return NextResponse.json({ ok: false, error: "Paystack verification failed" }, { status: 500 });
     }
 
     const verifyData = await verifyRes.json();
-
     if (verifyData.status !== true || verifyData.data?.status !== "success") {
       return NextResponse.json({ ok: false, error: "Payment not verified" }, { status: 400 });
     }
 
     const paystackEmail = verifyData.data?.customer?.email || "";
-    if (email && paystackEmail && email !== paystackEmail) {
+    if (paystackEmail && paystackEmail !== user.email) {
       return NextResponse.json({ ok: false, error: "Email mismatch" }, { status: 400 });
     }
 
-    const matchEmail = email || paystackEmail;
-    if (!matchEmail) {
-      return NextResponse.json({ ok: false, error: "No email to match" }, { status: 400 });
+    const paidAmount = verifyData.data?.amount || 0;
+    const metadata = verifyData.data?.metadata || {};
+    const planFromMeta = metadata.plan || metadata.custom_fields?.plan;
+
+    let plan: string;
+    if (planFromMeta && ["pro", "family"].includes(planFromMeta)) {
+      plan = planFromMeta;
+    } else if (paidAmount >= 3500) {
+      plan = "family";
+    } else if (paidAmount >= 1500) {
+      plan = "pro";
+    } else {
+      return NextResponse.json({ ok: false, error: "Insufficient payment amount" }, { status: 400 });
     }
 
     const { data: profile, error: profileErr } = await sb
-      .from("profiles")
-      .select("id, plan")
-      .eq("email", matchEmail)
-      .single();
+      .from("profiles").select("id, plan").eq("id", user.id).single();
 
     if (profileErr || !profile) {
-      console.error("Verify: profile not found for", matchEmail);
       return NextResponse.json({ ok: false, error: "Profile not found" }, { status: 404 });
     }
 
@@ -82,16 +83,10 @@ export async function POST(req: Request) {
     }
 
     const { error: updateErr } = await sb
-      .from("profiles")
-      .update({ plan })
-      .eq("id", profile.id);
+      .from("profiles").update({ plan }).eq("id", user.id);
 
-    if (updateErr) {
-      console.error("Verify: update failed", updateErr);
-      return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
-    }
+    if (updateErr) return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
 
-    console.log(`Paystack verify: tier upgraded to ${plan} for ${matchEmail} (ref: ${reference})`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Paystack verify error:", e);

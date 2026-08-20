@@ -227,9 +227,11 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   async function handleDeleteAccount() {
     if (deleteConfirm !== user?.email) return;
     try {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
       const res = await fetch("/api/account/delete", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ userId: user.id }),
       });
       if (!res.ok) throw new Error("Failed to delete account");

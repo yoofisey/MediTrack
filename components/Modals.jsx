@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
+import { sb } from "@/lib/supabase";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { useSwipe } from "@/lib/useSwipe";
 import { FormControl, FormRow } from "@/components/FormControls";
@@ -168,10 +169,12 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
     }
 
     try {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
       const initRes = await fetch("/api/paystack/init", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: selected, email: userEmail, country }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: selected, country }),
       });
       const initData = await initRes.json();
       if (!initRes.ok || !initData.ok || !initData.access_code) {
@@ -204,10 +207,12 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
           setBusy(true);
           setErr("");
           try {
+            let token = "";
+            try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
             const verifyRes = await fetch("/api/paystack/verify", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reference: transaction.reference, plan: selected, email: userEmail }),
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ reference: transaction.reference }),
             });
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok || !verifyData.ok) {

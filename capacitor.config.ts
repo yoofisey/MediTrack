@@ -10,8 +10,8 @@ const config: CapacitorConfig = {
       'useadhera.com',
       'www.useadhera.com',
       '*.supabase.co',
-      '*.google.com',
-      '*.googleusercontent.com',
+      'accounts.google.com',
+      '*.googleapis.com',
     ],
   },
   plugins: {
