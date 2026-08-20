@@ -115,6 +115,8 @@ export default function AuthScreen({ onAuth }) {
     if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
     if (pwScore(pw) < 3) { setErr("Password is too weak — use a mix of upper/lowercase, numbers, and symbols."); setBusy(false); return; }
     try {
+      const { data: existingAcct } = await sb.from("profiles").select("id").eq("email", email).maybeSingle();
+      if (existingAcct) { setErr("This email is already registered — please sign in instead."); setBusy(false); return; }
       const deviceTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { return ""; } })();
       const { error } = await sb.auth.signInWithOtp({
         email,

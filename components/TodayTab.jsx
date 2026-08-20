@@ -183,7 +183,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           <div className="card" style={{ padding: 18 }}>
             <div className="hero-label">Adherence this week</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
-              <ProgressRing pct={progressPct} />
+              <ProgressRing pct={adh !== null ? adh : progressPct} />
               {stk > 1 && <span className="streak-badge fire">🔥 {stk}-day streak</span>}
             </div>
             <div style={{ fontSize: 13, color: "var(--t3)", marginTop: 6 }}>
