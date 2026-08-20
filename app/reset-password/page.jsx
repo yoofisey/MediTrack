@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL } from "@/lib/constants";
 
@@ -13,18 +13,35 @@ export default function ResetPasswordPage() {
   const [vis, setVis] = useState(false);
   const [ready, setReady] = useState(false);
   const [sessionErr, setSessionErr] = useState("");
+  const resolvedRef = useRef(false);
 
   useEffect(() => {
-    let resolved = false;
+    if (resolvedRef.current) return;
 
-    async function resolveSession() {
+    const markReady = () => {
+      if (!resolvedRef.current) {
+        resolvedRef.current = true;
+        setReady(true);
+      }
+    };
+
+    const markError = () => {
+      if (!resolvedRef.current) {
+        resolvedRef.current = true;
+        setSessionErr("Invalid or expired reset link. Please request a new one from the app.");
+      }
+    };
+
+    sb.auth.onAuthStateChange((event, session) => {
+      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
+        markReady();
+      }
+    });
+
+    async function tryResolve() {
       try {
         const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-          resolved = true;
-          setReady(true);
-          return;
-        }
+        if (session) { markReady(); return; }
       } catch {}
 
       try {
@@ -33,8 +50,7 @@ export default function ResetPasswordPage() {
         if (code) {
           const { error } = await sb.auth.exchangeCodeForSession(code);
           if (!error) {
-            resolved = true;
-            setReady(true);
+            markReady();
             window.history.replaceState(null, "", window.location.pathname);
             return;
           }
@@ -43,21 +59,23 @@ export default function ResetPasswordPage() {
 
       try {
         const url = new URL(window.location.href);
-        const allParams = new URLSearchParams(url.hash.substring(1));
-        const queryParams = new URLSearchParams(url.search);
-        for (const [k, v] of queryParams) allParams.set(k, v);
+        const hashStr = url.hash.startsWith("#") ? url.hash.substring(1) : "";
+        const hashParams = new URLSearchParams(hashStr);
+        const queryParams = url.search ? new URLSearchParams(url.search) : new URLSearchParams();
+        const all = new URLSearchParams();
+        for (const [k, v] of hashParams) all.set(k, v);
+        for (const [k, v] of queryParams) all.set(k, v);
 
-        const type = allParams.get("type");
-        const accessToken = allParams.get("access_token");
-        const refreshToken = allParams.get("refresh_token");
-        const tokenHash = allParams.get("token_hash");
+        const type = all.get("type");
+        const accessToken = all.get("access_token");
+        const refreshToken = all.get("refresh_token");
+        const tokenHash = all.get("token_hash");
 
-        if (type === "recovery") {
+        if (type === "recovery" || type === "magiclink") {
           if (accessToken && refreshToken) {
             const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
             if (!error) {
-              resolved = true;
-              setReady(true);
+              markReady();
               window.history.replaceState(null, "", window.location.pathname);
               return;
             }
@@ -65,21 +83,35 @@ export default function ResetPasswordPage() {
           if (tokenHash) {
             const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
             if (!error) {
-              resolved = true;
-              setReady(true);
+              markReady();
               window.history.replaceState(null, "", window.location.pathname);
               return;
             }
           }
         }
       } catch {}
-
-      if (!resolved) {
-        setSessionErr("Invalid or expired reset link. Please request a new one from the app.");
-      }
     }
 
-    resolveSession();
+    tryResolve();
+
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (resolvedRef.current || attempts > 10) {
+        clearInterval(interval);
+        if (!resolvedRef.current) markError();
+        return;
+      }
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          clearInterval(interval);
+          markReady();
+        }
+      } catch {}
+    }, 500);
+
+    return () => clearInterval(interval);
   }, []);
 
   function pwScore(p) {
@@ -101,9 +133,8 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await sb.auth.updateUser({ password: pw });
       if (error) throw error;
-      await sb.auth.signOut().catch(() => {});
-      window.history.replaceState(null, "", window.location.pathname);
-      setDone(true);
+      window.history.replaceState(null, "", "/");
+      window.location.href = "/";
     } catch (e2) {
       setErr(e2?.message || "This reset link is invalid or has expired. Please request a new one.");
     } finally { setBusy(false); }
