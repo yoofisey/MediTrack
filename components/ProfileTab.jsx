@@ -227,12 +227,14 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   async function handleDeleteAccount() {
     if (deleteConfirm !== user?.email) return;
     try {
-      await sb.from("dose_logs").delete().eq("user_id", user.id);
-      await sb.from("medications").delete().eq("user_id", user.id);
-      await sb.from("profiles").delete().eq("id", user.id);
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (!res.ok) throw new Error("Failed to delete account");
       localStorage.clear();
       sessionStorage.clear();
-      await sb.auth.signOut();
       window.location.reload();
     } catch (e) {
       alert("Error deleting account: " + (e?.message || "Unknown error"));

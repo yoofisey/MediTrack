@@ -23,6 +23,7 @@ export default function AuthScreen({ onAuth }) {
   const [pwShow, setPwShow] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [forgotDone, setForgotDone] = useState(false);
+  const [consent, setConsent] = useState(false);
   const oauthBusyRef = useRef(false);
 
   function goWelcome() { setView("welcome"); setErr(""); setObl(""); setSent(false); setOtp(""); }
@@ -114,6 +115,7 @@ export default function AuthScreen({ onAuth }) {
     if (pw.length < 8) { setErr("Password must be at least 8 characters."); setBusy(false); return; }
     if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
     if (pwScore(pw) < 3) { setErr("Password is too weak — use a mix of upper/lowercase, numbers, and symbols."); setBusy(false); return; }
+    if (!consent) { setErr("Please agree to the Terms of Service and Privacy Policy."); setBusy(false); return; }
     try {
       const { data: existingAcct } = await sb.from("profiles").select("id").eq("email", email).maybeSingle();
       if (existingAcct) { setErr("This email is already registered — please sign in instead."); setBusy(false); return; }
@@ -351,8 +353,10 @@ export default function AuthScreen({ onAuth }) {
             {busy ? "Processing..." : "Create free account"}
           </button>
         </form>
-        <div style={{fontSize:12,color:"rgba(255,255,255,.35)",textAlign:"center",marginTop:14,lineHeight:1.5}}>
-          By creating an account you agree to our Terms of Service and Privacy Policy.
+        <div style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:"rgba(255,255,255,.5)",marginTop:14,lineHeight:1.5,textAlign:"left"}}>
+          <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
+            style={{marginTop:2,width:16,height:16,flexShrink:0,accentColor:"var(--teal)",cursor:"pointer"}} />
+          <span>I agree to the <a href="/privacy" target="_blank" style={{color:"rgba(255,255,255,.7)",textDecoration:"underline"}}>Privacy Policy</a> and Terms of Service. I understand my health data is processed to deliver the service.</span>
         </div>
         <div className="auth-switch">
           Already have an account? <button onClick={()=>{goSignIn();setErr("");}}>Sign in</button>
