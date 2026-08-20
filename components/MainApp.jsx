@@ -31,7 +31,7 @@ import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
 import GamificationTab from "@/components/GamificationTab";
 import CommunityTab from "@/components/CommunityTab";
-import { Home, Pill, BarChart3, HeartPulse, Users, Trophy, MessageCircle } from "lucide-react";
+import { Home, Pill, BarChart3, HeartPulse, Users } from "lucide-react";
 import { useInactivityLogout } from "@/lib/useInactivityLogout";
 
 export default function MainApp({ user, profile: initProfile, onSignOut }) {
@@ -694,8 +694,6 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     ...(hasFeature("vitals") || hasFeature("perMemberVitals") ? [{ id: "vitals", label: t("nav.vitals"), icon: <HeartPulse size={23} strokeWidth={1.9} /> }] : []),
     ...(hasFeature("familyMembers") ? [{ id: "family", label: t("nav.family"), icon: <Users size={23} strokeWidth={1.9} /> }] : []),
     { id: "reports", label: t("nav.reports"), icon: <BarChart3 size={23} strokeWidth={1.9} /> },
-    { id: "badges", label: "Rewards", icon: <Trophy size={23} strokeWidth={1.9} /> },
-    { id: "community", label: "Community", icon: <MessageCircle size={23} strokeWidth={1.9} /> },
   ];
   const tabIds = useMemo(() => tabs.map(t => t.id), [tabs]);
 
@@ -812,13 +810,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
               {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={openMemberReport} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
-              {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} />}
-              {tab === "badges" && <GamificationTab user={user} profile={profile} member={selfMember} />}
-              {tab === "community" && <CommunityTab user={user} profile={profile} />}
+              {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} onGoBadges={() => setTab("badges")} onGoCommunity={() => setTab("community")} />}
+              {tab === "badges" && <GamificationTab user={user} profile={profile} member={selfMember} onBack={() => setTab("me")} />}
+              {tab === "community" && <CommunityTab user={user} profile={profile} onBack={() => setTab("me")} />}
             </div>
           </div>
 
-          <div className="tabbar">
+          <div className="tabbar" style={tab === "badges" || tab === "community" ? {display:"none"} : undefined}>
             {tabs.map(t => (
               <div key={t.id} className={`tbi${tab === t.id ? " on" : ""}`} onClick={() => { setTab(t.id); setOverlayTab(null); setReportMemberKey(null); }}>
                 {t.icon}

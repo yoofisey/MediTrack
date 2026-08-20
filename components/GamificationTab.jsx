@@ -336,7 +336,7 @@ function RecentAchievements({ earnedIds }) {
   );
 }
 
-export default function GamificationTab({ user, profile, member }) {
+export default function GamificationTab({ user, profile, member, onBack }) {
   const earnedIds = useMemo(() => checkBadges(member), [member]);
   const points = useMemo(() => getTotalPoints(member), [member]);
   const currentStreak = useMemo(() => streak(member), [member]);
@@ -345,8 +345,9 @@ export default function GamificationTab({ user, profile, member }) {
     <div className="scroll">
       <style>{CSS}</style>
 
-      <div className="nav-large">
-        <span>Achievements</span>
+      <div style={{display:"flex",alignItems:"center",gap:6,padding:"12px 8px 4px"}}>
+        {onBack && <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:6,color:"var(--teal)",display:"flex",alignItems:"center"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>}
+        <div className="nav-large" style={{padding:0}}>Achievements</div>
       </div>
 
       <PointsCard points={points} currentStreak={currentStreak} />

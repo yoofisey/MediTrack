@@ -53,7 +53,7 @@ function getCategoryLabel(catId) {
   return cat?.label || catId;
 }
 
-export default function CommunityTab({ user, profile }) {
+export default function CommunityTab({ user, profile, onBack }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -220,8 +220,10 @@ export default function CommunityTab({ user, profile }) {
 
   return (
     <div className="scroll" {...refreshSwipe}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 8px 4px" }}>
+        {onBack && <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",padding:6,color:"var(--teal)",display:"flex",alignItems:"center"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>}
         <div className="nav-large" style={{ padding: 0 }}>Community</div>
+        <div style={{flex:1}}/>
         <button
           onClick={handleRefresh}
           style={{ background: "var(--ib1)", border: "none", borderRadius: 10, width: 36, height: 36, display: "grid", placeItems: "center", cursor: "pointer" }}

@@ -41,7 +41,7 @@ function Toggle({ on, onChange, disabled }) {
   );
 }
 
-export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs }) {
+export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs, onGoBadges, onGoCommunity }) {
   const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (isNativePlatform()) return "default"; if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
@@ -438,6 +438,21 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           </div>
         </div>
       )}
+
+      <div className="section" style={{marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,padding:"0 20px"}}>
+          <div onClick={onGoBadges} className="card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center",transition:"transform .15s"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
+            <div style={{fontSize:28,marginBottom:6}}>🏆</div>
+            <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>Rewards</div>
+            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Badges & challenges</div>
+          </div>
+          <div onClick={onGoCommunity} className="card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center",transition:"transform .15s"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
+            <div style={{fontSize:28,marginBottom:6}}>💬</div>
+            <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>Community</div>
+            <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Tips & support</div>
+          </div>
+        </div>
+      </div>
 
       {(config.upsell || plan === "pro") ? (
         <div className="upgrade-card" style={{margin:"0 20px 20px"}}>
