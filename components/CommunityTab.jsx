@@ -36,11 +36,22 @@ function timeAgo(dateStr) {
   return `${d}d ago`;
 }
 
-function getAvatar(userId) {
+function fallbackEmoji(userId) {
   if (!userId) return USER_EMOJIS[0];
   let hash = 0;
   for (let i = 0; i < userId.length; i++) hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
   return USER_EMOJIS[Math.abs(hash) % USER_EMOJIS.length];
+}
+
+function UserAvatar({ userId, profileMap, size = 36 }) {
+  const prof = profileMap?.[userId];
+  const emoji = prof?.avatar_emoji || fallbackEmoji(userId);
+  const imgUrl = prof?.avatar_url;
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: size * 0.5, flexShrink: 0, overflow: "hidden" }}>
+      {imgUrl ? <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : emoji}
+    </div>
+  );
 }
 
 function getCategoryColor(catId) {
@@ -67,6 +78,7 @@ export default function CommunityTab({ user, profile, onBack }) {
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(null);
+  const [profileMap, setProfileMap] = useState({});
   const composerRef = useRef(null);
   const commentInputRef = useRef(null);
 
@@ -81,6 +93,15 @@ export default function CommunityTab({ user, profile, onBack }) {
         .limit(50);
       if (error) throw error;
       setPosts(data || []);
+      const userIds = [...new Set((data || []).map(p => p.user_id).filter(Boolean))];
+      if (userIds.length) {
+        const { data: profiles } = await sb.from("profiles").select("id, avatar_emoji, avatar_url, full_name").in("id", userIds);
+        if (profiles) {
+          const map = {};
+          profiles.forEach(p => { map[p.id] = p; });
+          setProfileMap(map);
+        }
+      }
     } catch (e) {
       console.error("fetchPosts:", e);
     } finally {
@@ -193,7 +214,7 @@ export default function CommunityTab({ user, profile, onBack }) {
     setExpandedPost(null);
   }
 
-  const refreshSwipe = useSwipe({ onSwipeDown: handleRefresh });
+  const refreshSwipe = useSwipe({ onSwipeDown: handleRefresh, onSwipeRight: onBack });
 
   if (loading) {
     return (
@@ -271,9 +292,7 @@ export default function CommunityTab({ user, profile, onBack }) {
             className="card"
             style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
           >
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 }}>
-              {getAvatar(user?.id)}
-            </div>
+            <UserAvatar userId={user?.id} profileMap={profileMap} />
             <div style={{ flex: 1, fontSize: 13, color: "var(--t3)" }}>Share something with the community...</div>
             <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--teal)", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <Plus size={18} color="white" strokeWidth={2.5} />
@@ -282,9 +301,7 @@ export default function CommunityTab({ user, profile, onBack }) {
         ) : (
           <div className="card" style={{ padding: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 }}>
-                {getAvatar(user?.id)}
-              </div>
+              <UserAvatar userId={user?.id} profileMap={profileMap} />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>{displayName}</div>
                 <div style={{ fontSize: 11, color: "var(--t3)" }}>Posting publicly</div>
@@ -389,12 +406,10 @@ export default function CommunityTab({ user, profile, onBack }) {
               <div key={post.id} className="card" style={{ padding: 16, marginBottom: 12 }}>
                 {/* Header */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 }}>
-                    {getAvatar(post.user_id)}
-                  </div>
+                    <UserAvatar userId={post.user_id} profileMap={profileMap} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {post.user_id === myUserId ? "You" : `User ${post.user_id?.slice(0, 6)}`}
+                      {post.user_id === myUserId ? "You" : (profileMap[post.user_id]?.full_name || `User ${post.user_id?.slice(0, 6)}`)}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--t3)" }}>{timeAgo(post.created_at)}</div>
                   </div>
@@ -486,9 +501,7 @@ export default function CommunityTab({ user, profile, onBack }) {
                         )}
                         {(comments[post.id] || []).map(c => (
                           <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--bg)", display: "grid", placeItems: "center", fontSize: 13, flexShrink: 0 }}>
-                              {getAvatar(c.user_id)}
-                            </div>
+                            <UserAvatar userId={c.user_id} profileMap={profileMap} size={26} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
                                 <span style={{ fontSize: 12, fontWeight: 600, color: "var(--t1)" }}>
@@ -505,9 +518,7 @@ export default function CommunityTab({ user, profile, onBack }) {
 
                         {/* Comment input */}
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
-                          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 13, flexShrink: 0 }}>
-                            {getAvatar(user?.id)}
-                          </div>
+                            <UserAvatar userId={user?.id} profileMap={profileMap} size={26} />
                           <input
                             ref={commentInputRef}
                             type="text"

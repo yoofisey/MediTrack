@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { CSS } from "@/lib/constants";
+import { useSwipe } from "@/lib/useSwipe";
 import { Trophy, Star, Target, Award, Flame, Zap, Medal } from "lucide-react";
 import { BADGES, CHALLENGES, checkBadges, getTotalPoints, getChallengeProgress, getEarnedBadges } from "@/lib/gamification";
 import { streak } from "@/lib/household";
@@ -340,9 +341,10 @@ export default function GamificationTab({ user, profile, member, onBack }) {
   const earnedIds = useMemo(() => checkBadges(member), [member]);
   const points = useMemo(() => getTotalPoints(member), [member]);
   const currentStreak = useMemo(() => streak(member), [member]);
+  const backSwipe = useSwipe({ onSwipeRight: onBack });
 
   return (
-    <div className="scroll">
+    <div className="scroll" {...backSwipe}>
       <style>{CSS}</style>
 
       <div style={{display:"flex",alignItems:"center",gap:6,padding:"12px 8px 4px"}}>

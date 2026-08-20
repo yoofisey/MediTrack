@@ -217,6 +217,13 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       if (error) console.error("markDose:", error?.message || error);
       else if (member.kind === "self") decrementStock(slot.med.id, 1);
       reload();
+      try {
+        const { checkBadges } = await import("@/lib/gamification");
+        const { checkAndNotifyBadges } = await import("@/lib/notifications");
+        const updatedMember = { ...member, logs: [...(member.logs || []), { medication_id: slot.med.id, taken_at: takenAt }] };
+        const earned = checkBadges(updatedMember);
+        checkAndNotifyBadges(earned);
+      } catch {}
     } catch (e) { console.error("markDose exception:", e); }
   }
 
