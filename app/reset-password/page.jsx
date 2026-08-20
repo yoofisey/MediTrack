@@ -15,58 +15,71 @@ export default function ResetPasswordPage() {
   const [sessionErr, setSessionErr] = useState("");
 
   useEffect(() => {
-    let timeout;
+    let resolved = false;
 
-    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" && session) {
-        setReady(true);
-        clearTimeout(timeout);
-      }
-    });
-
-    const tryParseUrl = () => {
+    async function resolveSession() {
       try {
-        const url = new URL(window.location.href);
-        const hashParams = new URLSearchParams(url.hash.substring(1));
-        const queryParams = new URLSearchParams(url.search);
-
-        const accessToken = hashParams.get("access_token") || queryParams.get("access_token");
-        const refreshToken = hashParams.get("refresh_token") || queryParams.get("refresh_token");
-        const tokenHash = hashParams.get("token_hash") || queryParams.get("token_hash");
-        const type = hashParams.get("type") || queryParams.get("type");
-
-        if (type === "recovery" && accessToken && refreshToken) {
-          sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-            .then(({ error }) => {
-              if (!error) { setReady(true); clearTimeout(timeout); }
-            })
-            .catch(() => {});
-        } else if (type === "recovery" && tokenHash) {
-          sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
-            .then(({ error }) => {
-              if (!error) { setReady(true); clearTimeout(timeout); }
-            })
-            .catch(() => {});
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          resolved = true;
+          setReady(true);
+          return;
         }
       } catch {}
-    };
 
-    tryParseUrl();
-    window.addEventListener("hashchange", tryParseUrl);
-    window.addEventListener("popstate", tryParseUrl);
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+        if (code) {
+          const { error } = await sb.auth.exchangeCodeForSession(code);
+          if (!error) {
+            resolved = true;
+            setReady(true);
+            window.history.replaceState(null, "", window.location.pathname);
+            return;
+          }
+        }
+      } catch {}
 
-    timeout = setTimeout(() => {
-      if (!ready) {
+      try {
+        const url = new URL(window.location.href);
+        const allParams = new URLSearchParams(url.hash.substring(1));
+        const queryParams = new URLSearchParams(url.search);
+        for (const [k, v] of queryParams) allParams.set(k, v);
+
+        const type = allParams.get("type");
+        const accessToken = allParams.get("access_token");
+        const refreshToken = allParams.get("refresh_token");
+        const tokenHash = allParams.get("token_hash");
+
+        if (type === "recovery") {
+          if (accessToken && refreshToken) {
+            const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            if (!error) {
+              resolved = true;
+              setReady(true);
+              window.history.replaceState(null, "", window.location.pathname);
+              return;
+            }
+          }
+          if (tokenHash) {
+            const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+            if (!error) {
+              resolved = true;
+              setReady(true);
+              window.history.replaceState(null, "", window.location.pathname);
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      if (!resolved) {
         setSessionErr("Invalid or expired reset link. Please request a new one from the app.");
       }
-    }, 8000);
+    }
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-      window.removeEventListener("hashchange", tryParseUrl);
-      window.removeEventListener("popstate", tryParseUrl);
-    };
+    resolveSession();
   }, []);
 
   function pwScore(p) {
