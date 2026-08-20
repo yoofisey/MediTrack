@@ -15,43 +15,58 @@ export default function ResetPasswordPage() {
   const [sessionErr, setSessionErr] = useState("");
 
   useEffect(() => {
-    const hash = window.location.hash;
-    const search = window.location.search;
-    
-    let params = new URLSearchParams(hash.substring(1));
-    let type = params.get("type");
-    
-    if (!type) {
-      params = new URLSearchParams(search);
-      type = params.get("type");
-    }
-    
-    if (type !== "recovery") {
-      setSessionErr("Invalid or expired reset link. Please request a new one from the app.");
-      return;
-    }
-    
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-    const tokenHash = params.get("token_hash");
-    
-    if (accessToken && refreshToken) {
-      sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
-          if (error) throw error;
-          setReady(true);
-        })
-        .catch(() => setSessionErr("Invalid or expired reset link. Please request a new one from the app."));
-    } else if (tokenHash) {
-      sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
-        .then(({ error }) => {
-          if (error) throw error;
-          setReady(true);
-        })
-        .catch(() => setSessionErr("Invalid or expired reset link. Please request a new one from the app."));
-    } else {
-      setSessionErr("Invalid reset link. Please request a new one from the app.");
-    }
+    let timeout;
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" && session) {
+        setReady(true);
+        clearTimeout(timeout);
+      }
+    });
+
+    const tryParseUrl = () => {
+      try {
+        const url = new URL(window.location.href);
+        const hashParams = new URLSearchParams(url.hash.substring(1));
+        const queryParams = new URLSearchParams(url.search);
+
+        const accessToken = hashParams.get("access_token") || queryParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token") || queryParams.get("refresh_token");
+        const tokenHash = hashParams.get("token_hash") || queryParams.get("token_hash");
+        const type = hashParams.get("type") || queryParams.get("type");
+
+        if (type === "recovery" && accessToken && refreshToken) {
+          sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+            .then(({ error }) => {
+              if (!error) { setReady(true); clearTimeout(timeout); }
+            })
+            .catch(() => {});
+        } else if (type === "recovery" && tokenHash) {
+          sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
+            .then(({ error }) => {
+              if (!error) { setReady(true); clearTimeout(timeout); }
+            })
+            .catch(() => {});
+        }
+      } catch {}
+    };
+
+    tryParseUrl();
+    window.addEventListener("hashchange", tryParseUrl);
+    window.addEventListener("popstate", tryParseUrl);
+
+    timeout = setTimeout(() => {
+      if (!ready) {
+        setSessionErr("Invalid or expired reset link. Please request a new one from the app.");
+      }
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+      window.removeEventListener("hashchange", tryParseUrl);
+      window.removeEventListener("popstate", tryParseUrl);
+    };
   }, []);
 
   function pwScore(p) {
