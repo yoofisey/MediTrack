@@ -3,9 +3,16 @@
 import { useMemo } from "react";
 import { CSS } from "@/lib/constants";
 import { useSwipe } from "@/lib/useSwipe";
-import { Trophy, Star, Target, Award, Flame, Zap, Medal } from "lucide-react";
+import { Trophy, Star, Target, Award, Flame, Zap, Medal, Pill, Crown, NotebookPen, BookOpen, Gem, Stethoscope, Heart, Sunrise, Moon } from "lucide-react";
 import { BADGES, CHALLENGES, checkBadges, getTotalPoints, getChallengeProgress, getEarnedBadges } from "@/lib/gamification";
 import { streak } from "@/lib/household";
+
+const ICON_MAP = { Pill, Flame, Zap, Star, Crown, Trophy, NotebookPen, BookOpen, Gem, Medal, Stethoscope, Heart, Sunrise, Moon };
+
+function BadgeIcon({ name, size = 24, ...props }) {
+  const Icon = ICON_MAP[name];
+  return Icon ? <Icon size={size} {...props} /> : null;
+}
 
 const CATEGORY_META = {
   getting_started: { label: "Getting Started", color: "var(--teal)" },
@@ -84,7 +91,7 @@ function BadgeItem({ badge, earned }) {
         fontSize: 24,
         filter: earned ? "none" : "grayscale(1)",
       }}>
-        {badge.icon}
+        <BadgeIcon name={badge.icon} size={24} color={earned ? "var(--t1)" : "var(--t4)"} />
       </div>
       <div style={{
         fontSize: 11,
@@ -277,7 +284,7 @@ function RecentAchievements({ earnedIds }) {
           Recent Achievements
         </div>
         <div className="empty-state" style={{ padding: "24px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
+          <div style={{ marginBottom: 8 }}><Trophy size={32} color="var(--t4)" strokeWidth={1.5} /></div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)", marginBottom: 4 }}>No badges yet</div>
           <div style={{ fontSize: 12, color: "var(--t3)" }}>Start logging doses to earn your first badge!</div>
         </div>
@@ -312,7 +319,7 @@ function RecentAchievements({ earnedIds }) {
                 fontSize: 20,
                 flexShrink: 0,
               }}>
-                {badge.icon}
+                <BadgeIcon name={badge.icon} size={18} color="var(--t1)" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>{badge.title}</div>

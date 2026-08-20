@@ -8,7 +8,7 @@ import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import MedLogButton from "@/components/MedLogButton";
-import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X } from "lucide-react";
+import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X, Hand } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -244,7 +244,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
         </div>
       ) : (
         <div className="empty-state" style={{ paddingTop: 60 }}>
-          <div className="empty-state-icon" style={{ fontSize: 44 }}>👋</div>
+          <div className="empty-state-icon"><Hand size={44} color="var(--t4)" strokeWidth={1.5} /></div>
           <div className="empty-state-title">Nothing to track yet</div>
           <div className="empty-state-sub">Add a medication or invite a family member to get started.</div>
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>

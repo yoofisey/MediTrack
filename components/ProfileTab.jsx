@@ -14,7 +14,7 @@ import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/li
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
 import AvatarPicker from "@/components/AvatarPicker";
-import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Info, Check } from "lucide-react";
+import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Info, Check, Trophy, MessageCircle } from "lucide-react";
 import { avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
@@ -442,12 +442,12 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <div className="section" style={{marginBottom:16}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,padding:"0 20px"}}>
           <div onClick={onGoBadges} className="card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center",transition:"transform .15s"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
-            <div style={{fontSize:28,marginBottom:6}}>🏆</div>
+            <div style={{marginBottom:6}}><Trophy size={28} color="var(--teal)" strokeWidth={1.8} /></div>
             <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>Rewards</div>
             <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Badges & challenges</div>
           </div>
           <div onClick={onGoCommunity} className="card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center",transition:"transform .15s"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
-            <div style={{fontSize:28,marginBottom:6}}>💬</div>
+            <div style={{marginBottom:6}}><MessageCircle size={28} color="var(--teal)" strokeWidth={1.8} /></div>
             <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>Community</div>
             <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Tips & support</div>
           </div>

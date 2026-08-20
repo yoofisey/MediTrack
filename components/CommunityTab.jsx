@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { sb } from "@/lib/supabase";
 import { useSwipe } from "@/lib/useSwipe";
-import { MessageCircle, Heart, ThumbsUp, Send, Plus, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageCircle, Heart, ThumbsUp, Send, Plus, Filter, ChevronDown, ChevronUp, Dumbbell, Sparkles, Leaf, Shield, Palette, Rocket, Cat, Bug, Flower2, Star, Waves, User, Stethoscope, Microscope, Monitor, Sun } from "lucide-react";
 
 const CATEGORIES = [
   { id: "all", label: "All", color: "var(--teal)" },
@@ -15,13 +15,13 @@ const CATEGORIES = [
 ];
 
 const REACTIONS = [
-  { emoji: "❤️", key: "heart" },
-  { emoji: "👍", key: "thumbsup" },
-  { emoji: "💪", key: "strong" },
-  { emoji: "🎉", key: "celebrate" },
+  { icon: Heart, key: "heart", color: "#FF3B30" },
+  { icon: ThumbsUp, key: "thumbsup", color: "#007AFF" },
+  { icon: Dumbbell, key: "strong", color: "#FF9500" },
+  { icon: Sparkles, key: "celebrate", color: "#AF52DE" },
 ];
 
-const USER_EMOJIS = ["🧑‍⚕️", "👩‍⚕️", "🧑‍🔬", "👩‍💻", "🧑‍🎨", "👩‍🚀", "🧑‍🌾", "🦸", "🧙", "🦊", "🐱", "🐼", "🦋", "🌸", "⭐", "🌊"];
+const AVATAR_ICONS = [Stethoscope, Microscope, Monitor, Palette, Rocket, Leaf, Shield, Sparkles, Cat, Bug, Flower2, Star, Waves, User, Heart, Sun];
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -37,19 +37,22 @@ function timeAgo(dateStr) {
 }
 
 function fallbackEmoji(userId) {
-  if (!userId) return USER_EMOJIS[0];
+  if (!userId) return AVATAR_ICONS[0];
   let hash = 0;
   for (let i = 0; i < userId.length; i++) hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
-  return USER_EMOJIS[Math.abs(hash) % USER_EMOJIS.length];
+  return AVATAR_ICONS[Math.abs(hash) % AVATAR_ICONS.length];
 }
 
 function UserAvatar({ userId, profileMap, size = 36 }) {
   const prof = profileMap?.[userId];
-  const emoji = prof?.avatar_emoji || fallbackEmoji(userId);
   const imgUrl = prof?.avatar_url;
+  const emoji = prof?.avatar_emoji;
+  const FallbackIcon = fallbackEmoji(userId);
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: size * 0.5, flexShrink: 0, overflow: "hidden" }}>
-      {imgUrl ? <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : emoji}
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", flexShrink: 0, overflow: "hidden" }}>
+      {imgUrl ? <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : emoji ? <span style={{ fontSize: size * 0.5 }}>{emoji}</span>
+        : <FallbackIcon size={size * 0.5} color="var(--t3)" strokeWidth={1.8} />}
     </div>
   );
 }
@@ -384,7 +387,7 @@ export default function CommunityTab({ user, profile, onBack }) {
       {/* Posts */}
       {filteredPosts.length === 0 ? (
         <div style={{ padding: "50px 20px", textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🌿</div>
+          <div style={{ marginBottom: 12 }}><Leaf size={40} color="var(--t4)" strokeWidth={1.5} /></div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", marginBottom: 6 }}>
             {activeCategory === "all" ? "Be the first to share something!" : "No posts in this category yet"}
           </div>
@@ -455,7 +458,7 @@ export default function CommunityTab({ user, profile, onBack }) {
                           transition: "all .15s",
                         }}
                       >
-                        <span>{r.emoji}</span>
+                        <r.icon size={14} color={myReacted ? r.color : "var(--t3)"} />
                         {count > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: myReacted ? "var(--teal)" : "var(--t3)" }}>{count}</span>}
                       </button>
                     );
