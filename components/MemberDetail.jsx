@@ -240,16 +240,16 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
         </div>
       </div>
 
-      <div style={{ margin: "0 20px 20px", background: "#FFF8E7", borderRadius: 20, padding: "18px", border: "1px solid #F0DFB8" }}>
+      <div style={{ margin: "0 20px 20px", background: "var(--ib3)", borderRadius: 20, padding: "18px", border: "1px solid var(--sep)" }}>
         <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 15, lineHeight: 1.55, color: "#8A6D2F" }}>
           "{member.careNote || "Tap to add a care note — preferences, quirks, what makes them comfortable."}"
         </div>
         {editNote ? (
           <div style={{ marginTop: 12 }}>
-            <textarea className="sheet-input" rows={3} value={noteText} onChange={e => setNoteText(e.target.value)} style={{ fontSize: 14, background: "#FFFDF6" }} autoFocus />
+            <textarea className="sheet-input" rows={3} value={noteText} onChange={e => setNoteText(e.target.value)} style={{ fontSize: 14, background: "var(--input)" }} autoFocus />
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button className="btn btn-sm btn-primary" style={{ flex: 1 }} onClick={saveNote}>{savedNote ? "Saved ✓" : "Save note"}</button>
-              <button className="btn btn-sm btn-ghost" style={{ flex: 1, background: "#FFFDF6" }} onClick={() => setEditNote(false)}>Cancel</button>
+              <button className="btn btn-sm btn-ghost" style={{ flex: 1, background: "var(--input)" }} onClick={() => setEditNote(false)}>Cancel</button>
             </div>
           </div>
         ) : (
@@ -266,7 +266,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
             <div style={{ fontSize: 13, fontWeight: 700 }}>{missed.length} missed dose{missed.length > 1 ? "s" : ""} today</div>
             <div style={{ fontSize: 12, opacity: .85 }}>{missed.map(m => `${m.time} · ${m.med.name}`).join(", ")}</div>
           </div>
-          {phoneHref && <a href={phoneHref} style={{ width: 42, height: 42, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", flexShrink: 0 }}><Phone size={19} color="var(--red)" /></a>}
+          {phoneHref && <a href={phoneHref} style={{ width: 42, height: 42, borderRadius: "50%", background: "var(--card)", display: "grid", placeItems: "center", flexShrink: 0, border: "0.5px solid var(--sep)" }}><Phone size={19} color="var(--red)" /></a>}
         </div>
       )}
     </div>

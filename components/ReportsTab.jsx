@@ -1076,7 +1076,7 @@ ${has("reports") ? `
           <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
             <div dangerouslySetInnerHTML={{ __html: pdfHtml }} />
           </div>
-          <div style={{ position: "sticky", bottom: 0, display: "flex", gap: 10, padding: "12px 16px calc(12px + env(safe-area-inset-bottom,0px))", background: "#fff", borderTop: "1px solid #e2e8f0", boxShadow: "0 -4px 16px rgba(15,23,42,.06)" }}>
+          <div style={{ position: "sticky", bottom: 0, display: "flex", gap: 10, padding: "12px 16px calc(12px + env(safe-area-inset-bottom,0px))", background: "var(--bar)", borderTop: "1px solid var(--sep)", boxShadow: "0 -4px 16px rgba(0,0,0,.06)", backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)" }}>
             <button className="btn btn-primary" onClick={printPdfReport} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Print
             </button>

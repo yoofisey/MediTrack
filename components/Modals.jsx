@@ -315,8 +315,8 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
               className={selected===p.id ? "glass-card" : ""}
               style={{
                 flex:1, borderRadius:14, padding:"12px 8px", cursor:"pointer", textAlign:"center",
-                border:`2px solid ${selected===p.id ? p.color : "rgba(0,0,0,.06)"}`,
-                background: selected===p.id ? "rgba(255,255,255,.72)" : "rgba(255,255,255,.4)",
+                border:`2px solid ${selected===p.id ? p.color : "var(--sep)"}`,
+                background: selected===p.id ? "var(--glass)" : "var(--card)",
                 backdropFilter: "blur(16px) saturate(1.4)",
                 WebkitBackdropFilter: "blur(16px) saturate(1.4)",
                 transition:"all .2s cubic-bezier(.25,.1,.25,1)",

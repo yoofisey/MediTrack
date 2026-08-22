@@ -48,11 +48,11 @@ export default function AlertsTab({ household, onOpenMember, hasRefill = true })
                     </div>
                     <div style={{ display: "flex" }}>
                       {href ? (
-                        <a href={href} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "white", color: "var(--red)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+                        <a href={href} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "var(--card)", color: "var(--red)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
                           <Phone size={17} strokeWidth={2.4} /> Call {a.member.kind === "self" ? "now" : a.member.name.split(" ")[0]}
                         </a>
                       ) : (
-                        <div onClick={() => onOpenMember(a.member)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "white", color: "var(--red)", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                        <div onClick={() => onOpenMember(a.member)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "13px 0", background: "var(--card)", color: "var(--red)", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
                           Remind {a.member.kind === "self" ? "me" : "them"} <ChevronRight size={16} />
                         </div>
                       )}
@@ -71,17 +71,17 @@ export default function AlertsTab({ household, onOpenMember, hasRefill = true })
               <div className="section-header" style={{ padding: "18px 20px 8px" }}>This week</div>
               <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
                 {visibleWeek.map((a, i) => (
-                  <div key={i} onClick={() => onOpenMember(a.member)} style={{ background: "#FFF8E7", border: "1px solid #F0DFB8", borderRadius: 20, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#F5E6C4", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                      <Package size={18} color="#8A6D2F" strokeWidth={2} />
+                  <div key={i} onClick={() => onOpenMember(a.member)} style={{ background: "var(--ib3)", border: "1px solid var(--sep)", borderRadius: 20, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--ib3)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <Package size={18} color="var(--orange)" strokeWidth={2} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#6B5426" }}>Refill {a.med.name}</div>
-                      <div style={{ fontSize: 12, color: "#9A8450", marginTop: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--t1)" }}>Refill {a.med.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>
                         {a.med.pills_per_package ? `${a.remaining} of ${a.total} left · ` : ""}{a.member.kind === "self" ? "you" : a.member.name}
                       </div>
                     </div>
-                    <ChevronRight size={18} color="#9A8450" />
+                    <ChevronRight size={18} color="var(--t3)" />
                   </div>
                 ))}
               </div>

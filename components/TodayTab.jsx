@@ -236,7 +236,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
               </div>
               {selMissed.length > 0 && (
                 <a href={selPhone || undefined} onClick={(e) => { if (!selPhone) { e.preventDefault(); alert(`No phone number on file for ${selected.name}.`); } }}
-                  style={{ width: 48, height: 48, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,.2)" }}>
+                  style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--card)", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,.2)", border: "0.5px solid var(--sep)" }}>
                   <Phone size={22} color="var(--red)" />
                 </a>
               )}
