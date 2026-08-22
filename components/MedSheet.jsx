@@ -92,7 +92,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         <div className="sheet-title">{med?"Edit Medication":"New Medication"}</div>
         {err && <div style={{margin:"0 16px 8px"}} className="err-msg">{err}</div>}
         {capHit && (
-          <div style={{ margin: "0 16px 12px", background: "var(--ib3)", borderRadius: 16, padding: 14 }}>
+          <div className="glass-card" style={{ margin: "0 16px 12px", padding: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--t1)", marginBottom: 4 }}>You&apos;ve reached the {getTierConfig(tier).label} limit</div>
             <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 10 }}>The {getTierConfig(tier).label} plan includes up to {limits.maxMeds} medications. Upgrade to {upLabel} for unlimited medications, weekly insights and shareable reports.</div>
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => { onUpgrade?.(); onClose(); }}>Upgrade to {upLabel} →</button>

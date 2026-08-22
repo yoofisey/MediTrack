@@ -393,7 +393,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     <div className="scroll">
       <style>{CSS}</style>
 
-      <div className="profile-header" style={{background:"var(--card)",margin:"0 20px 14px",borderRadius:"var(--rxl)",padding:"30px 20px 24px",boxShadow:"var(--card-shadow)",border:"var(--card-border)"}}>
+      <div className="profile-header glass-card" style={{margin:"0 20px 14px",borderRadius:"var(--rxl)",padding:"30px 20px 24px"}}>
         <div style={{position:"relative",width:88,height:88}}>
           <div className="profile-avatar" style={{cursor:profile?.avatar_url?"pointer":"default",overflow:"hidden",margin:0,boxShadow:"0 4px 16px rgba(0,0,0,.12)"}} onClick={() => profile?.avatar_url && setShowLightbox(true)}>
             {profile?.avatar_url ? (
@@ -412,7 +412,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         </div>
         <div className="profile-name">{profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0]}</div>
         <div style={{display:"flex",gap:8,alignItems:"center",marginTop:-4}}>
-          <span style={{fontSize:13,fontWeight:600,color:pm.color,background:`${pm.color}14`,padding:"3px 12px",borderRadius:99,display:"flex",alignItems:"center",gap:4}}>{pm.icon} {pm.label}</span>
+          <span className="premium-badge" style={{color:pm.color,background:`linear-gradient(135deg,${pm.color}18,${pm.color}22)`,borderColor:`${pm.color}30`}}>{pm.icon} {pm.label}</span>
           <span style={{fontSize:13,color:"var(--t3)",display:"inline-flex",alignItems:"center",gap:4}}><Globe size={12}/> {selCountry.name}</span>
         </div>
         <div style={{display:"flex",gap:8,marginTop:6}}>
@@ -445,12 +445,12 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       <div className="section" style={{marginBottom:16}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,padding:"0 20px"}}>
-          <div onClick={onGoBadges} className="card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center",transition:"transform .15s"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
+          <div onClick={onGoBadges} className="glass-card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
             <div style={{marginBottom:6}}><Trophy size={28} color="var(--teal)" strokeWidth={1.8} /></div>
             <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>Rewards</div>
             <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Badges & challenges</div>
           </div>
-          <div onClick={onGoCommunity} className="card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center",transition:"transform .15s"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
+          <div onClick={onGoCommunity} className="glass-card" style={{padding:"18px 14px",cursor:"pointer",textAlign:"center"}} onMouseDown={e=>e.currentTarget.style.transform="scale(.97)"} onMouseUp={e=>e.currentTarget.style.transform=""} onMouseLeave={e=>e.currentTarget.style.transform=""}>
             <div style={{marginBottom:6}}><MessageCircle size={28} color="var(--teal)" strokeWidth={1.8} /></div>
             <div style={{fontSize:14,fontWeight:700,color:"var(--t1)"}}>Community</div>
             <div style={{fontSize:11,color:"var(--t3)",marginTop:2}}>Tips & support</div>

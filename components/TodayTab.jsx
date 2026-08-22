@@ -180,7 +180,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
 
       {(has("reports") || has("perMemberReports")) && adh !== null && (
         <div style={{ margin: "14px 20px 4px" }}>
-          <div className="card" style={{ padding: 18 }}>
+          <div className="glass-card stat-glow" style={{ padding: 18 }}>
             <div className="hero-label">Adherence this week</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2 }}>
               <ProgressRing pct={adh !== null ? adh : progressPct} />
@@ -198,8 +198,9 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
 
       {config.upsell && (
         <div style={{ margin: "14px 20px 4px" }}>
-          <div className="card" style={{ padding: 18, background: "linear-gradient(135deg,#FFFFFF,var(--ib2))", border: "1px solid var(--ib3)" }}>
+          <div className="glass-card stat-glow" style={{ padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span className="premium-badge">PRO</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: "var(--t1)" }}>Unlock {upLabel}</span>
             </div>
             <div style={{ fontSize: 13, color: "var(--t3)", lineHeight: 1.45 }}>
