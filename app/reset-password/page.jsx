@@ -32,10 +32,8 @@ export default function ResetPasswordPage() {
       }
     };
 
-    sb.auth.onAuthStateChange((event, session) => {
-      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
-        markReady();
-      }
+    const unsub = sb.auth.onAuthStateChange((event, session) => {
+      if (session) markReady();
     });
 
     async function tryResolve() {
@@ -66,27 +64,25 @@ export default function ResetPasswordPage() {
         for (const [k, v] of hashParams) all.set(k, v);
         for (const [k, v] of queryParams) all.set(k, v);
 
-        const type = all.get("type");
         const accessToken = all.get("access_token");
         const refreshToken = all.get("refresh_token");
         const tokenHash = all.get("token_hash");
+        const type = all.get("type");
 
-        if (type === "recovery" || type === "magiclink") {
-          if (accessToken && refreshToken) {
-            const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-            if (!error) {
-              markReady();
-              window.history.replaceState(null, "", window.location.pathname);
-              return;
-            }
+        if (accessToken && refreshToken) {
+          const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          if (!error) {
+            markReady();
+            window.history.replaceState(null, "", window.location.pathname);
+            return;
           }
-          if (tokenHash) {
-            const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
-            if (!error) {
-              markReady();
-              window.history.replaceState(null, "", window.location.pathname);
-              return;
-            }
+        }
+        if (tokenHash && (type === "recovery" || type === "magiclink")) {
+          const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+          if (!error) {
+            markReady();
+            window.history.replaceState(null, "", window.location.pathname);
+            return;
           }
         }
       } catch {}
@@ -97,7 +93,7 @@ export default function ResetPasswordPage() {
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      if (resolvedRef.current || attempts > 10) {
+      if (resolvedRef.current || attempts > 30) {
         clearInterval(interval);
         if (!resolvedRef.current) markError();
         return;
@@ -111,7 +107,7 @@ export default function ResetPasswordPage() {
       } catch {}
     }, 500);
 
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); unsub?.data?.subscription?.unsubscribe?.(); };
   }, []);
 
   function pwScore(p) {
