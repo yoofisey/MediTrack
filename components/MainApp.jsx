@@ -8,7 +8,7 @@ import { useSwipe } from "@/lib/useSwipe";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock, syncVisits } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
-import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, getNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, initCapacitorNotifs, isNativePlatform, setupForegroundListener } from "@/lib/notifications";
+import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, getNotifPerm, subscribeToPush, stopAlarmSound, clearAllTimers, clearTimerState, initCapacitorNotifs, isNativePlatform, setupForegroundListener } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { initUrlDeeplinks } from "@/lib/deeplinks";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
@@ -304,7 +304,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     } catch (e) { console.error("family report:", e); alert("Could not generate the report. Please try again."); }
   }
 
-  useEffect(() => { if (notifOn() && (meds.length || logs.length)) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30, profile?.timezone); return () => { clearAllTimers(); }; }, [meds, profile?.reminder_lead, profile?.wake_time, profile?.timezone, logs]);
+  useEffect(() => { if (notifOn() && (meds.length || logs.length)) scheduleDoseAlarms(meds, logs, profile?.wake_time || "08:00", profile?.reminder_lead || 30, profile?.timezone); return () => { clearTimerState(); }; }, [meds, profile?.reminder_lead, profile?.wake_time, profile?.timezone, logs]);
   useEffect(() => {
     try {
       const vitalReminders = JSON.parse(localStorage.getItem("mt_vital_reminders") || "{}");
@@ -559,6 +559,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     root.style.setProperty("--ib4", t.ib4);
     root.style.setProperty("--ib5", t.ib5);
     root.style.setProperty("--ib6", t.ib6);
+    root.style.setProperty("--glass", t.glass);
+    root.style.setProperty("--glass-border", t.glassBorder);
+    root.style.setProperty("--glass-hi", t.glassHi);
+    root.style.setProperty("--glass-sh", t.glassSh);
   }, [profile?.theme]);
 
   function reload() { setLoadKey(k => k + 1); }
