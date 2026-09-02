@@ -10,7 +10,7 @@ import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { Card, Segmented, InsightCard } from "@/components/ui";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download, Scale, Heart } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download, Scale, Heart, MapPin } from "lucide-react";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -23,6 +23,8 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   const [journalEntries, setJournalEntries] = useState([]);
   const [pdfHtml, setPdfHtml] = useState(null);
   const [range, setRange] = useState("all");
+  const [expandedVisit, setExpandedVisit] = useState(null);
+  const [pastOpen, setPastOpen] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try { return JSON.parse(localStorage.getItem("mt_dismissed_insights") || "[]"); } catch { return []; }
   });
@@ -1190,30 +1192,96 @@ ${has("reports") ? `
             <div className="empty-state-sub">Schedule a hospital visit to start tracking your appointment history</div>
           </div>
         ) : (
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {allVisits.map(v => (
-              <div key={v.id} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)"}}>
-                <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
-                  <div style={{width:38,height:38,borderRadius:12,background:visitStatusOf(v) === "attended" ? "var(--ib5)" : visitStatusOf(v) === "missed" ? "var(--ib6)" : "var(--ib1)",display:"grid",placeItems:"center",flexShrink:0}}>
-                    <Ico><CalendarDays size={18} strokeWidth={2.2} color="var(--t1)"/></Ico>
+          (() => {
+            const upcoming = allVisits.filter(v => visitStatusOf(v) === "upcoming");
+            const past = allVisits.filter(v => visitStatusOf(v) !== "upcoming");
+            const showUpcoming = upcoming.slice(0, 3);
+            const showPast = (pastOpen ? past : past.slice(0, 3));
+            const rowSub = v => `${visitDateLabel(v)} · ${visitTimeLabel(v)}${v.facility ? ` · ${v.facility}` : ""}`;
+            const rowIcon = v => visitStatusOf(v) === "attended" ? "var(--ib5)" : visitStatusOf(v) === "missed" ? "var(--ib6)" : "var(--ib1)";
+            const rowIconColor = v => visitStatusOf(v) === "attended" ? "var(--teal2)" : visitStatusOf(v) === "missed" ? "var(--red)" : "var(--teal)";
+            return (
+              <div>
+                {upcoming.length > 0 && (
+                  <div style={{marginBottom:14}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 4px",marginBottom:6}}>
+                      <span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".8px",color:"var(--t4)"}}>Up next</span>
+                      {upcoming.length > 3 && <span style={{fontSize:11,fontWeight:600,color:"var(--t3)"}}>{upcoming.length} planned</span>}
+                    </div>
+                    <div style={{background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",overflow:"hidden"}}>
+                      {showUpcoming.map((v, i) => (
+                        <div key={v.id} className="row" style={{borderTop:i>0?"0.5px solid var(--sep)":"none",cursor:"pointer",alignItems:"center"}} onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}>
+                          <div style={{width:28,height:28,borderRadius:9,background:rowIcon(v),display:"grid",placeItems:"center",flexShrink:0}}>
+                            <Ico><CalendarDays size={14} strokeWidth={2.2} color={rowIconColor(v)}/></Ico>
+                          </div>
+                          <div className="row-body" style={{minWidth:0}}>
+                            <div className="row-title" style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.reason || "Hospital visit"}</span>
+                              {visitStatusBadge(v)}
+                            </div>
+                            <div className="row-sub" style={{fontSize:11,color:"var(--t3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rowSub(v)}</div>
+                          </div>
+                          <span style={{fontSize:10,color:"var(--t4)",transition:"transform .2s",transform:expandedVisit===v.id?"rotate(180deg)":"rotate(0deg)",flexShrink:0}}>▼</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:3}}>
-                      <span style={{fontSize:15,fontWeight:600,color:"var(--t1)",letterSpacing:"-.2px"}}>{v.reason || "Hospital visit"}</span>
-                      {visitStatusBadge(v)}
+                )}
+
+                {past.length > 0 && (
+                  <div>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 4px",marginBottom:6}}>
+                      <span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".8px",color:"var(--t4)"}}>History</span>
+                      <span style={{fontSize:11,fontWeight:600,color:"var(--t3)"}}>{past.length} past</span>
                     </div>
-                    <div style={{fontSize:13,fontWeight:500,color:"var(--t2)",marginBottom:2}}>
-                      {v.doctor ? `Dr. ${v.doctor}` : "Doctor not set"}{v.facility ? ` · ${v.facility}` : ""}
+                    <div style={{background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",overflow:"hidden"}}>
+                      {showPast.map((v, i) => (
+                        <div key={v.id} className="row" style={{borderTop:i>0?"0.5px solid var(--sep)":"none",cursor:"pointer",alignItems:"center"}} onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}>
+                          <div style={{width:28,height:28,borderRadius:9,background:rowIcon(v),display:"grid",placeItems:"center",flexShrink:0}}>
+                            <Ico><CalendarDays size={14} strokeWidth={2.2} color={rowIconColor(v)}/></Ico>
+                          </div>
+                          <div className="row-body" style={{minWidth:0}}>
+                            <div className="row-title" style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.reason || "Hospital visit"}</span>
+                              {visitStatusBadge(v)}
+                            </div>
+                            <div className="row-sub" style={{fontSize:11,color:"var(--t3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rowSub(v)}</div>
+                          </div>
+                          <span style={{fontSize:10,color:"var(--t4)",transition:"transform .2s",transform:expandedVisit===v.id?"rotate(180deg)":"rotate(0deg)",flexShrink:0}}>▼</span>
+                        </div>
+                      ))}
+                      {past.length > 3 && (
+                        <div className="row" style={{borderTop:showPast.length?"0.5px solid var(--sep)":"none",cursor:"pointer",alignItems:"center",justifyContent:"center"}} onClick={() => setPastOpen(!pastOpen)}>
+                          <div className="row-body" style={{alignItems:"center"}}>
+                            <div className="row-title" style={{fontSize:13,color:"var(--teal)",textAlign:"center"}}>{pastOpen ? "Show less" : `Show all ${past.length} visits`}</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div style={{fontSize:12,color:"var(--t3)"}}>
-                      {visitDateLabel(v)} at {visitTimeLabel(v)}{visitReminderLabel(v) ? ` · reminder ${visitReminderLabel(v)}` : ""}
-                    </div>
-                    {v.notes && <div style={{fontSize:12,color:"var(--t3)",marginTop:6,background:"var(--bg)",borderRadius:10,padding:"8px 10px"}}>{v.notes}</div>}
                   </div>
-                </div>
+                )}
+
+                {expandedVisit && allVisits.some(v => v.id === expandedVisit) && (() => {
+                  const v = allVisits.find(v => v.id === expandedVisit);
+                  if (!v) return null;
+                  return (
+                    <div style={{marginTop:14,background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",padding:14}}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                        <div style={{width:30,height:30,borderRadius:9,background:rowIcon(v),display:"grid",placeItems:"center",flexShrink:0}}><Ico><MapPin size={15} strokeWidth={2.2} color={rowIconColor(v)}/></Ico></div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{v.reason || "Hospital visit"}</div>
+                          <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{visitDateLabel(v)} · {visitTimeLabel(v)}</div>
+                          {v.doctor && <div style={{fontSize:12,color:"var(--t2)",marginTop:6}}>Dr. {v.doctor}{v.facility ? ` · ${v.facility}` : ""}</div>}
+                          {v.reminder_minutes > 0 && <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Reminder {visitReminderLabel(v)}</div>}
+                          {v.notes ? <div style={{fontSize:12,color:"var(--t3)",marginTop:8,background:"var(--bg)",borderRadius:10,padding:"8px 10px"}}>{v.notes}</div> : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-            ))}
-          </div>
+            );
+          })()
         )}
       </div>
 
