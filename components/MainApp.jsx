@@ -31,6 +31,7 @@ import { JournalEntrySheet, getJournalEntry } from "@/components/HealthJournal";
 import FamilyInviteSheet from "@/components/FamilyInviteSheet";
 import GamificationTab from "@/components/GamificationTab";
 import CommunityTab from "@/components/CommunityTab";
+import VisitHistoryTab from "@/components/VisitHistoryTab";
 import { Home, Pill, BarChart3, HeartPulse, Users } from "lucide-react";
 import { useInactivityLogout } from "@/lib/useInactivityLogout";
 
@@ -68,6 +69,15 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [vitalsMember, setVitalsMember] = useState(null);
   const [vitalsSubTab, setVitalsSubTab] = useState("vitals");
   const [reportMemberKey, setReportMemberKey] = useState(null);
+  const [visitHistoryFrom, setVisitHistoryFrom] = useState("reports");
+
+  const navigateFromReports = (id) => {
+    if (id === "profile") setTab("me");
+    if (id === "visits") {
+      setVisitHistoryFrom(vitalsSubTab === "reports" && tab === "vitals" ? "vitals" : "reports");
+      setTab("visits");
+    }
+  };
   const [medSheetFor, setMedSheetFor] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
@@ -860,19 +870,20 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
               {tab === "vitals" && (hasFeature("vitals") || hasFeature("perMemberVitals")) && (
                 vitalsSubTab === "reports"
-                  ? <ReportsTab logs={reportMember ? (reportMember.logs || []) : logs} meds={reportMember ? (reportMember.meds || []) : meds} vitals={reportMember ? (reportMember.vitals || []) : vitals} plan={profile?.plan || "free"} memberName={reportMember?.name} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} onBack={reportMember ? () => { setReportMemberKey(null); setTab("family"); } : () => setVitalsSubTab("vitals")} />
+                  ? <ReportsTab logs={reportMember ? (reportMember.logs || []) : logs} meds={reportMember ? (reportMember.meds || []) : meds} vitals={reportMember ? (reportMember.vitals || []) : vitals} plan={profile?.plan || "free"} memberName={reportMember?.name} tz={profile?.timezone} onNavigate={navigateFromReports} onBack={reportMember ? () => { setReportMemberKey(null); setTab("family"); } : () => setVitalsSubTab("vitals")} />
                   : <VitalsTab vitals={selfMember.vitals || []} onRefresh={reload} member={selfMember} onGoReports={() => { setReportMemberKey(null); setTab("reports"); }} />
               )}
-              {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
-              {tab === "reports" && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={(id) => { if (id === "profile") setTab("me"); }} />}
+              {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={navigateFromReports} />}
+              {tab === "reports" && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={navigateFromReports} />}
               {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={openMemberReport} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
               {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} onGoBadges={() => setTab("badges")} onGoCommunity={() => setTab("community")} />}
               {tab === "badges" && <GamificationTab user={user} profile={profile} member={selfMember} onBack={() => setTab("me")} />}
               {tab === "community" && <CommunityTab user={user} profile={profile} onBack={() => setTab("me")} />}
+              {tab === "visits" && <VisitHistoryTab onBack={() => { if (visitHistoryFrom === "vitals") { setTab("vitals"); setVitalsSubTab("reports"); } else { setTab("reports"); } }} />}
             </div>
           </div>
 
-          <div className="tabbar" style={tab === "badges" || tab === "community" ? {display:"none"} : undefined}>
+          <div className="tabbar" style={tab === "badges" || tab === "community" || tab === "visits" ? {display:"none"} : undefined}>
             {tabs.map(t => (
               <div key={t.id} className={`tbi${tab === t.id ? " on" : ""}`} onClick={() => { setTab(t.id); setOverlayTab(null); setReportMemberKey(null); }}>
                 {t.icon}

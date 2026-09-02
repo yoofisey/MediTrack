@@ -10,7 +10,8 @@ import AdherenceCalendar from "@/components/AdherenceCalendar";
 import { Card, Segmented, InsightCard } from "@/components/ui";
 import { SideEffectSummary } from "@/components/SideEffectTracker";
 import { JournalMiniCalendar, JournalEntrySheet, JournalTimeline, getJournalEntry } from "@/components/HealthJournal";
-import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download, Scale, Heart, MapPin } from "lucide-react";
+import { Pill, BarChart3, TrendingUp, TrendingDown, Lightbulb, ClipboardList, DollarSign, FileText, Stethoscope, BookOpen, CalendarDays, Download, Scale, Heart, ChevronRight } from "lucide-react";
+import { VisitRow, VisitDetailCard, visitStatusOf, visitStatusLabel, visitTimeLabel } from "@/components/VisitHistoryList";
 
 function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
@@ -24,7 +25,6 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   const [pdfHtml, setPdfHtml] = useState(null);
   const [range, setRange] = useState("all");
   const [expandedVisit, setExpandedVisit] = useState(null);
-  const [pastOpen, setPastOpen] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     try { return JSON.parse(localStorage.getItem("mt_dismissed_insights") || "[]"); } catch { return []; }
   });
@@ -39,38 +39,6 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     attended: allVisits.filter(v => v.status === "attended").length,
     missed: allVisits.filter(v => v.status === "missed").length,
   };
-
-  function visitStatusOf(v) {
-    if (v.status === "attended") return "attended";
-    if (v.status === "missed") return "missed";
-    return getVisitTime(v) < now ? "scheduled" : "upcoming";
-  }
-  function visitStatusLabel(v) {
-    return ({ attended: "Attended", missed: "Missed", scheduled: "Scheduled", upcoming: "Upcoming" })[visitStatusOf(v)];
-  }
-  function visitStatusBadge(v) {
-    const colors = {
-      attended: { bg: "var(--ib5)", fg: "var(--teal2)" },
-      missed: { bg: "var(--ib6)", fg: "var(--red)" },
-      scheduled: { bg: "var(--bg)", fg: "var(--t3)" },
-      upcoming: { bg: "var(--ib1)", fg: "var(--teal)" },
-    }[visitStatusOf(v)];
-    return <span style={{ fontSize: 11, fontWeight: 700, background: colors.bg, color: colors.fg, padding: "3px 10px", borderRadius: 99, flexShrink: 0 }}>{visitStatusLabel(v)}</span>;
-  }
-  function visitReminderLabel(v) {
-    const m = parseInt(v.reminder_minutes);
-    if (!m || m <= 0) return "";
-    if (m >= 1440) return `${Math.round(m / 1440)} day${Math.round(m / 1440) > 1 ? "s" : ""} before`;
-    if (m >= 60) return `${Math.round(m / 60)} hr${Math.round(m / 60) > 1 ? "s" : ""} before`;
-    return `${m} min before`;
-  }
-  function visitTimeLabel(v) {
-    const t = getVisitTime(v);
-    return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  function visitDateLabel(v) {
-    return fmtDateLong(v.date + "T12:00:00");
-  }
 
   useEffect(() => {
     try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch { setJournalEntries([]); }
@@ -1192,96 +1160,21 @@ ${has("reports") ? `
             <div className="empty-state-sub">Schedule a hospital visit to start tracking your appointment history</div>
           </div>
         ) : (
-          (() => {
-            const upcoming = allVisits.filter(v => visitStatusOf(v) === "upcoming");
-            const past = allVisits.filter(v => visitStatusOf(v) !== "upcoming");
-            const showUpcoming = upcoming.slice(0, 3);
-            const showPast = (pastOpen ? past : past.slice(0, 3));
-            const rowSub = v => `${visitDateLabel(v)} · ${visitTimeLabel(v)}${v.facility ? ` · ${v.facility}` : ""}`;
-            const rowIcon = v => visitStatusOf(v) === "attended" ? "var(--ib5)" : visitStatusOf(v) === "missed" ? "var(--ib6)" : "var(--ib1)";
-            const rowIconColor = v => visitStatusOf(v) === "attended" ? "var(--teal2)" : visitStatusOf(v) === "missed" ? "var(--red)" : "var(--teal)";
-            return (
-              <div>
-                {upcoming.length > 0 && (
-                  <div style={{marginBottom:14}}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 4px",marginBottom:6}}>
-                      <span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".8px",color:"var(--t4)"}}>Up next</span>
-                      {upcoming.length > 3 && <span style={{fontSize:11,fontWeight:600,color:"var(--t3)"}}>{upcoming.length} planned</span>}
-                    </div>
-                    <div style={{background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",overflow:"hidden"}}>
-                      {showUpcoming.map((v, i) => (
-                        <div key={v.id} className="row" style={{borderTop:i>0?"0.5px solid var(--sep)":"none",cursor:"pointer",alignItems:"center"}} onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}>
-                          <div style={{width:28,height:28,borderRadius:9,background:rowIcon(v),display:"grid",placeItems:"center",flexShrink:0}}>
-                            <Ico><CalendarDays size={14} strokeWidth={2.2} color={rowIconColor(v)}/></Ico>
-                          </div>
-                          <div className="row-body" style={{minWidth:0}}>
-                            <div className="row-title" style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.reason || "Hospital visit"}</span>
-                              {visitStatusBadge(v)}
-                            </div>
-                            <div className="row-sub" style={{fontSize:11,color:"var(--t3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rowSub(v)}</div>
-                          </div>
-                          <span style={{fontSize:10,color:"var(--t4)",transition:"transform .2s",transform:expandedVisit===v.id?"rotate(180deg)":"rotate(0deg)",flexShrink:0}}>▼</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {past.length > 0 && (
-                  <div>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 4px",marginBottom:6}}>
-                      <span style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".8px",color:"var(--t4)"}}>History</span>
-                      <span style={{fontSize:11,fontWeight:600,color:"var(--t3)"}}>{past.length} past</span>
-                    </div>
-                    <div style={{background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",overflow:"hidden"}}>
-                      {showPast.map((v, i) => (
-                        <div key={v.id} className="row" style={{borderTop:i>0?"0.5px solid var(--sep)":"none",cursor:"pointer",alignItems:"center"}} onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}>
-                          <div style={{width:28,height:28,borderRadius:9,background:rowIcon(v),display:"grid",placeItems:"center",flexShrink:0}}>
-                            <Ico><CalendarDays size={14} strokeWidth={2.2} color={rowIconColor(v)}/></Ico>
-                          </div>
-                          <div className="row-body" style={{minWidth:0}}>
-                            <div className="row-title" style={{fontSize:14,display:"flex",alignItems:"center",gap:6}}>
-                              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.reason || "Hospital visit"}</span>
-                              {visitStatusBadge(v)}
-                            </div>
-                            <div className="row-sub" style={{fontSize:11,color:"var(--t3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rowSub(v)}</div>
-                          </div>
-                          <span style={{fontSize:10,color:"var(--t4)",transition:"transform .2s",transform:expandedVisit===v.id?"rotate(180deg)":"rotate(0deg)",flexShrink:0}}>▼</span>
-                        </div>
-                      ))}
-                      {past.length > 3 && (
-                        <div className="row" style={{borderTop:showPast.length?"0.5px solid var(--sep)":"none",cursor:"pointer",alignItems:"center",justifyContent:"center"}} onClick={() => setPastOpen(!pastOpen)}>
-                          <div className="row-body" style={{alignItems:"center"}}>
-                            <div className="row-title" style={{fontSize:13,color:"var(--teal)",textAlign:"center"}}>{pastOpen ? "Show less" : `Show all ${past.length} visits`}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {expandedVisit && allVisits.some(v => v.id === expandedVisit) && (() => {
-                  const v = allVisits.find(v => v.id === expandedVisit);
-                  if (!v) return null;
-                  return (
-                    <div style={{marginTop:14,background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",padding:14}}>
-                      <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
-                        <div style={{width:30,height:30,borderRadius:9,background:rowIcon(v),display:"grid",placeItems:"center",flexShrink:0}}><Ico><MapPin size={15} strokeWidth={2.2} color={rowIconColor(v)}/></Ico></div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:14,fontWeight:600,color:"var(--t1)"}}>{v.reason || "Hospital visit"}</div>
-                          <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{visitDateLabel(v)} · {visitTimeLabel(v)}</div>
-                          {v.doctor && <div style={{fontSize:12,color:"var(--t2)",marginTop:6}}>Dr. {v.doctor}{v.facility ? ` · ${v.facility}` : ""}</div>}
-                          {v.reminder_minutes > 0 && <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>Reminder {visitReminderLabel(v)}</div>}
-                          {v.notes ? <div style={{fontSize:12,color:"var(--t3)",marginTop:8,background:"var(--bg)",borderRadius:10,padding:"8px 10px"}}>{v.notes}</div> : null}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            );
-          })()
+          <>
+            <div style={{background:"var(--card)",borderRadius:"var(--rl)",boxShadow:"var(--card-shadow)",overflow:"hidden"}}>
+              {allVisits.slice(0, 3).map((v, i) => (
+                <VisitRow key={v.id} v={v} expanded={expandedVisit === v.id} onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)} style={{borderTop: i > 0 ? "0.5px solid var(--sep)" : "none"}}/>
+              ))}
+            </div>
+            {expandedVisit && (() => {
+              const v = allVisits.find(x => x.id === expandedVisit);
+              return v ? <VisitDetailCard v={v}/> : null;
+            })()}
+            <div className="row" style={{cursor:"pointer"}} onClick={() => onNavigate && onNavigate("visits")}>
+              <div className="row-body"><div className="row-title" style={{fontSize:14}}>See all visits</div><div className="row-sub" style={{fontSize:11}}>{allVisits.length} visits total</div></div>
+              <ChevronRight size={17} color="var(--t3)" strokeWidth={2}/>
+            </div>
+          </>
         )}
       </div>
 
