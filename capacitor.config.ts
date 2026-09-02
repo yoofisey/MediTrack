@@ -24,6 +24,11 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true,
     },
+    LocalNotifications: {
+      smallIcon: "ic_stat_adhera",
+      iconColor: "#0E9F6E",
+      presentationOptions: ["badge", "sound", "banner", "list"],
+    },
   },
 };
 
