@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CSS, fmtTime, fmtDateLong, currencySymbol, escapeHtml } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
-import { calcStreak, getVisits } from "@/lib/data";
+import { calcStreak, getVisits, getVisitTime, localDayKey } from "@/lib/data";
 import { useTier } from "@/components/TierContext";
 import AdherenceChart from "@/components/AdherenceChart";
 import AdherenceCalendar from "@/components/AdherenceCalendar";
@@ -29,6 +29,47 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   const { config: limits, has } = useTier();
   const today = new Date();
 
+  const allVisits = getVisits().slice().sort((a, b) => ((b.date || "") + (b.time || "")).localeCompare((a.date || "") + (a.time || "")));
+  const now = new Date();
+  const visitStats = {
+    total: allVisits.length,
+    upcoming: allVisits.filter(v => v.status !== "attended" && v.status !== "missed" && getVisitTime(v) >= now).length,
+    attended: allVisits.filter(v => v.status === "attended").length,
+    missed: allVisits.filter(v => v.status === "missed").length,
+  };
+
+  function visitStatusOf(v) {
+    if (v.status === "attended") return "attended";
+    if (v.status === "missed") return "missed";
+    return getVisitTime(v) < now ? "scheduled" : "upcoming";
+  }
+  function visitStatusLabel(v) {
+    return ({ attended: "Attended", missed: "Missed", scheduled: "Scheduled", upcoming: "Upcoming" })[visitStatusOf(v)];
+  }
+  function visitStatusBadge(v) {
+    const colors = {
+      attended: { bg: "var(--ib5)", fg: "var(--teal2)" },
+      missed: { bg: "var(--ib6)", fg: "var(--red)" },
+      scheduled: { bg: "var(--bg)", fg: "var(--t3)" },
+      upcoming: { bg: "var(--ib1)", fg: "var(--teal)" },
+    }[visitStatusOf(v)];
+    return <span style={{ fontSize: 11, fontWeight: 700, background: colors.bg, color: colors.fg, padding: "3px 10px", borderRadius: 99, flexShrink: 0 }}>{visitStatusLabel(v)}</span>;
+  }
+  function visitReminderLabel(v) {
+    const m = parseInt(v.reminder_minutes);
+    if (!m || m <= 0) return "";
+    if (m >= 1440) return `${Math.round(m / 1440)} day${Math.round(m / 1440) > 1 ? "s" : ""} before`;
+    if (m >= 60) return `${Math.round(m / 60)} hr${Math.round(m / 60) > 1 ? "s" : ""} before`;
+    return `${m} min before`;
+  }
+  function visitTimeLabel(v) {
+    const t = getVisitTime(v);
+    return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  function visitDateLabel(v) {
+    return fmtDateLong(v.date + "T12:00:00");
+  }
+
   useEffect(() => {
     try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch { setJournalEntries([]); }
   }, [showHistory]);
@@ -37,15 +78,39 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   const rangedLogs = cutoff ? logs.filter(l => new Date(l.taken_at) >= cutoff) : logs;
   const streak = calcStreak(logs, meds, tz);
   const grouped = {};
-  rangedLogs.forEach(l => { const d = l.taken_at?.split("T")[0]; if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); } });
+  rangedLogs.forEach(l => { const d = localDayKey(new Date(l.taken_at), tz); if (d) { if (!grouped[d]) grouped[d]=[]; grouped[d].push(l); } });
   const daysTracked = Object.keys(grouped).length;
   const totalDoses = rangedLogs.length;
-  const adherence = daysTracked > 0 ? Math.round((totalDoses / (daysTracked * meds.reduce((s,m) => s + (m.times_per_day || 1), 0))) * 100) : 0;
+
+  function isMedActiveOnDate(med, date) {
+    const s = new Date(med.start_date);
+    const e = new Date(med.start_date); e.setDate(e.getDate() + (med.course_duration_days || 30));
+    return med.active && date >= s && date <= e;
+  }
+
+  const activeMedsInRange = meds.filter(m => {
+    if (!m.active) return false;
+    if (!cutoff) return true;
+    return isMedActiveOnDate(m, cutoff) || isMedActiveOnDate(m, today);
+  });
+
+  const adherence = daysTracked > 0 && activeMedsInRange.length > 0
+    ? Math.round((totalDoses / (daysTracked * activeMedsInRange.reduce((s,m) => s + (m.times_per_day || 1), 0))) * 100) : 0;
 
   function perMedAdherence() {
-    return meds.map(med => {
+    return meds.filter(m => m.active).map(med => {
       const medLogs = rangedLogs.filter(l => l.medication_id === med.id);
-      const expected = med.course_duration_days * (med.times_per_day || 1);
+      let expected = 0;
+      const rangeStart = cutoff || new Date(med.start_date);
+      const rangeEnd = today;
+      const medStart = new Date(med.start_date);
+      const medEnd = new Date(med.start_date); medEnd.setDate(medEnd.getDate() + (med.course_duration_days || 30));
+      const effStart = rangeStart > medStart ? rangeStart : medStart;
+      const effEnd = rangeEnd < medEnd ? rangeEnd : medEnd;
+      if (effEnd >= effStart) {
+        const daysActive = Math.floor((effEnd - effStart) / 86400000) + 1;
+        expected = daysActive * (med.times_per_day || 1);
+      }
       const pct = expected > 0 ? Math.round((medLogs.length / expected) * 100) : 0;
       return { ...med, taken: medLogs.length, expected, pct: Math.min(pct, 100) };
     });
@@ -68,6 +133,12 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       txt += `• ${m.name} (${m.dosage_amount} ${m.dosage_unit}) — ${m.pct}% [${status}]\n`;
       txt += `  Taken ${m.taken}/${m.expected} expected doses\n`;
     });
+    if (allVisits.length > 0) {
+      txt += `\nVISIT HISTORY:\n`;
+      allVisits.forEach(v => {
+        txt += `• ${v.date} ${v.time} — ${v.reason || "Hospital visit"} [${visitStatusLabel(v)}]${v.doctor ? ` · Dr. ${v.doctor}` : ""}${v.facility ? ` · ${v.facility}` : ""}\n`;
+      });
+    }
     txt += `\n─────────────────────\n`;
     txt += `Generated by Adhera · adhera.app`;
     return txt;
@@ -102,7 +173,8 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     const ctx = canvas.getContext("2d");
     const w = canvas.width, h = canvas.height;
     const count = data.length;
-    const pad = { t: 40, r: 24, b: count > 6 ? 80 : 56, l: 56 };
+    const hasLabel = label && label.trim().length > 0;
+    const pad = { t: hasLabel ? 40 : 16, r: 24, b: count > 6 ? 80 : 56, l: 56 };
     const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
     ctx.clearRect(0, 0, w, h);
 
@@ -114,10 +186,12 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     ctx.roundRect(0, 0, w, h, 12);
     ctx.fill();
 
-    ctx.fillStyle = "#0F172A";
-    ctx.font = "600 15px Inter, system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(label, w/2, 24);
+    if (hasLabel) {
+      ctx.fillStyle = "#0F172A";
+      ctx.font = "600 15px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, w/2, 24);
+    }
 
     const maxVal = Math.max(...data.map(d => d.val), 10);
     const gap = cw / (count + 1);
@@ -197,7 +271,8 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   function drawLineChart(canvas, series, label, colors) {
     const ctx = canvas.getContext("2d");
     const w = canvas.width, h = canvas.height;
-    const pad = { t: 40, r: 24, b: 60, l: 56 };
+    const hasLabel = label && label.trim().length > 0;
+    const pad = { t: hasLabel ? 40 : 16, r: 24, b: 60, l: 56 };
     const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
     ctx.clearRect(0, 0, w, h);
 
@@ -209,10 +284,12 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     ctx.roundRect(0, 0, w, h, 12);
     ctx.fill();
 
-    ctx.fillStyle = "#0F172A";
-    ctx.font = "600 15px Inter, system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(label, w/2, 24);
+    if (hasLabel) {
+      ctx.fillStyle = "#0F172A";
+      ctx.font = "600 15px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, w/2, 24);
+    }
 
     const allVals = series.flatMap(s => s.data.map(d => d.val));
     const maxVal = Math.max(...allVals, 10);
@@ -303,9 +380,12 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const ds = d.toISOString().split("T")[0];
-      const dayLogs = logs.filter(l => l.taken_at?.startsWith(ds));
-      const dailyExp = meds.reduce((s,m) => s + (m.times_per_day || 1), 0);
+      const ds = localDayKey(d, tz);
+      const dayLogs = logs.filter(l => localDayKey(new Date(l.taken_at), tz) === ds);
+      const dailyExp = activeMedsInRange.reduce((s,m) => {
+        if (!isMedActiveOnDate(m, d)) return s;
+        return s + (m.times_per_day || 1);
+      }, 0);
       const pct = dailyExp > 0 ? Math.round((dayLogs.length / dailyExp) * 100) : 0;
       weekDays.push({ label: d.toLocaleDateString("en",{weekday:"short"}), val: Math.min(pct,100) });
     }
@@ -313,12 +393,12 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     const chartCanvas1 = document.createElement("canvas");
     chartCanvas1.width = 720;
     chartCanvas1.height = 340;
-    drawBarChart(chartCanvas1, pm.map(m => ({ label: m.name.length > 12 ? m.name.slice(0,12)+"…" : m.name, val: m.pct })), "Adherence by Medication", "#2563EB");
+    drawBarChart(chartCanvas1, pm.map(m => ({ label: m.name.length > 12 ? m.name.slice(0,12)+"…" : m.name, val: m.pct })), "", "#2563EB");
 
     const chartCanvas2 = document.createElement("canvas");
     chartCanvas2.width = 720;
     chartCanvas2.height = 300;
-    drawBarChart(chartCanvas2, weekDays, "Daily Adherence (Last 7 Days)", "#059669");
+    drawBarChart(chartCanvas2, weekDays, "", "#059669");
 
     const chart1 = chartCanvas1.toDataURL("image/png");
     const chart2 = chartCanvas2.toDataURL("image/png");
@@ -334,7 +414,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       drawLineChart(bpCanvas, [
         { label: "Systolic", data: bpLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value })) },
         { label: "Diastolic", data: bpLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value_secondary || 0 })) },
-      ], "Blood Pressure (Last 30 Days)", ["#FF3B30", "#FF9500"]);
+      ], "", ["#FF3B30", "#FF9500"]);
       chart3 = bpCanvas.toDataURL("image/png");
     }
     if (weightLogs.length > 1) {
@@ -343,7 +423,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       wtCanvas.height = 300;
       drawLineChart(wtCanvas, [
         { label: "Weight", data: weightLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value })) },
-      ], "Weight (Last 30 Days)", ["#007AFF"]);
+      ], "", ["#007AFF"]);
       chart4 = wtCanvas.toDataURL("image/png");
     }
 
@@ -421,8 +501,10 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   .metric-card-label{font-size:11px;color:#64748b;margin-top:4px;line-height:1.3}
 
   .section-title{font-size:16px;font-weight:700;color:#0f172a;margin-bottom:14px;margin-top:28px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px}
-  .chart-wrap{margin:0 0 20px;text-align:center;padding:8px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:12px}
+  .section-title+.chart-wrap,.section-title+.data-table{margin-top:6px}
+  .chart-wrap{margin:0 0 20px;text-align:center;padding:10px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:12px}
   .chart-wrap img{max-width:100%;height:auto;border-radius:8px}
+  @media print{.chart-wrap,.data-table,.clinical-note,.insight-grid{page-break-inside:avoid}}
 
   .data-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
   .data-table thead th{padding:10px 10px;text-align:left;font-weight:600;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid #e2e8f0;background:#f8fafc}
@@ -538,6 +620,34 @@ ${chart3 ? `<div class="chart-wrap"><img src="${chart3}" alt="Blood pressure tre
 ${chart4 ? `<div class="chart-wrap"><img src="${chart4}" alt="Weight trend chart"/></div>` : ""}
 ` : ""}
 
+${allVisits.length > 0 ? `
+<div class="section-title">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  Visit History
+</div>
+<div class="metric-row">
+  <div class="metric-card"><div class="metric-card-value blue">${visitStats.upcoming}</div><div class="metric-card-label">Upcoming<br>Visits</div></div>
+  <div class="metric-card"><div class="metric-card-value green">${visitStats.attended}</div><div class="metric-card-label">Attended<br>Visits</div></div>
+  <div class="metric-card"><div class="metric-card-value red">${visitStats.missed}</div><div class="metric-card-label">Missed<br>Visits</div></div>
+  <div class="metric-card"><div class="metric-card-value purple">${visitStats.total}</div><div class="metric-card-label">Total<br>Visits</div></div>
+</div>
+<table class="data-table">
+  <thead>
+    <tr><th>Date</th><th>Time</th><th>Doctor</th><th>Facility</th><th>Purpose</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+     ${allVisits.map(v => `<tr>
+       <td style="font-weight:600">${v.date}</td>
+       <td>${visitTimeLabel(v)}</td>
+       <td>${escapeHtml(v.doctor ? "Dr. " + v.doctor : "—")}</td>
+       <td>${escapeHtml(v.facility || "—")}</td>
+       <td>${escapeHtml(v.reason || "Hospital visit")}</td>
+       <td><span class="badge badge-${visitStatusOf(v) === "attended" ? "good" : visitStatusOf(v) === "missed" ? "poor" : "fair"}">${visitStatusLabel(v)}</span></td>
+     </tr>`).join("")}
+  </tbody>
+</table>
+` : ""}
+
 ${has("reports") ? `
 <div class="section-title">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
@@ -568,7 +678,7 @@ ${has("reports") ? `
 
 <div class="clinical-note">
   <div class="clinical-note-title">For the Medical Professional</div>
-     <p>This report summarizes the patient's self-reported medication adherence data tracked through Adhera. The patient has ${meds.length} medication${meds.length!==1?"s":""} on record with an overall adherence rate of <strong>${adherence}%</strong> across ${daysTracked} tracked days. ${pm.filter(m => m.pct < 80).length > 0 ? `Medications requiring attention: ${pm.filter(m => m.pct < 80).map(m => escapeHtml(m.name)).join(", ")}.` : "All medications are at or above the 80% adherence threshold."} The most consistent dosing occurs during the <strong>${timeAnalysis.best}</strong> period. Data is self-reported and may not reflect actual consumption. This report is intended to support clinical discussions and should not replace professional medical judgment.</p>
+  <p>This report summarizes the patient's self-reported medication adherence data tracked through Adhera. The patient has ${meds.length} medication${meds.length!==1?"s":""} on record with an overall adherence rate of <strong>${adherence}%</strong> across ${daysTracked} tracked days. ${pm.filter(m => m.pct < 80).length > 0 ? `Medications requiring attention: ${pm.filter(m => m.pct < 80).map(m => escapeHtml(m.name)).join(", ")}.` : "All medications are at or above the 80% adherence threshold."} The most consistent dosing occurs during the <strong>${timeAnalysis.best}</strong> period. Data is self-reported and may not reflect actual consumption. This report is intended to support clinical discussions and should not replace professional medical judgment.</p>
 </div>
 ` : ""}
 
@@ -692,18 +802,20 @@ ${has("reports") ? `
         });
       }
 
-      const visits = getVisits().filter(v => v.date >= new Date().toISOString().split("T")[0]).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+      const visits = getVisits().slice().sort((a, b) => ((b.date || "") + (b.time || "")).localeCompare((a.date || "") + (a.time || "")));
       if (visits.length > 0) {
-        addSection("Upcoming Appointments", () => {
+        const labelFor = v => v.status === "attended" ? "Attended" : v.status === "missed" ? "Missed" : getVisitTime(v) < new Date() ? "Scheduled" : "Upcoming";
+        addSection("Visit History", () => {
           visits.forEach(v => {
             if (y > pageH - 30) { doc.addPage(); y = 20; }
             doc.setFont("helvetica", "bold"); doc.setFontSize(10);
             doc.setTextColor(30, 30, 30);
-            doc.text(`\u2022 ${v.reason || "Visit"} — ${v.date} at ${v.time}`, ml, y); y += 4;
+            doc.text(`\u2022 ${v.reason || "Visit"} — ${v.date} at ${v.time} [${labelFor(v)}]`, ml, y); y += 4;
             doc.setFont("helvetica", "normal"); doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
-            if (v.facility) doc.text(`  ${v.facility}`, ml + 4, y); y += 4;
-            if (v.doctor) doc.text(`  ${v.doctor}`, ml + 4, y); y += 4;
+            if (v.facility) doc.text(`  Facility: ${v.facility}`, ml + 4, y); y += 4;
+            if (v.doctor) doc.text(`  Doctor: ${v.doctor}`, ml + 4, y); y += 4;
+            if (v.notes) doc.text(`  Notes: ${v.notes}`, ml + 4, y); y += 4;
             y += 2;
           });
         });
@@ -718,6 +830,83 @@ ${has("reports") ? `
     }
   }
 
+  async function exportBasicPdf() {
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageW = 210, pageH = 297, ml = 20, mr = 20;
+      let y = 20;
+
+      doc.setFont("helvetica", "bold"); doc.setFontSize(22);
+      doc.setTextColor(37, 99, 235);
+      doc.text("Adhera", ml, y); y += 4;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      doc.setTextColor(140, 140, 140);
+      doc.text("Basic Medication Report", ml, y); y += 3;
+      doc.text(`${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, ml, y);
+      y += 8;
+      doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
+      doc.line(ml, y, pageW - mr, y); y += 10;
+
+      doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+      doc.setTextColor(37, 99, 235);
+      doc.text("Medications", ml, y); y += 8;
+      const active = meds.filter(m => m.active);
+      if (active.length === 0) {
+        doc.setFont("helvetica", "italic"); doc.setFontSize(10);
+        doc.setTextColor(140, 140, 140);
+        doc.text("No active medications.", ml, y); y += 6;
+      } else {
+        active.forEach(med => {
+          if (y > pageH - 30) { doc.addPage(); y = 20; }
+          doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+          doc.setTextColor(30, 30, 30);
+          doc.text(`\u2022 ${med.name}`, ml, y); y += 5;
+          doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`  ${med.dosage_amount} ${med.dosage_unit} \u00B7 ${med.times_per_day}x daily`, ml + 4, y); y += 6;
+        });
+      }
+
+      y += 4;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(13);
+      doc.setTextColor(37, 99, 235);
+      doc.text("Adherence", ml, y); y += 8;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Overall: ${adherence}%`, ml, y); y += 5;
+      doc.text(`Streak: ${streak} day${streak !== 1 ? "s" : ""}`, ml, y); y += 5;
+      doc.text(`Days tracked: ${daysTracked}`, ml, y); y += 5;
+      doc.text(`Total doses: ${totalDoses}`, ml, y); y += 8;
+
+      const pm = perMedAdherence();
+      if (pm.length > 0) {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+        doc.setTextColor(30, 30, 30);
+        doc.text("Per Medication:", ml, y); y += 6;
+        pm.forEach(m => {
+          if (y > pageH - 25) { doc.addPage(); y = 20; }
+          const status = m.pct >= 80 ? "Good" : m.pct >= 50 ? "Fair" : "Poor";
+          doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+          doc.setTextColor(60, 60, 60);
+          doc.text(`\u2022 ${m.name}: ${m.pct}% (${status}) \u2014 ${m.taken}/${m.expected} doses`, ml + 2, y); y += 5;
+        });
+      }
+
+      y += 10;
+      doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
+      doc.line(ml, y, pageW - mr, y); y += 6;
+      doc.setFont("helvetica", "italic"); doc.setFontSize(9);
+      doc.setTextColor(140, 140, 140);
+      doc.text("Upgrade to Pro for detailed charts, clinical insights, and doctor-ready reports.", ml, y); y += 5;
+      doc.text("Generated by Adhera \u00B7 adhera.app \u00B7 Confidential", ml, y);
+
+      doc.save(`adhera_basic_report_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (e) {
+      console.error("Basic PDF export error:", e);
+    }
+  }
+
   const pm = perMedAdherence();
 
   function AdherenceCard({ m, index }) {
@@ -729,7 +918,7 @@ ${has("reports") ? `
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:15,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{m.name}</div>
           <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{m.taken}/{m.expected} doses</div>
-          <div className="prog"><div className="prog-fill" style={{width:`${m.pct}%`,background:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)"}}/></div>
+          <div className="prog"><div className="prog-fill" style={{transform:`scaleX(${m.pct/100})`,background:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)"}}/></div>
         </div>
         <div style={{fontSize:17,fontWeight:700,color:m.pct>=80?"var(--teal2)":m.pct>=50?"var(--orange)":"var(--red)",flexShrink:0}}>{m.pct}%</div>
       </div>
@@ -813,7 +1002,7 @@ ${has("reports") ? `
         <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
           <Ico><CalendarDays size={15} strokeWidth={2.2} color="var(--teal2)"/></Ico> Adherence calendar
         </div>
-        <AdherenceCalendar logs={logs} meds={meds}/>
+        <AdherenceCalendar logs={logs} meds={meds} tz={tz}/>
       </div>
 
       {has("reports") && (
@@ -822,16 +1011,19 @@ ${has("reports") ? `
             <Ico><TrendingUp size={15} strokeWidth={2.2} color="var(--teal2)"/></Ico> Detailed treatment analytics
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {meds.map(med => {
-              const medLogs = logs.filter(l => l.medication_id === med.id);
+            {meds.filter(m => m.active).map(med => {
+              const medLogs = rangedLogs.filter(l => l.medication_id === med.id);
               const firstLog = medLogs[medLogs.length-1];
               const daysSinceStart = firstLog ? Math.ceil((today-new Date(firstLog.taken_at).getTime())/86400000) : 0;
               const expectedDaily = med.times_per_day || 1;
               const expectedTotal = daysSinceStart * expectedDaily;
               const pct = expectedTotal > 0 ? Math.round((medLogs.length/expectedTotal)*100) : 0;
               const skipRate = medLogs.length > 0 ? Math.round((1 - medLogs.length/Math.max(expectedTotal,medLogs.length))*100) : 0;
-              const trend = medLogs.length >= 14
-                ? medLogs.slice(0,7).length >= medLogs.slice(-7).length ? "improving" : "declining"
+              const sorted = [...medLogs].sort((a,b) => new Date(a.taken_at) - new Date(b.taken_at));
+              const recentHalf = sorted.slice(-7);
+              const olderHalf = sorted.slice(0, 7);
+              const trend = sorted.length >= 14
+                ? (recentHalf.length >= olderHalf.length ? "improving" : "declining")
                 : "insufficient data";
               const trendColor = trend==="improving"?"var(--teal2)":trend==="declining"?"var(--red)":"var(--t3)";
               const trendIcon = trend==="improving"?<TrendingUp size={14} strokeWidth={2.2}/>:trend==="declining"?<TrendingDown size={14} strokeWidth={2.2}/>:<BarChart3 size={14} strokeWidth={2.2}/>;
@@ -844,7 +1036,7 @@ ${has("reports") ? `
                       <div style={{fontSize:12,color:"var(--t3)"}}>{medLogs.length} total doses · {pct}% adherence</div>
                     </div>
                   </div>
-                  <div className="prog" style={{marginBottom:8}}><div className="prog-fill" style={{width:`${pct}%`,background:pct>=80?"var(--teal2)":pct>=50?"var(--orange)":"var(--red)"}}/></div>
+                  <div className="prog" style={{marginBottom:8}}><div className="prog-fill" style={{transform:`scaleX(${pct/100})`,background:pct>=80?"var(--teal2)":pct>=50?"var(--orange)":"var(--red)"}}/></div>
                   <div style={{display:"flex",gap:16,fontSize:12}}>
                     <div style={{background:"var(--bg)",borderRadius:8,padding:"6px 10px",flex:1,textAlign:"center"}}>
                       <div style={{fontSize:11,color:"var(--t3)",marginBottom:1}}>Trend</div>
@@ -916,7 +1108,7 @@ ${has("reports") ? `
         );
       })()}
 
-      {!has("reports") && !has("perMemberReports") && (
+      {!has("reports") && !has("perMemberReports") && !has("basicReports") && (
         <div className="upgrade-card" style={{margin:"0 20px 16px"}}>
           <div className="upgrade-title">Upgrade for advanced reports</div>
           <div className="upgrade-sub">
@@ -929,7 +1121,7 @@ ${has("reports") ? `
       )}
 
       <div style={{padding:"0 20px 16px"}}>
-        <AdherenceChart logs={logs} meds={meds}/>
+        <AdherenceChart logs={logs} meds={meds} tz={tz}/>
       </div>
 
       {has("sideEffects") && (
@@ -973,6 +1165,58 @@ ${has("reports") ? `
         </div>
       </div>
 
+      <div className="section">
+        <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
+          <Ico><Stethoscope size={15} strokeWidth={2.2} color="var(--teal2)"/></Ico> Visit history
+          {allVisits.length > 0 && (
+            <button onClick={exportVisitsCsv}
+              style={{marginLeft:"auto",fontSize:12,fontWeight:600,color:"var(--t2)",background:"var(--card)",padding:"6px 12px",borderRadius:99,border:"1px solid var(--sep)",display:"inline-flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+              <Ico><Download size={13} strokeWidth={2.2}/></Ico> CSV
+            </button>
+          )}
+        </div>
+
+        <div className="chip-group" style={{marginBottom:14,rowGap:8}}>
+          <div className="chip blue"><div className="chip-val">{visitStats.upcoming}</div><div className="chip-lbl">Upcoming</div></div>
+          <div className="chip green"><div className="chip-val">{visitStats.attended}</div><div className="chip-lbl">Attended</div></div>
+          <div className="chip red"><div className="chip-val">{visitStats.missed}</div><div className="chip-lbl">Missed</div></div>
+          <div className="chip"><div className="chip-val">{visitStats.total}</div><div className="chip-lbl">Total visits</div></div>
+        </div>
+
+        {allVisits.length === 0 ? (
+          <div className="empty-state" style={{margin:"8px 0 0"}}>
+            <div className="empty-state-icon"><Ico><Stethoscope size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div>
+            <div className="empty-state-title">No visits yet</div>
+            <div className="empty-state-sub">Schedule a hospital visit to start tracking your appointment history</div>
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {allVisits.map(v => (
+              <div key={v.id} style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)"}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                  <div style={{width:38,height:38,borderRadius:12,background:visitStatusOf(v) === "attended" ? "var(--ib5)" : visitStatusOf(v) === "missed" ? "var(--ib6)" : "var(--ib1)",display:"grid",placeItems:"center",flexShrink:0}}>
+                    <Ico><CalendarDays size={18} strokeWidth={2.2} color="var(--t1)"/></Ico>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:3}}>
+                      <span style={{fontSize:15,fontWeight:600,color:"var(--t1)",letterSpacing:"-.2px"}}>{v.reason || "Hospital visit"}</span>
+                      {visitStatusBadge(v)}
+                    </div>
+                    <div style={{fontSize:13,fontWeight:500,color:"var(--t2)",marginBottom:2}}>
+                      {v.doctor ? `Dr. ${v.doctor}` : "Doctor not set"}{v.facility ? ` · ${v.facility}` : ""}
+                    </div>
+                    <div style={{fontSize:12,color:"var(--t3)"}}>
+                      {visitDateLabel(v)} at {visitTimeLabel(v)}{visitReminderLabel(v) ? ` · reminder ${visitReminderLabel(v)}` : ""}
+                    </div>
+                    {v.notes && <div style={{fontSize:12,color:"var(--t3)",marginTop:6,background:"var(--bg)",borderRadius:10,padding:"8px 10px"}}>{v.notes}</div>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {has("healthJournal") && (
         <div className="section">
           <div className="section-header" style={{display:"flex",alignItems:"center",gap:8}}>
@@ -995,11 +1239,15 @@ ${has("reports") ? `
           const maxDays = limits.history;
           const grouped2 = {};
           logs.forEach(l => {
-            const d = l.taken_at?.split("T")[0];
+            const d = localDayKey(new Date(l.taken_at), tz);
             if (d) { if (!grouped2[d]) grouped2[d] = []; grouped2[d].push(l); }
           });
           const days = Object.keys(grouped2).sort().reverse().slice(0, maxDays);
-          const totalExpected = meds.reduce((s, m) => s + (m.times_per_day || 1), 0);
+          const totalExpected = meds.filter(m => m.active).reduce((s, m) => {
+            const dayDate = new Date(d + "T12:00:00");
+            if (!isMedActiveOnDate(m, dayDate)) return s;
+            return s + (m.times_per_day || 1);
+          }, 0);
 
           if (days.length === 0) {
             return <div className="empty-state" style={{marginBottom:8}}><div className="empty-state-icon"><Ico><ClipboardList size={52} strokeWidth={1.5} color="var(--t2)"/></Ico></div><div className="empty-state-title">No history yet</div><div className="empty-state-sub">Your dose logs will appear here</div></div>;
@@ -1044,32 +1292,43 @@ ${has("reports") ? `
            <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
              <button className="btn btn-primary" onClick={generatePdfReport} disabled={meds.length === 0} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
                <Ico><FileText size={15} strokeWidth={2.2} color="white"/></Ico> Full PDF report
-            </button>
-            <button className="btn" onClick={exportHealthSummary} disabled={meds.length === 0}
-              style={{flex:1,background:"var(--teal2)",color:"white",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-              <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Quick PDF
-            </button>
-          </div>
+             </button>
+             <button className="btn" onClick={exportHealthSummary} disabled={meds.length === 0}
+               style={{flex:1,background:"var(--teal2)",color:"white",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+               <Ico><Download size={15} strokeWidth={2.2} color="white"/></Ico> Quick PDF
+             </button>
+           </div>
 
-          <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
-            <button className="btn" onClick={shareWithDoctor} disabled={meds.length === 0}
-              style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
-              <Ico><Stethoscope size={15} strokeWidth={2.2}/></Ico> Share with doctor
-            </button>
-            <button className="btn" onClick={() => exportCsv("dose_logs", logs, meds)}
-              style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
-              <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export CSV
-            </button>
-          </div>
+           <div style={{padding:"4px 20px 8px",display:"flex",gap:10}}>
+             <button className="btn" onClick={shareWithDoctor} disabled={meds.length === 0}
+               style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+               <Ico><Stethoscope size={15} strokeWidth={2.2}/></Ico> Share with doctor
+             </button>
+             <button className="btn" onClick={() => exportCsv("dose_logs", logs, meds)}
+               style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+               <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export CSV
+             </button>
+           </div>
 
-          <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
-            <button className="btn" onClick={exportJournalCsv}
-              style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
-              <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal
-            </button>
-          </div>
-        </>
-      )}
+           <div style={{padding:"0 20px 20px",display:"flex",gap:10}}>
+             <button className="btn" onClick={exportJournalCsv}
+               style={{flex:1,background:"var(--card)",color:"var(--t1)",fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",gap:6,border:"0.5px solid var(--sep)"}}>
+               <Ico><Download size={15} strokeWidth={2.2}/></Ico> Export journal
+             </button>
+           </div>
+         </>
+       )}
+
+       {has("basicReports") && !has("reports") && (
+         <div style={{padding:"4px 20px 16px"}}>
+           <button className="btn" onClick={exportBasicPdf} disabled={meds.length === 0}
+             style={{width:"100%",background:"var(--card)",color:"var(--t1)",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"14px 16px",borderRadius:14,border:"1px solid var(--sep)",boxShadow:"var(--card-shadow)"}}>
+             <Ico><FileText size={18} strokeWidth={2.2} color="var(--teal2)"/></Ico>
+             <span>Download Basic Report</span>
+           </button>
+           <div style={{fontSize:12,color:"var(--t3)",textAlign:"center",marginTop:8}}>Upgrade to Pro for charts, clinical insights, and doctor-ready reports</div>
+         </div>
+       )}
 
       {pdfHtml && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1200, background: "#f1f5f9", display: "flex", flexDirection: "column" }}>
@@ -1115,6 +1374,18 @@ function exportJournalCsv() {
     return `"${date}","${text}","${mood}"`;
   }).join("\n");
   downloadCsv(header + rows, `journal_${new Date().toISOString().split("T")[0]}.csv`);
+}
+
+function exportVisitsCsv() {
+  let visits = [];
+  try { visits = JSON.parse(localStorage.getItem("mt_visits") || "[]"); } catch {}
+  const header = "Date,Time,Doctor,Facility,Purpose,Status,Reminder,Notes\n";
+  const rows = visits.slice().sort((a, b) => ((a.date || "") + (a.time || "")).localeCompare((b.date || "") + (b.time || ""))).map(v => {
+    const status = v.status === "attended" ? "Attended" : v.status === "missed" ? "Missed" : getVisitTime(v) < new Date() ? "Scheduled" : "Upcoming";
+    const reminder = v.reminder_minutes ? `${v.reminder_minutes} min before` : "";
+    return `"${v.date || ""}","${v.time || ""}","${(v.doctor || "").replace(/"/g, '""')}","${(v.facility || "").replace(/"/g, '""')}","${(v.reason || "").replace(/"/g, '""')}","${status}","${reminder}","${(v.notes || "").replace(/"/g, '""')}"`;
+  }).join("\n");
+  downloadCsv(header + rows, `visit_history_${new Date().toISOString().split("T")[0]}.csv`);
 }
 
 function downloadCsv(content, filename) {

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type });
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type: "magiclink" });
     if (!error) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = safeNext;

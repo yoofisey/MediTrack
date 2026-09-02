@@ -74,7 +74,6 @@ export default function App() {
   useEffect(() => { screenRef.current = screen; }, [screen]);
 
   useEffect(() => {
-    const MIN_LOAD_MS = 4500;
     const MAX_LOAD_MS = 7000;
     let cancelled = false;
     let       dest = "landing";
@@ -119,7 +118,7 @@ export default function App() {
       if (cancelled) return;
       if (isRecovery) dest = "reset";
       const elapsed = Date.now() - start;
-      const remaining = isRecovery ? 0 : Math.max(0, MIN_LOAD_MS - elapsed);
+      const remaining = isRecovery ? 0 : Math.max(0, Math.min(800, 1200 - elapsed));
       await new Promise(r => setTimeout(r, remaining));
       finishInit();
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { localDayKey } from "@/lib/data";
 import { Target, Zap, Sparkles } from "lucide-react";
 
 function BarChart({ data, height = 120, barColor = "var(--teal)" }) {
@@ -47,10 +48,10 @@ function DonutChart({ pct, size = 100, stroke = 10, color = "var(--teal)" }) {
   );
 }
 
-export default function AdherenceChart({ logs, meds }) {
+export default function AdherenceChart({ logs, meds, tz }) {
   const [view, setView] = useState("week");
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = localDayKey(today, tz);
 
   const activeMeds = meds.filter(m => {
     if (!m.active) return false;
@@ -69,7 +70,7 @@ export default function AdherenceChart({ logs, meds }) {
   }
 
   function takenForDay(dateStr) {
-    return logs.filter(l => l.taken_at?.startsWith(dateStr)).length;
+    return logs.filter(l => localDayKey(new Date(l.taken_at), tz) === dateStr).length;
   }
 
   function adherenceForDay(dateStr) {
@@ -83,7 +84,7 @@ export default function AdherenceChart({ logs, meds }) {
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const ds = d.toISOString().split("T")[0];
+    const ds = localDayKey(d, tz);
     const label = view === "week"
       ? d.toLocaleDateString("en-US", { weekday: "short" }).charAt(0)
       : d.getDate().toString();
@@ -144,7 +145,6 @@ export default function AdherenceChart({ logs, meds }) {
             const medLogs = logs.filter(l => l.medication_id === med.id);
             const totalExpected = dayData.reduce((sum, d, i) => {
               const dateObj = new Date(today); dateObj.setDate(dateObj.getDate() - (days - 1 - i));
-              const ds = dateObj.toISOString().split("T")[0];
               const start = new Date(med.start_date);
               const end = new Date(med.start_date); end.setDate(end.getDate() + med.course_duration_days);
               if (dateObj >= start && dateObj <= end) return sum + (med.times_per_day || 1);

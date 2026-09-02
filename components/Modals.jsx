@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CSS } from "@/lib/constants";
 import { sb } from "@/lib/supabase";
 import { COUNTRIES, getPricing } from "@/lib/data";
@@ -97,9 +97,15 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
   const [err, setErr] = useState("");
   const [paystackOpen, setPaystackOpen] = useState(false);
   const [paystackLoading, setPaystackLoading] = useState(false);
+  const popupRef = useRef(null);
   const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
   function closePaystack() {
+    try {
+      if (popupRef.current && typeof popupRef.current.close === "function") popupRef.current.close();
+    } catch {}
+    popupRef.current = null;
+    try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
     document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('iframe[src*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('.paystack-iframe-modal, .paystack-overlay, .paystack-backdrop').forEach(el => el.remove());
@@ -201,6 +207,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
       setPaystackOpen(true);
       setPaystackLoading(true);
       const popup = new window.PaystackPop();
+      popupRef.current = popup;
       popup.resumeTransaction(initData.access_code, {
         onSuccess: async function(transaction) {
           setPaystackLoading(false);
@@ -216,10 +223,15 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
             });
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok || !verifyData.ok) {
-              setErr("Payment verification failed. Please contact support.");
+              if (verifyData?.error === "Email mismatch" || verifyRes.status === 400) {
+                setErr("This paystack account's email doesn't match your Adhera account. Please contact support.");
+              } else {
+                setErr("Payment verification failed. Please contact support.");
+              }
               setBusy(false);
               return;
             }
+            try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
             onUpgrade(selected);
             setPaystackOpen(false);
           } catch (e) {
@@ -228,9 +240,19 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
           setBusy(false);
         },
         onCancel: function() {
+          popupRef.current = null;
+          try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
           setPaystackLoading(false);
           setBusy(false);
           setPaystackOpen(false);
+        },
+        onError: function(err) {
+          popupRef.current = null;
+          try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+          setPaystackLoading(false);
+          setPaystackOpen(false);
+          setErr(err?.message || "Payment window failed to open. Please try again.");
+          setBusy(false);
         },
       });
     } catch (e) {

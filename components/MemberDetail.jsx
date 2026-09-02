@@ -241,7 +241,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
       </div>
 
       <div style={{ margin: "0 20px 20px", background: "var(--ib3)", borderRadius: 20, padding: "18px", border: "1px solid var(--sep)" }}>
-        <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 15, lineHeight: 1.55, color: "#8A6D2F" }}>
+        <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 15, lineHeight: 1.55, color: "var(--orange)" }}>
           "{member.careNote || "Tap to add a care note — preferences, quirks, what makes them comfortable."}"
         </div>
         {editNote ? (
@@ -253,7 +253,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
             </div>
           </div>
         ) : (
-          <button className="btn btn-sm" style={{ marginTop: 12, background: "#F5E6C4", color: "#8A6D2F", fontWeight: 600, border: "none", width: "auto", padding: "8px 16px" }}
+          <button className="btn btn-sm" style={{ marginTop: 12, background: "var(--ib3)", color: "var(--orange)", fontWeight: 600, border: "none", width: "auto", padding: "8px 16px" }}
             onClick={() => { setNoteText(member.careNote || ""); setEditNote(true); }}>
             {member.careNote ? "Edit note" : "Add a care note"}
           </button>

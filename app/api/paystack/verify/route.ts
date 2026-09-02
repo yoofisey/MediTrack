@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/rateLimit";
 
 const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -12,6 +13,9 @@ function getAdminClient() {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, 10, 60000);
+  if (rl) return rl;
+
   const sb = getAdminClient();
   if (!sb) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
   if (!anonKey || !PAYSTACK_SECRET_KEY) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
@@ -37,6 +41,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid reference" }, { status: 400 });
   }
 
+  const { data: existingRef } = await sb
+    .from("payment_references").select("id").eq("user_id", user.id).eq("reference", reference).maybeSingle();
+  if (existingRef) {
+    return NextResponse.json({ ok: true, already_active: true });
+  }
+
   try {
     const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`, "Content-Type": "application/json" },
@@ -52,23 +62,43 @@ export async function POST(req: Request) {
     }
 
     const paystackEmail = verifyData.data?.customer?.email || "";
-    if (paystackEmail && paystackEmail !== user.email) {
+    if (!paystackEmail || paystackEmail !== user.email) {
       return NextResponse.json({ ok: false, error: "Email mismatch" }, { status: 400 });
     }
 
     const paidAmount = verifyData.data?.amount || 0;
+    const paidCurrency = (verifyData.data?.currency || "").toUpperCase();
     const metadata = verifyData.data?.metadata || {};
     const planFromMeta = metadata.plan || metadata.custom_fields?.plan;
+
+    // Paystack reports amounts in the smallest currency unit (pesewas/kobo/cents),
+    // matching the amounts charged by /api/paystack/init.
+    const MIN_AMOUNTS: Record<string, Record<string, number>> = {
+      GHS: { pro: 1500, family: 2800 },
+      NGN: { pro: 250000, family: 450000 },
+      ZAR: { pro: 5900, family: 10900 },
+      KES: { pro: 30000, family: 55000 },
+    };
 
     let plan: string;
     if (planFromMeta && ["pro", "family"].includes(planFromMeta)) {
       plan = planFromMeta;
-    } else if (paidAmount >= 3500) {
-      plan = "family";
-    } else if (paidAmount >= 1500) {
-      plan = "pro";
+    } else if (paidAmount && MIN_AMOUNTS[paidCurrency]) {
+      const min = MIN_AMOUNTS[paidCurrency];
+      if (paidAmount >= min.family) plan = "family";
+      else if (paidAmount >= min.pro) plan = "pro";
+      else return NextResponse.json({ ok: false, error: "Insufficient payment amount or unsupported currency" }, { status: 400 });
     } else {
-      return NextResponse.json({ ok: false, error: "Insufficient payment amount" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Insufficient payment amount or unsupported currency" }, { status: 400 });
+    }
+
+    const { error: refErr } = await sb
+      .from("payment_references").insert({ user_id: user.id, reference, plan, paid_at: new Date().toISOString() });
+    if (refErr) {
+      if (refErr.code === "23505") {
+        return NextResponse.json({ ok: true, already_active: true });
+      }
+      console.error("payment_references insert failed:", refErr.message);
     }
 
     const { data: profile, error: profileErr } = await sb
@@ -83,7 +113,7 @@ export async function POST(req: Request) {
     }
 
     const { error: updateErr } = await sb
-      .from("profiles").update({ plan }).eq("id", user.id);
+      .from("profiles").update({ plan, paid_at: new Date().toISOString() }).eq("id", user.id);
 
     if (updateErr) return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
 

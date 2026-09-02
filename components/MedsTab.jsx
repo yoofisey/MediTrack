@@ -61,7 +61,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
           ))}
         </div>
         <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{t("meds.day")} {prog} {t("meds.of")} {med.course_duration_days}</div>
-        <div className="prog"><div className="prog-fill" style={{width:`${pct*100}%`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
+        <div className="prog"><div className="prog-fill" style={{transform:`scaleX(${pct})`,background:isActive?"var(--teal)":"var(--t4)"}}/></div>
         {med.dose_interval_hours&&<div style={{fontSize:12,color:"var(--t3)",marginTop:6,display:"flex",alignItems:"center",gap:5}}><Ico><Clock size={13} strokeWidth={2.2}/></Ico> Every {med.dose_interval_hours}h</div>}
         {med.notes&&<div style={{fontSize:13,color:"var(--t3)",marginTop:8,display:"flex",alignItems:"center",gap:5}}><Ico><FileText size={14} strokeWidth={2.2}/></Ico> {med.notes}</div>}
         {remaining !== null && (
@@ -103,7 +103,7 @@ export default function MedsTab({ meds, logs, onAdd, onEdit, onDelete, onRefill,
             <span style={{fontSize:13,fontWeight:600,color:"var(--t2)"}}>{t("meds.medLimit")}</span>
             <span style={{fontSize:13,fontWeight:600,color:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}>{medCount}/{limits.maxMeds} {t("meds.used")}</span>
           </div>
-          <div className="prog"><div className="prog-fill" style={{width:`${Math.min(medCount/limits.maxMeds,1)*100}%`,background:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}/></div>
+          <div className="prog"><div className="prog-fill" style={{transform:`scaleX(${Math.min(medCount/limits.maxMeds,1)})`,background:medCount>=limits.maxMeds?"var(--red)":"var(--teal)"}}/></div>
           {medCount>=limits.maxMeds && <div style={{fontSize:12,color:"var(--t3)",marginTop:6}}>{t("meds.upgradeForUnlimited")}</div>}
         </div>
       ) : (

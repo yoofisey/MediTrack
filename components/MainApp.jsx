@@ -104,6 +104,51 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("trxref") || params.get("reference");
+      if (!ref) return;
+      const pendingPlan = sessionStorage.getItem("adhera_pending_plan");
+      if (!pendingPlan || !["pro", "family"].includes(pendingPlan)) return;
+
+      (async () => {
+        try {
+          let token = "";
+          try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
+          const res = await fetch("/api/paystack/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ reference: ref }),
+          });
+          const data = await res.json();
+          if (cancelled) return;
+          if (res.ok && data.ok) {
+            try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+            const { data: prof } = await sb.from("profiles").select("*").eq("id", user.id).single();
+            if (!cancelled && prof) {
+              setProfile(prev => ({ ...prev, ...prof }));
+              setShowUpgrade(false);
+            }
+          } else {
+            console.error("redirect paystack verify failed:", data?.error || res.status);
+          }
+        } catch (e) {
+          console.error("redirect paystack verify error:", e?.message || e);
+        } finally {
+          if (!cancelled) {
+            try { window.history.replaceState({}, "", window.location.pathname); } catch {}
+          }
+        }
+      })();
+    } catch (e) {
+      console.error("paystack redirect parse:", e);
+    }
+    return () => { cancelled = true; };
+  }, [user?.id, loadKey]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
 
     const cachedMeds = getCached("meds");
     const cachedLogs = getCached("logs");

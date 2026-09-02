@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/rateLimit";
 
 const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -10,12 +11,19 @@ function admin(): SupabaseClient | null {
   return createClient(sbUrl, serviceKey);
 }
 
-async function deleteTable(sb: SupabaseClient, table: string, userIdCol: string, userId: string) {
+async function deleteTable(sb: SupabaseClient, table: string, userIdCol: string, userId: string): Promise<string | null> {
   const { error } = await sb.from(table).delete().eq(userIdCol, userId);
-  if (error) console.error(`delete ${table}:`, error.message);
+  if (error) {
+    console.error(`delete ${table}:`, error.message);
+    return `${table}: ${error.message}`;
+  }
+  return null;
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, 5, 60000);
+  if (rl) return rl;
+
   const sb = admin();
   if (!sb) return NextResponse.json({ error: "Server not configured" }, { status: 500 });
   if (!anonKey) return NextResponse.json({ error: "Server not configured" }, { status: 500 });
@@ -31,29 +39,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { userId } = await req.json();
-  if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  let body: { userId?: string };
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  if (!body.userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
-  if (user.id !== userId) {
+  if (user.id !== body.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await deleteTable(sb, "community_comments", "user_id", userId);
-  await deleteTable(sb, "community_posts", "user_id", userId);
-  await deleteTable(sb, "user_badges", "user_id", userId);
-  await deleteTable(sb, "user_points", "user_id", userId);
-  await deleteTable(sb, "user_challenges", "user_id", userId);
-  await deleteTable(sb, "dose_logs", "user_id", userId);
-  await deleteTable(sb, "medications", "user_id", userId);
-  await deleteTable(sb, "vitals", "user_id", userId);
-  await deleteTable(sb, "visits", "user_id", userId);
-  await deleteTable(sb, "family_members", "user_id", userId);
-  await deleteTable(sb, "push_subscriptions", "user_id", userId);
-  await deleteTable(sb, "vital_reminders", "user_id", userId);
-  await deleteTable(sb, "profiles", "id", userId);
+  const errors: string[] = [];
+  const userId = body.userId;
+
+  for (const [table, col] of [
+    ["community_comments", "user_id"], ["community_posts", "user_id"],
+    ["user_badges", "user_id"], ["user_points", "user_id"], ["user_challenges", "user_id"],
+    ["dose_logs", "user_id"], ["medications", "user_id"], ["vitals", "user_id"],
+    ["visits", "user_id"], ["family_members", "user_id"], ["push_subscriptions", "user_id"],
+    ["vital_reminders", "user_id"], ["payment_references", "user_id"],
+    ["profiles", "id"],
+  ]) {
+    const err = await deleteTable(sb, table, col, userId);
+    if (err) errors.push(err);
+  }
 
   const { error: delErr } = await sb.auth.admin.deleteUser(userId);
-  if (delErr) console.error("delete auth user:", delErr.message);
+  if (delErr) {
+    console.error("delete auth user:", delErr.message);
+    errors.push(`auth_user: ${delErr.message}`);
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json({ ok: false, error: "Partial deletion failure", details: errors }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -47,9 +47,8 @@ function saveJournal(data) {
 
 export function addJournalEntry(entry) {
   const journal = getJournal();
-  const dateStr = entry.date || new Date().toISOString().split("T")[0];
   const todayStr = new Date().toISOString().split("T")[0];
-  if (dateStr > todayStr) return;
+  const dateStr = (entry.date || todayStr) > todayStr ? todayStr : (entry.date || todayStr);
   const existing = journal.findIndex(e => e.date === dateStr);
   let saved;
   if (existing >= 0) {
@@ -505,7 +504,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
             <FormControl label="Any symptoms?">
               <div className="chip-group">
                 {SYMPTOMS.map(s => (
-                  <div key={s.id} onClick={() => toggleSymptom(s.id)} className={`chip${symptoms.includes(s.id) ? " on" : ""}`}>
+                  <div key={s.id} onClick={() => toggleSymptom(s.id)} className={`pill${symptoms.includes(s.id) ? " on" : ""}`}>
                     <span style={{display:"inline-flex",alignItems:"center",gap:4}}><s.icon size={14}/> {s.label}</span>
                   </div>
                 ))}

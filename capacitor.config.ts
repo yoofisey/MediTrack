@@ -9,9 +9,8 @@ const config: CapacitorConfig = {
     allowNavigation: [
       'useadhera.com',
       'www.useadhera.com',
-      '*.supabase.co',
+      'luxtopkzdyflbejwgniq.supabase.co',
       'accounts.google.com',
-      '*.googleapis.com',
     ],
   },
   plugins: {

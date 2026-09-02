@@ -425,6 +425,28 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarUpload}/>
 
+      {(plan === "pro" || plan === "family") && profile?.paid_at && (() => {
+        const paidAt = new Date(profile.paid_at);
+        const daysSince = Math.floor((Date.now() - paidAt.getTime()) / 86400000);
+        const daysLeft = Math.max(0, 21 - daysSince);
+        if (daysLeft > 3) return null;
+        return (
+          <div style={{margin:"0 20px 14px",padding:"14px 16px",background: daysLeft === 0 ? "rgba(239,68,68,.1)" : "rgba(251,191,36,.1)",border: `1px solid ${daysLeft === 0 ? "rgba(239,68,68,.25)" : "rgba(251,191,36,.25)"}`,borderRadius:14}}>
+            <div style={{fontSize:14,fontWeight:700,color: daysLeft === 0 ? "#EF4444" : "#F59E0B",marginBottom:4}}>
+              {daysLeft === 0 ? "Subscription expired" : `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left on your ${plan} plan`}
+            </div>
+            <div style={{fontSize:12,color:"var(--t3)",lineHeight:1.5}}>
+              {daysLeft === 0
+                ? "Your plan has been downgraded to Free. Renew to regain access to premium features."
+                : "Renew your subscription to keep full access to premium features."}
+            </div>
+            <button onClick={() => setShowUpgrade(true)} style={{marginTop:10,padding:"8px 16px",background: daysLeft === 0 ? "#EF4444" : "#F59E0B",color:"white",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+              {daysLeft === 0 ? "Renew now" : "Renew early"}
+            </button>
+          </div>
+        );
+      })()}
+
       {showLightbox && profile?.avatar_url && (
         <div onClick={() => setShowLightbox(false)}
           style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.85)",display:"grid",placeItems:"center",cursor:"pointer",animation:"fadeIn .2s"}}>

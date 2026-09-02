@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/rateLimit";
 
 const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -10,11 +11,14 @@ const PAYSTACK_PLANS: Record<string, { pro: string; family: string }> = {
   GH: { pro: "PLN_w5rq3bkd5uh5mqj", family: "PLN_h9mlqfmujuh74c9" },
 };
 const PLAN_AMOUNTS: Record<string, Record<string, number>> = {
-  GH: { pro: 1500, family: 3500 },
+  GH: { pro: 1500, family: 2800 },
 };
 const VALID_COUNTRIES = ["GH", "NG", "ZA", "KE"];
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, 10, 60000);
+  if (rl) return rl;
+
   if (!PAYSTACK_SECRET_KEY || !sbUrl || !serviceKey || !anonKey) {
     return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
   }
@@ -58,6 +62,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "No email on account" }, { status: 400 });
   }
 
+  const origin = req.headers.get("origin") || "https://www.useadhera.com";
+
   try {
     const res = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -70,6 +76,7 @@ export async function POST(req: Request) {
         amount,
         plan: planCode,
         currency: countryCode === "GH" ? "GHS" : countryCode === "NG" ? "NGN" : countryCode === "ZA" ? "ZAR" : "KES",
+        callback_url: `${origin}/`,
         metadata: { plan, country: countryCode, user_id: user.id },
       }),
     });

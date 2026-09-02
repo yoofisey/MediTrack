@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
     };
 
     const unsub = sb.auth.onAuthStateChange((event, session) => {
-      if (session) markReady();
+      if (session && event === "PASSWORD_RECOVERY") markReady();
     });
 
     async function tryResolve() {
@@ -42,43 +42,29 @@ export default function ResetPasswordPage() {
         if (session) { markReady(); return; }
       } catch {}
 
-      try {
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-        if (code) {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      if (code) {
+        try {
           const { error } = await sb.auth.exchangeCodeForSession(code);
           if (!error) {
             markReady();
             window.history.replaceState(null, "", window.location.pathname);
             return;
           }
-        }
-      } catch {}
+        } catch {}
+      }
 
       try {
-        const url = new URL(window.location.href);
         const hashStr = url.hash.startsWith("#") ? url.hash.substring(1) : "";
-        const hashParams = new URLSearchParams(hashStr);
-        const queryParams = url.search ? new URLSearchParams(url.search) : new URLSearchParams();
-        const all = new URLSearchParams();
-        for (const [k, v] of hashParams) all.set(k, v);
-        for (const [k, v] of queryParams) all.set(k, v);
+        const all = new URLSearchParams(hashStr);
 
         const accessToken = all.get("access_token");
         const refreshToken = all.get("refresh_token");
-        const tokenHash = all.get("token_hash");
         const type = all.get("type");
 
-        if (accessToken && refreshToken) {
+        if (accessToken && refreshToken && type === "recovery") {
           const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-          if (!error) {
-            markReady();
-            window.history.replaceState(null, "", window.location.pathname);
-            return;
-          }
-        }
-        if (tokenHash && (type === "recovery" || type === "magiclink")) {
-          const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
           if (!error) {
             markReady();
             window.history.replaceState(null, "", window.location.pathname);

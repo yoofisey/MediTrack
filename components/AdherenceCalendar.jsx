@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { localDayKey } from "@/lib/data";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function AdherenceCalendar({ logs, meds }) {
+export default function AdherenceCalendar({ logs, meds, tz }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -19,12 +20,9 @@ export default function AdherenceCalendar({ logs, meds }) {
 
     const logMap = {};
     logs.forEach(l => {
-      const d = l.taken_at?.split("T")[0];
+      const d = localDayKey(new Date(l.taken_at), tz);
       if (d) logMap[d] = (logMap[d] || 0) + 1;
     });
-
-    const medMap = {};
-    meds.forEach(m => { medMap[m.id] = m.times_per_day || 1; });
 
     const cells = [];
     for (let r = 0; r < rows; r++) {
@@ -33,23 +31,29 @@ export default function AdherenceCalendar({ logs, meds }) {
         const dayNum = cellIdx - startPad + 1;
         if (dayNum < 1 || dayNum > daysInMonth) { cells.push(null); continue; }
         const date = new Date(year, month, dayNum);
-        const dateStr = date.toISOString().split("T")[0];
+        const dateStr = localDayKey(date, tz);
         const takenCount = logMap[dateStr] || 0;
-        const expectedCount = Object.values(medMap).reduce((s, v) => s + v, 0);
-        const isToday = dateStr === today.toISOString().split("T")[0];
+        const expectedCount = meds.reduce((s, m) => {
+          if (!m.active) return s;
+          const medStart = new Date(m.start_date);
+          const medEnd = new Date(m.start_date); medEnd.setDate(medEnd.getDate() + (m.course_duration_days || 30));
+          if (date >= medStart && date <= medEnd) return s + (m.times_per_day || 1);
+          return s;
+        }, 0);
+        const isToday = dateStr === localDayKey(today, tz);
         const pct = expectedCount > 0 ? takenCount / expectedCount : 0;
 
         let color = "var(--sep)";
-        if (takenCount > 0 && pct >= 0.9) color = "#34D399";
-        else if (takenCount > 0 && pct >= 0.5) color = "#FBBF24";
-        else if (takenCount > 0) color = "#F87171";
+        if (takenCount > 0 && pct >= 0.8) color = "var(--green)";
+        else if (takenCount > 0 && pct >= 0.5) color = "var(--orange)";
+        else if (takenCount > 0) color = "var(--red)";
         else if (date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) color = "var(--t4)";
 
         cells.push({ dayNum, dateStr, takenCount, color, isToday, date });
       }
     }
     return { cells, rows };
-  }, [viewDate, logs, meds, today]);
+  }, [viewDate, logs, meds, today, tz]);
 
   const monthLabel = viewDate.toLocaleDateString("en", { month: "long", year: "numeric" });
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

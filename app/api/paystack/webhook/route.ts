@@ -27,7 +27,9 @@ export async function POST(req: Request) {
   }
 
   const expected = crypto.createHmac("sha512", secret).update(body).digest("hex");
-  if (signature !== expected) {
+  const sigBuf = Buffer.from(signature, "hex");
+  const expBuf = Buffer.from(expected, "hex");
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
     return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });
   }
 
@@ -67,13 +69,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: true });
     }
 
+    try {
+      const { data: existingRef } = await sb
+        .from("payment_references")
+        .select("id")
+        .eq("user_id", profile.id)
+        .eq("reference", reference)
+        .maybeSingle();
+      if (!existingRef) {
+        await sb
+          .from("payment_references")
+          .insert({ user_id: profile.id, reference, plan, paid_at: new Date().toISOString() });
+      }
+    } catch (refErr) {
+      // Non-fatal: the plan update below is the source of truth. A missing
+      // payment_references table/constraint must not drop the webhook.
+      console.error("Paystack webhook: reference record not written", refErr);
+    }
+
     if (profile.plan === plan) {
       return NextResponse.json({ ok: true, already_active: true });
     }
 
     const { error: updateErr } = await sb
       .from("profiles")
-      .update({ plan })
+      .update({ plan, paid_at: new Date().toISOString() })
       .eq("id", profile.id);
 
     if (updateErr) {

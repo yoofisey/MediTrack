@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
 import { COUNTRIES, getPricing } from "@/lib/data";
+import { isDisposableEmail, checkSignupRate, recordSignupAttempt, checkOtpAttempts, recordOtpAttempt, resetOtpAttempts } from "@/lib/antispam";
 import SentOtpView from "./SentOtpView";
 import { CheckCircle2, Bell, Flame, BarChart3, Check, Circle, Globe } from "lucide-react";
 
@@ -24,6 +25,8 @@ export default function AuthScreen({ onAuth }) {
   const [cooldown, setCooldown] = useState(0);
   const [forgotDone, setForgotDone] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const [otpAttempts, setOtpAttempts] = useState({ allowed: true, remaining: 5, waitMin: 0 });
   const oauthBusyRef = useRef(false);
 
   function goWelcome() { setView("welcome"); setErr(""); setObl(""); setSent(false); setOtp(""); }
@@ -107,15 +110,24 @@ export default function AuthScreen({ onAuth }) {
 
   function isValidEmail(e) { return RE_EMAIL.test(e); }
 
+  useEffect(() => {
+    if (sent && email) setOtpAttempts(checkOtpAttempts(email));
+  }, [sent, email]);
+
   async function handleSignUp(e) {
     e.preventDefault(); setBusy(true); setErr("");
+    if (honeypot) { setBusy(false); return; }
     const cleanName = sanitizeHtml(name).trim();
     if (!cleanName) { setErr("Please enter your name."); setBusy(false); return; }
     if (!isValidEmail(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
+    if (isDisposableEmail(email)) { setErr("Please use a permanent email address."); setBusy(false); return; }
+    const rateCheck = checkSignupRate(email);
+    if (!rateCheck.allowed) { setErr(`Too many sign-up attempts. Try again in ${rateCheck.waitMin} minutes.`); setBusy(false); return; }
     if (pw.length < 8) { setErr("Password must be at least 8 characters."); setBusy(false); return; }
     if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
     if (pwScore(pw) < 3) { setErr("Password is too weak — use a mix of upper/lowercase, numbers, and symbols."); setBusy(false); return; }
     if (!consent) { setErr("Please agree to the Terms of Service and Privacy Policy."); setBusy(false); return; }
+    recordSignupAttempt(email);
     try {
       const { data: existingAcct } = await sb.from("profiles").select("id").eq("email", email).maybeSingle();
       if (existingAcct) { setErr("This email is already registered — please sign in instead."); setBusy(false); return; }
@@ -154,11 +166,14 @@ export default function AuthScreen({ onAuth }) {
   async function handleOtpVerify(e) {
     e.preventDefault();
     if (otp.length < 6) { setErr("Enter the 6-digit code from your email."); return; }
+    const otpCheck = checkOtpAttempts(email);
+    if (!otpCheck.allowed) { setErr(`Too many failed attempts. Try again in ${otpCheck.waitMin} minutes.`); return; }
     setBusy(true); setErr("");
     try {
       const { data: vData, error: vErr } = await sb.auth.verifyOtp({ email, token: otp, type: "email" });
       if (vErr) throw vErr;
       if (!vData?.user) throw new Error("Verification failed.");
+      resetOtpAttempts(email);
       const { data: existing } = await sb.from("profiles").select("id").eq("id", vData.user.id);
       if (existing?.length > 0) {
         await sb.auth.signOut();
@@ -167,6 +182,7 @@ export default function AuthScreen({ onAuth }) {
       await sb.auth.updateUser({ password: pwStore });
       onAuth(vData.user, true);
     } catch (e) {
+      recordOtpAttempt(email);
       setErr(String(e?.message || "") || "Invalid or expired code.");
     } finally { setBusy(false); }
   }
@@ -225,6 +241,7 @@ export default function AuthScreen({ onAuth }) {
           onOtpVerify={handleOtpVerify} onResend={handleResendOtp}
           onBack={() => { goWelcome(); }}
           busy={busy} cooldown={cooldown} err={err}
+          otpAttempts={otpAttempts}
         />
       </div>
     </div>
@@ -313,6 +330,10 @@ export default function AuthScreen({ onAuth }) {
         {err && <div className="err-msg">{err}</div>}
 
         <form onSubmit={handleSignUp}>
+          <div aria-hidden="true" style={{position:"absolute",left:"-9999px",opacity:0,height:0,width:0,overflow:"hidden",pointerEvents:"none",tabIndex:-1}}>
+            <label htmlFor="hp-name">Name</label>
+            <input id="hp-name" type="text" name="name" autoComplete="name" tabIndex={-1} value={honeypot} onChange={e=>setHoneypot(e.target.value)} />
+          </div>
           <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
             <input className="auth-input" type="text" placeholder="Full name" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
             <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>

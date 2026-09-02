@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/rateLimit";
 
 const FROM_EMAIL = "noreply@useadhera.com";
 
@@ -11,6 +12,9 @@ function getResend() {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(req, 5, 3600000);
+  if (rl) return rl;
+
   let body: { to?: string; senderName?: string };
   try {
     body = await req.json();
@@ -34,7 +38,9 @@ export async function POST(req: Request) {
   if (!token || !supabaseAnonKey) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
-  const sb = createClient(supabaseUrl, supabaseAnonKey);
+  const sb = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
   const { data: authData, error: authErr } = await sb.auth.getUser(token);
   const userId = authData?.user?.id;
   if (authErr || !userId) {
