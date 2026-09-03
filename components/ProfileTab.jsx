@@ -9,7 +9,7 @@ import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers, getNotifPerm, isNativePlatform } from "@/lib/notifications";
 import { canScheduleExactAlarms, openExactAlarmSettings, openAppSettings } from "@/lib/local-notifs";
-import { FormControl } from "@/components/FormControls";
+import { FormControl, FormRow } from "@/components/FormControls";
 import { sb } from "@/lib/supabase";
 import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
@@ -48,6 +48,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [notifPerm, setNotifPerm] = useState(() => { if (isNativePlatform()) return "default"; if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [appVersion, setAppVersion] = useState("1.0.0");
   useEffect(() => { if (isNativePlatform()) { import("@capacitor/app").then(({ App }) => App.getInfo().then(info => setAppVersion(info.version)).catch(() => {})).catch(() => {}); } }, []);
+  const [nowMs] = useState(() => Date.now());
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [exactAlarm, setExactAlarm] = useState(null);
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
@@ -437,8 +438,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <input ref={fileInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarUpload}/>
 
       {(plan === "pro" || plan === "family") && profile?.paid_at && (() => {
-        const paidAt = new Date(profile.paid_at);
-        const daysSince = Math.floor((Date.now() - paidAt.getTime()) / 86400000);
+        const paidAt = new Date(profile.paid_at).getTime();
+        const daysSince = Math.floor((nowMs - paidAt) / 86400000);
         const daysLeft = Math.max(0, 21 - daysSince);
         if (daysLeft > 3) return null;
         return (
