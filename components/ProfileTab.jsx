@@ -15,8 +15,8 @@ import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/li
 import { PrivacyModal, TermsModal, UpgradeModal, FamilyInviteModal } from "@/components/Modals";
 import MedicalID from "@/components/MedicalID";
 import AvatarPicker from "@/components/AvatarPicker";
-import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Ruler, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Heart, Info, Check, Trophy, MessageCircle } from "lucide-react";
-import { savePersonalDetails as savePersonalToServer, fetchPersonalDetails as fetchPersonalFromServer } from "@/lib/healthData";
+import { Trash2, Pencil, Sun, Moon, Bell, Clock, ClipboardList, Timer, Volume2, Droplet, AlertTriangle, Phone, Mail, Globe, Languages, LogOut, Download, FileSpreadsheet, UserPlus, Users, User, ShieldAlert, Pill, BarChart3, Crown, Sparkles, Stethoscope, Info, Check, Trophy, MessageCircle } from "lucide-react";
+import { savePersonalDetails as savePersonalToServer } from "@/lib/healthData";
 import { avatarIcon } from "@/lib/avatars";
 
 function Ico({ children, ...props }) {
@@ -43,7 +43,7 @@ function Toggle({ on, onChange, disabled }) {
   );
 }
 
-export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs, onGoBadges, onGoCommunity }) {
+export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, meds, logs, onGoBadges, onGoCommunity }) {
   const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (isNativePlatform()) return "default"; if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [appVersion, setAppVersion] = useState("1.0.0");
