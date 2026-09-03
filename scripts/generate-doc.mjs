@@ -103,7 +103,7 @@ const doc = new Document({
       bullet("Framework: Next.js 16 (App Router) with Turbopack for development builds."),
       bullet("Language: JavaScript (JSX) with TypeScript for layout/metadata."),
       bullet("Styling: CSS-in-JS via inline styles, global constants file (CSS constant), minimal Tailwind CSS."),
-      bullet("Key components: AuthScreen, MainApp, TodayTab, MedsTab, HistoryTab, ReportsTab, ProfileTab, MedSheet, Modals (DeleteConfirm, LogDose, Upgrade, FamilyInvite, Privacy, Terms), TransitionScreen, AlarmOverlay, SentOtpView, EnterprisePaymentView."),
+      bullet("Key components: AuthScreen, MainApp, TodayTab, MedsTab, VitalsTab, ReportsTab, VisitHistoryTab, ProfileTab, MedSheet, VisitSheet, Modals (DeleteConfirm, LogDose, Upgrade, FamilyInvite, Privacy, Terms), TransitionScreen, AlarmOverlay, SentOtpView."),
       bullet("PWA: Service worker (sw.js) for background notification scheduling, manifest.json for installability."),
 
       h2("3.2 Backend"),

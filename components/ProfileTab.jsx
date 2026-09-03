@@ -46,6 +46,8 @@ function Toggle({ on, onChange, disabled }) {
 export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, medCount, meds, logs, onGoBadges, onGoCommunity }) {
   const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (isNativePlatform()) return "default"; if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
+  const [appVersion, setAppVersion] = useState("1.0.0");
+  useEffect(() => { if (isNativePlatform()) { import("@capacitor/app").then(({ App }) => App.getInfo().then(info => setAppVersion(info.version)).catch(() => {})).catch(() => {}); } }, []);
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [exactAlarm, setExactAlarm] = useState(null);
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
@@ -671,7 +673,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     <div className="section" style={{marginBottom:16}}>
       <div className="section-header">{t("profile.about")}</div>
         <div className="list">
-          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version 1.0.1</div></div></div>
+          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version {appVersion}</div></div></div>
           <div className="row" onClick={()=>setShowPrivacy(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Privacy Policy</div></div><Chevron/></div>
           <div className="row" onClick={()=>setShowTerms(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Terms of Service</div></div><Chevron/></div>
         </div>

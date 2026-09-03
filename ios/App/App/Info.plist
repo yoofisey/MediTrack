@@ -47,6 +47,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Adhera uses the camera to scan QR codes for sharing your medication and health data with your doctor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Adhera uses your photo library to set a profile or avatar picture.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
