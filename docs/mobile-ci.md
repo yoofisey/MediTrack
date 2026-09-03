@@ -13,28 +13,40 @@ variables; Codemagic has a "New group" picker when adding variables.
 
 ### `android_keystore` — signs the Play Store build
 
-One-time, on a local machine (must not be committed to git):
+The release keystore was generated on 2026-09-03 and is backed up at:
+
+```
+C:\Users\franc\Documents\Adhera-Signing\
+├── adhera-release.jks   # the signing keystore (keep this safe — cannot be recreated)
+├── adhera-cert.pem      # exported X.509 certificate
+└── keystore.b64         # base64 of the .jks, ready to paste into Codemagic
+```
+
+The alias is `adhera` and the certificate SHA-256 is
+`81:85:E5:43:BE:77:B9:23:2A:9E:F2:61:82:73:EA:07:0C:1D:54:A8:88:88:7B:99:C7:47:5E:CB:F6:40:35:52`
+(use this to confirm a CI-signed build matches your local key).
+
+To regenerate a new keystore from scratch (e.g. for another app), create and
+encode it on a local machine (must not be committed to git):
 
 ```powershell
 keytool -genkey -v -keystore adhera-release.jks -alias adhera \
   -keyalg RSA -keysize 2048 -validity 10000 -storetype JKS
-```
-
-Then encode for Codemagic:
-
-```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\adhera-release.jks")) | Set-Content keystore.b64
 ```
+
+For the existing keystore, populate the `android_keystore` environment group:
 
 | Variable | Value |
 | --- | --- |
 | `KEYSTORE_BASE64` | contents of `keystore.b64` |
-| `KEYSTORE_PASSWORD` | the `-storepass` you set |
-| `KEY_ALIAS` | `adhera` (or whatever alias you chose) |
-| `KEY_PASSWORD` | the key password you set |
+| `KEYSTORE_PASSWORD` | the store password (from local `android/keystore.properties`) |
+| `KEY_ALIAS` | `adhera` |
+| `KEY_PASSWORD` | the key password (from local `android/keystore.properties`) |
 
-Back up the `.jks` file somewhere safe (password manager / USB). If lost, you
-cannot update the app on the Play Store.
+Back up `Adhera-Signing` off-machine (password manager / USB / cloud you
+control). If the `.jks` is lost, the app can never be updated on the Play
+Store under the same signing identity.
 
 ### `google_services` — enables FCM push (Android + iOS)
 
@@ -67,10 +79,12 @@ Prerequisites in the Apple Developer portal (one-time, $99/yr membership):
 
 1. Commit and push `codemagic.yaml`, then push a tag or merge to `main` and
    open the repo in Codemagic (Settings → Integrations → GitHub).
-2. Add the three secret groups above to the app.
-3. Replace `CI_EMAIL_RECIPIENT` in `codemagic.yaml` with your email.
-4. Trigger the `android-release` workflow. Download the AAB from the artifacts
-   tab. Verify the APK installs on a device.
+2. Add the secret groups above to the app: `android_keystore`,
+   `google_services`, `appstore_connect` (and `supabase`/`vercel` for the web
+   workflow).
+3. Trigger the `android-release` workflow. Download the AAB from the artifacts
+   tab. Verify the APK installs on a device and that it is signed with the
+   Adhera key (SHA-256 `81:85:E5:43:...:52`).
 
 ## Uploading to the stores
 
