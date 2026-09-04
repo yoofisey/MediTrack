@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getPaystackSecret } from "@/lib/payments";
+import { getPaystackSecret } from "@/lib/payments-server";
 import crypto from "crypto";
 
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
