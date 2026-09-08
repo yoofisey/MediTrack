@@ -53,11 +53,12 @@ export default function PricingPage() {
   const { pricing } = getPricing(country);
   const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
   const pay = getPaymentsConfig(country);
+  const paidCta = pay.ready ? "Get started" : "Coming soon";
 
   const plans = [
     { id: "free", name: "Free", price: "Free", per: "forever", desc: "Getting started with your own meds.", highlight: false, cta: "Start free", solid: false, features: FEATURES.free },
-    { id: "pro", name: "Pro", price: pricing.pro.label, per: pricing.pro.label === "Coming soon" ? "" : "/mo", desc: "Full tracking, reports, and reminders.", highlight: true, cta: "Coming soon", solid: true, features: FEATURES.pro },
-    { id: "family", name: "Family", price: pricing.family.label, per: pricing.family.label === "Coming soon" ? "" : "/mo", desc: "Manage medications for up to 5 people.", highlight: false, cta: "Coming soon", solid: true, features: FEATURES.family },
+    { id: "pro", name: "Pro", price: pricing.pro.label, per: pricing.pro.label === "Coming soon" ? "" : "/mo", desc: "Full tracking, reports, and reminders.", highlight: true, cta: paidCta, solid: true, features: FEATURES.pro },
+    { id: "family", name: "Family", price: pricing.family.label, per: pricing.family.label === "Coming soon" ? "" : "/mo", desc: "Manage medications for up to 5 people.", highlight: false, cta: paidCta, solid: true, features: FEATURES.family },
   ];
 
   return (

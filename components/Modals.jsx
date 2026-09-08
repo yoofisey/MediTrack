@@ -37,7 +37,7 @@ export function PrivacyModal({ onClose }) {
             <p><strong>6. Your Rights</strong></p>
             <p>You have the right to: access your data, export your data (JSON or CSV), correct your data, delete your account and all associated data. You can exercise these rights directly through the app&apos;s Profile → Privacy & Data settings.</p>
             <p><strong>7. Third-Party Services</strong></p>
-            <p>We use Supabase for authentication and database hosting. We use Paystack for payment processing. Push notifications may use your browser&apos;s notification API. No other third parties have access to your personal medication data.</p>
+            <p>We use Supabase for authentication and database hosting. We use Paystack and Paddle for payment processing. Push notifications may use your browser&apos;s notification API. No other third parties have access to your personal medication data.</p>
             <p><strong>8. Changes to This Policy</strong></p>
             <p>We may update this policy from time to time. Significant changes will be notified via email or in-app notice.</p>
             <p><strong>9. Contact</strong></p>
@@ -88,7 +88,7 @@ export function TermsModal({ onClose }) {
   );
 }
 
-export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgrade }) {
+export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose, onUpgrade }) {
   const upgradeTarget = getTierConfig(currentPlan || "free").upgradeTarget || "pro";
   const [selected, setSelected] = useState(
     currentPlan === "pro" || currentPlan === "family" ? (currentPlan === "pro" ? "family" : "family") : upgradeTarget
@@ -174,6 +174,11 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
       return;
     }
 
+    if (pay.gateway === "paddle") {
+      await handlePaddlePayment();
+      return;
+    }
+
     try {
       let token = "";
       try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
@@ -255,6 +260,66 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
           setBusy(false);
         },
       });
+} catch (e) {
+      setErr(e.message || "Payment failed. Please try again.");
+      setBusy(false);
+    }
+  }
+
+  function loadPaddle() {
+    return new Promise((resolve, reject) => {
+      if (typeof window.Paddle !== "undefined") return resolve();
+      const s = document.createElement("script");
+      s.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+      s.async = true;
+      s.onload = () => setTimeout(resolve, 300);
+      s.onerror = () => reject(new Error("Failed to load Paddle. Check your internet connection."));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function handlePaddlePayment() {
+    try {
+      await loadPaddle();
+
+      const priceId = pay.paddle?.prices?.[selected];
+      if (!priceId) {
+        setErr("Checkout is not configured yet. Please contact support.");
+        setBusy(false);
+        return;
+      }
+
+      try { window.Paddle.Environment.set(pay.paddle?.env === "sandbox" ? "sandbox" : "production"); } catch {}
+
+      window.Paddle.Initialize({
+        token: pay.paddle?.token,
+        eventCallback: (event) => {
+          if (event?.name === "checkout.completed") {
+            try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+            onUpgrade(selected);
+            setBusy(false);
+          }
+          if (event?.name === "checkout.closed") {
+            try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+            setBusy(false);
+            setPaystackOpen(false);
+          }
+        },
+      });
+
+      sessionStorage.setItem("adhera_pending_plan", selected);
+      setPaystackOpen(true);
+      window.Paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+        customData: { plan: selected, user_id: userId || "" },
+        customer: { email: userEmail || "" },
+        settings: {
+          displayMode: "overlay",
+          theme: "light",
+          locale: "en",
+          successUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/`,
+        },
+      });
     } catch (e) {
       setErr(e.message || "Payment failed. Please try again.");
       setBusy(false);
@@ -324,7 +389,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
           <div style={{fontSize:14,color:"var(--t3)"}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
               {currentPlan === "pro" && <span style={{background:"var(--teal)",color:"white",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:99,letterSpacing:".3px"}}>PRO</span>}
-              <Globe size={13}/> {selCountry.name} · Paystack <Check size={11} strokeWidth={3}/>
+              <Globe size={13}/> {selCountry.name} · {pay.gateway === "paddle" ? "Checkout" : "Paystack"} <Check size={11} strokeWidth={3}/>
             </span>
           </div>
         </div>
@@ -404,7 +469,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
             {busy ? "Cancel" : "Maybe later"}
           </button>
           <div style={{fontSize:10,color:"var(--t3)",textAlign:"center",marginTop:8,lineHeight:1.4}}>
-            {pay.ready ? "Secure payment via Paystack. Cancel anytime." : "Free tier stays free — paid plans will unlock here when payments go live in your country."}
+            {pay.ready ? `Secure payment via ${pay.gateway === "paddle" ? "Paddle" : "Paystack"}. Cancel anytime.` : "Free tier stays free — paid plans will unlock here when payments go live in your country."}
           </div>
         </div>
       </div>

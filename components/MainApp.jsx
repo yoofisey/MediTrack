@@ -934,6 +934,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <UpgradeModal
           country={user?.user_metadata?.country}
           userEmail={user?.email}
+          userId={user?.id}
           currentPlan={profile?.plan || "free"}
           onClose={() => setShowUpgrade(false)}
           onUpgrade={p => { setProfile(prev => ({ ...prev, plan: p })); setShowUpgrade(false); }}

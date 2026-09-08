@@ -1,4 +1,5 @@
 import { getPaymentsConfig } from "./payments";
+import crypto from "crypto";
 
 export type PaystackCountry = "GH" | "NG" | "ZA" | "KE";
 export type PaystackPlanKey = "pro" | "family";
@@ -33,4 +34,42 @@ export function getPaystackSecret(country?: string) {
 
 export function getPaystackPlans(country: string) {
   return getPaymentsConfig(country).plans;
+}
+
+const PADDLE_PRICE_IDS = {
+  pro: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO || "",
+  family: process.env.NEXT_PUBLIC_PADDLE_PRICE_FAMILY || "",
+};
+
+export function getPaddleWebhookSecret() {
+  return process.env.PADDLE_WEBHOOK_SECRET || "";
+}
+
+export function getPaddlePriceId(plan: PaystackPlanKey) {
+  return PADDLE_PRICE_IDS[plan] || "";
+}
+
+export function planForPaddlePriceId(priceId: string): PaystackPlanKey | "" {
+  if (priceId && priceId === PADDLE_PRICE_IDS.pro) return "pro";
+  if (priceId && priceId === PADDLE_PRICE_IDS.family) return "family";
+  return "";
+}
+
+export function verifyPaddleSignature(rawBody: string, signatureHeader: string, secret: string) {
+  if (!signatureHeader || !secret) return false;
+  const parts = new Map<string, string>();
+  for (const pair of signatureHeader.split(";")) {
+    const [k, ...rest] = pair.split("=");
+    if (k && rest.length) parts.set(k, rest.join("="));
+  }
+  const ts = parts.get("ts");
+  if (!ts || !/^\d+$/.test(ts)) return false;
+  const age = Math.abs(Date.now() / 1000 - Number(ts));
+  if (age > 300) return false;
+  const h1 = parts.get("h1");
+  if (!h1) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${ts}:${rawBody}`).digest("hex");
+  const a = Buffer.from(h1, "hex");
+  const b = Buffer.from(expected, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }

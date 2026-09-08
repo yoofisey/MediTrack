@@ -714,6 +714,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <UpgradeModal
             country={country}
             userEmail={user?.email}
+            userId={user?.id}
             currentPlan={plan}
             onClose={() => setShowUpgrade(false)}
             onUpgrade={handleUpgrade}
