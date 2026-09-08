@@ -3,8 +3,10 @@
 # Builds the Android AAB/APK and iOS IPA for the Adhera mobile app
 # (Capacitor 8, remote-hosted web app at https://www.useadhera.com).
 #
-# Codemagic secret groups required (create them with these exact names in
-# Codemagic UI: App settings > Environment variables > Global/Application):
+# Note: the web app itself is deployed by Vercel's GitHub integration, so this
+# file only builds the native shells. Codemagic secret groups required (create
+# them with these exact names in Codemagic UI: App settings > Environment
+# variables > Global/Application):
 #   android_keystore  -> KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
 #   google_services   -> GOOGLE_SERVICES_JSON  (contents of android/app/google-services.json)
 #   appstore_connect  -> APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_ID,
@@ -13,22 +15,6 @@
 # See docs/mobile-ci.md for how to generate every secret and first-run steps.
 
 workflows:
-  web-build:
-    name: Web (Vercel)
-    instance_type: mac_mini_m2
-    environment:
-      groups:
-        - supabase
-        - vercel
-    scripts:
-      - npm install
-      - npm run build
-    artifacts:
-      - .next/**/*
-    publishing:
-      scripts:
-        - npx vercel deploy --prod --token=$VERCEL_TOKEN
-
   android-release:
     name: Android Release (AAB + APK)
     instance_type: mac_mini_m2
