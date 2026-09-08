@@ -73,3 +73,51 @@ export function verifyPaddleSignature(rawBody: string, signatureHeader: string, 
   const b = Buffer.from(expected, "hex");
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+const FASTSPRING_PRODUCTS = {
+  pro: process.env.FASTSPRING_PRODUCT_PRO || "plan-pro",
+  family: process.env.FASTSPRING_PRODUCT_FAMILY || "plan-family",
+};
+
+const FASTSPRING_COUNTRY_BLOCKLIST = ["CU", "IR", "IQ", "MM", "KP", "RU", "SO", "SD", "SY"];
+
+const FASTSPRING_PAYSTACK_COUNTRIES = ["GH", "NG", "ZA", "KE"];
+
+export function getFastSpringProduct(plan: PaystackPlanKey) {
+  return FASTSPRING_PRODUCTS[plan] || "";
+}
+
+export function planForFastSpringProduct(product: string): PaystackPlanKey | "" {
+  if (product && product === FASTSPRING_PRODUCTS.pro) return "pro";
+  if (product && product === FASTSPRING_PRODUCTS.family) return "family";
+  return "";
+}
+
+export function getFastSpringConfig() {
+  return {
+    storeId: process.env.FASTSPRING_STORE_ID || "",
+    username: process.env.FASTSPRING_USERNAME || "",
+    password: process.env.FASTSPRING_PASSWORD || "",
+    webhookSecret: process.env.FASTSPRING_WEBHOOK_SECRET || "",
+    currency: process.env.FASTSPRING_CURRENCY || "USD",
+  };
+}
+
+export function getFastSpringAuthHeader(config: { username: string; password: string }) {
+  return "Basic " + Buffer.from(`${config.username}:${config.password}`).toString("base64");
+}
+
+export function verifyFastSpringSignature(rawBody: string, signatureHeader: string, secret: string) {
+  if (!signatureHeader || !secret) return false;
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(signatureHeader, "hex");
+  const b = Buffer.from(expected, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+export function fastspringCountryStatus(country: string) {
+  const code = (country || "").toUpperCase();
+  if (FASTSPRING_PAYSTACK_COUNTRIES.includes(code)) return "paystack";
+  if (FASTSPRING_COUNTRY_BLOCKLIST.includes(code)) return "blocked";
+  return "fastspring";
+}
