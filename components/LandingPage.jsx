@@ -80,10 +80,14 @@ export default function LandingPage({ onGetStarted }) {
 
       <div style={{background:"#f8fafc",borderTop:"1px solid #e2e8f0",padding:"24px"}}>
         <div style={{maxWidth:480,margin:"0 auto",textAlign:"center"}}>
-          <div style={{fontSize:13,color:"#94a3b8",lineHeight:1.6}}>
+          <div style={{fontSize:13,color:"#64748b",lineHeight:2,display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}>
             <a href="/privacy" style={{color:"#64748b",textDecoration:"underline"}}>Privacy Policy</a>
-            {" · "}
-            <span style={{color:"#64748b",fontWeight:600}}>Adhera</span>
+            <a href="/terms" style={{color:"#64748b",textDecoration:"underline"}}>Terms of Service</a>
+            <a href="/refund-policy" style={{color:"#64748b",textDecoration:"underline"}}>Refund Policy</a>
+            <a href="/pricing" style={{color:"#64748b",textDecoration:"underline"}}>Pricing</a>
+          </div>
+          <div style={{fontSize:13,color:"#94a3b8",lineHeight:1.6}}>
+            <span style={{color:"#64748b",fontWeight:600}}>Adhera</span> · support@useadhera.com
             {" · "}
             © 2026
           </div>
