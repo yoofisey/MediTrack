@@ -8,6 +8,7 @@ import { useSwipe } from "@/lib/useSwipe";
 import { FormControl, FormRow } from "@/components/FormControls";
 import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
+import { CheckoutSheet, CheckoutLoading, CheckoutSuccess } from "@/components/CheckoutSheet";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
 
 function Ico({ children, ...props }) {
@@ -95,8 +96,7 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
   );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [paystackOpen, setPaystackOpen] = useState(false);
-  const [paystackLoading, setPaystackLoading] = useState(false);
+  const [phase, setPhase] = useState("pick"); // pick → launch → popup → verify → done
   const popupRef = useRef(null);
   const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
@@ -109,17 +109,18 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
     document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('iframe[src*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('.paystack-iframe-modal, .paystack-overlay, .paystack-backdrop').forEach(el => el.remove());
-    setPaystackOpen(false);
-    setPaystackLoading(false);
+    setPhase("pick");
     setBusy(false);
   }
 
   useEffect(() => {
-    if (!paystackOpen) return;
-    function onKey(e) { if (e.key === "Escape") closePaystack(); }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [paystackOpen]);
+    if (phase === "popup" || phase === "verify") {
+      function onKey(e) { if (e.key === "Escape") closePaystack(); }
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }
+    return undefined;
+  }, [phase]);
   const { pricing } = getPricing(country || "GH");
   const selCountry = COUNTRIES.find(c => c.code === (country || "GH")) || COUNTRIES[0];
   const pay = getPaymentsConfig(country || "GH");
@@ -204,13 +205,17 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
       if (typeof window.PaystackPop === "undefined") throw new Error("Paystack SDK not ready. Please try again.");
 
       sessionStorage.setItem("adhera_pending_plan", selected);
-      setPaystackOpen(true);
-      setPaystackLoading(true);
+      setPhase("launch");
       const popup = new window.PaystackPop();
       popupRef.current = popup;
       popup.resumeTransaction(initData.access_code, {
+        onLoad: function() {
+          setPhase("popup");
+          setBusy(false);
+        },
         onSuccess: async function(transaction) {
-          setPaystackLoading(false);
+          popupRef.current = null;
+          setPhase("verify");
           setBusy(true);
           setErr("");
           try {
@@ -228,12 +233,12 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
               } else {
                 setErr("Payment verification failed. Please contact support.");
               }
+              setPhase("pick");
               setBusy(false);
               return;
             }
             try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
-            onUpgrade(selected);
-            setPaystackOpen(false);
+            setPhase("done");
           } catch (e) {
             setErr("Payment verification failed. Please contact support.");
           }
@@ -242,78 +247,60 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
         onCancel: function() {
           popupRef.current = null;
           try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
-          setPaystackLoading(false);
-          setBusy(false);
-          setPaystackOpen(false);
+          closePaystack();
         },
         onError: function(err) {
           popupRef.current = null;
           try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
-          setPaystackLoading(false);
-          setPaystackOpen(false);
+          closePaystack();
           setErr(err?.message || "Payment window failed to open. Please try again.");
-          setBusy(false);
         },
       });
 } catch (e) {
       setErr(e.message || "Payment failed. Please try again.");
       setBusy(false);
+      setPhase("pick");
     }
+  }
+
+const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", "Unlocking your plan"];
+
+  if (phase === "checkout") {
+    return (
+      <CheckoutSheet
+        plan={{ name: plan.name, tagline: plan.tagline }}
+        billing={{ amountLabel: plan.price }}
+        countryName={selCountry.name}
+        email={userEmail || "Your account email"}
+        gatewayLabel="Paystack"
+        busy={busy}
+        err={err}
+        canPay={pay.ready}
+        ctaLabel={`Subscribe · ${plan.price}/month`}
+        onPay={handlePayment}
+        onClose={() => setPhase("pick")}
+      />
+    );
+  }
+
+  if (phase === "launch") {
+    return <CheckoutLoading plan={plan} color={plan.color} onCancel={closePaystack} />;
+  }
+
+  if (phase === "popup") {
+    return null;
+  }
+
+  if (phase === "verify") {
+    return <CheckoutLoading plan={plan} color={plan.color} steps={VERIFY_STEPS} onCancel={closePaystack} />;
+  }
+
+  if (phase === "done") {
+    return <CheckoutSuccess plan={plan} color={plan.color} onDone={() => { if (typeof onUpgrade === "function") onUpgrade(selected); }} />;
   }
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      {paystackOpen && (
-        <div style={{
-          position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:99999,
-          background: paystackLoading ? "rgba(0,0,0,.5)" : "transparent",
-          backdropFilter: paystackLoading ? "blur(12px)" : "none",
-          WebkitBackdropFilter: paystackLoading ? "blur(12px)" : "none",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "all .3s ease",
-        }}>
-          {paystackLoading && (
-            <div style={{
-              textAlign: "center", color: "white",
-              animation: "fadeIn .4s ease",
-            }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: "50%",
-                background: "rgba(255,255,255,.12)", border: "2px solid rgba(255,255,255,.2)",
-                display: "grid", placeItems: "center", margin: "0 auto 20px",
-                position: "relative",
-              }}>
-                <div style={{
-                  position: "absolute", inset: -4, borderRadius: "50%",
-                  border: "2px solid transparent", borderTopColor: plan.color,
-                  animation: "spin .8s linear infinite",
-                }} />
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={plan.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-              </div>
-              <div style={{fontSize: 18, fontWeight: 700, marginBottom: 6, letterSpacing: "-.3px" }}>
-                Opening secure checkout
-              </div>
-              <div style={{fontSize: 13, opacity: .7, lineHeight: 1.5 }}>
-                Connecting to Paystack...
-              </div>
-            </div>
-          )}
-          <button onClick={closePaystack}
-            style={{
-              position:"absolute", top:14, left:14, width:44, height:44,
-              borderRadius:22, border:"none", cursor:"pointer",
-              background:"rgba(0,0,0,.06)", backdropFilter:"blur(8px)",
-              WebkitBackdropFilter:"blur(8px)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:22, color: paystackLoading ? "white" : "var(--t1)", pointerEvents:"auto",
-              boxShadow:"0 2px 8px rgba(0,0,0,.15)",
-            }}
-            aria-label="Back to app"
-          >←</button>
-        </div>
-      )}
       <div className="sheet" style={{maxHeight:"95dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
@@ -378,33 +365,23 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
         </div>
 
         <div style={{padding:"8px 16px",borderTop:"1px solid var(--sep)"}}>
-          {pay.ready ? (
-            <button
-              className="btn"
-              disabled={busy || selected === currentPlan}
-              style={{
-                width:"100%", marginBottom:10,
-                background: plan.color, color:"white",
-                fontSize:16, fontWeight:700, opacity: (busy || selected === currentPlan) ? 0.5 : 1,
-              }}
-              onClick={handlePayment}
-            >
-              {busy ? "Processing…" : selected === currentPlan ? `You're on ${plan.name}` : currentPlan === "pro" ? `Upgrade to ${plan.name} · ${plan.price}/month` : `Unlock ${plan.name} · ${plan.price}/month`}
-            </button>
-          ) : (
-            <div style={{
-              width:"100%", marginBottom:10, padding:"14px 12px", borderRadius:12,
-              background:"var(--ib3)", color:"var(--t2)", textAlign:"center",
-              fontSize:14, fontWeight:600, boxSizing:"border-box",
-            }}>
-              Payments coming soon in {selCountry.name}
-            </div>
-          )}
+          <button
+            className="btn"
+            disabled={!pay.ready || selected === currentPlan}
+            style={{
+              width:"100%", marginBottom:10,
+              background: plan.color, color:"white",
+              fontSize:16, fontWeight:700, opacity: (!pay.ready || selected === currentPlan) ? 0.5 : 1,
+            }}
+            onClick={() => setPhase("checkout")}
+          >
+            {selected === currentPlan ? `You're on ${plan.name}` : currentPlan === "pro" ? `Upgrade to ${plan.name} · ${plan.price}/month` : `Unlock ${plan.name} · ${plan.price}/month`}
+          </button>
           <button className="btn btn-ghost" onClick={onClose}>
-            {busy ? "Cancel" : "Maybe later"}
+            Maybe later
           </button>
           <div style={{fontSize:10,color:"var(--t3)",textAlign:"center",marginTop:8,lineHeight:1.4}}>
-            {pay.ready ? "Secure payment via Paystack. Cancel anytime." : "Free tier stays free — paid plans will unlock here when payments go live in your country."}
+            {pay.ready ? "Secure payment via Paystack. Cancel anytime." : `Payments coming soon in ${selCountry.name} — free tier stays free.`}
           </div>
         </div>
       </div>
