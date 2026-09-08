@@ -19,19 +19,6 @@ export async function POST(req: Request) {
   }
 
   const body = await req.text();
-  const signature = req.headers.get("x-paystack-signature") || "";
-  const secret = getPaystackSecret();
-
-  if (!secret) {
-    return NextResponse.json({ ok: false, error: "Paystack secret not configured" }, { status: 500 });
-  }
-
-  const expected = crypto.createHmac("sha512", secret).update(body).digest("hex");
-  const sigBuf = Buffer.from(signature, "hex");
-  const expBuf = Buffer.from(expected, "hex");
-  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-    return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });
-  }
 
   let event;
   try {
@@ -40,11 +27,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
+  const metadata = event.data?.metadata || {};
+  const secret = getPaystackSecret(metadata.country);
+
+  if (!secret) {
+    return NextResponse.json({ ok: false, error: "Paystack secret not configured" }, { status: 500 });
+  }
+
+  const signature = req.headers.get("x-paystack-signature") || "";
+  const expected = crypto.createHmac("sha512", secret).update(body).digest("hex");
+  const sigBuf = Buffer.from(signature, "hex");
+  const expBuf = Buffer.from(expected, "hex");
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });
+  }
+
   if (event.event !== "charge.success") {
     return NextResponse.json({ ok: true, skipped: true });
   }
-
-  const metadata = event.data?.metadata || {};
   const plan = metadata.plan;
   const email = event.data?.customer?.email || "";
   const reference = event.data?.reference || "";

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { rateLimit } from "@/lib/rateLimit";
+import { getPaystackSecret, PLAN_MIN_AMOUNTS } from "@/lib/payments-server";
 
 const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || "";
 
 function getAdminClient() {
   if (!sbUrl || !serviceKey) return null;
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   const sb = getAdminClient();
   if (!sb) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
-  if (!anonKey || !PAYSTACK_SECRET_KEY) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
+  if (!anonKey) return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
 
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "");
@@ -31,14 +31,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { reference?: string };
+  let body: { reference?: string; country?: string };
   try { body = await req.json(); } catch {
     return NextResponse.json({ ok: false, error: "Invalid request" }, { status: 400 });
   }
 
-  const { reference } = body;
+  const { reference, country } = body;
   if (!reference || !/^[a-zA-Z0-9_-]+$/.test(reference)) {
     return NextResponse.json({ ok: false, error: "Invalid reference" }, { status: 400 });
+  }
+
+  const paystackSecret = getPaystackSecret(country);
+  if (!paystackSecret) {
+    return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
   }
 
   const { data: existingRef } = await sb
@@ -49,7 +54,7 @@ export async function POST(req: Request) {
 
   try {
     const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${paystackSecret}`, "Content-Type": "application/json" },
     });
 
     if (!verifyRes.ok) {
@@ -71,20 +76,11 @@ export async function POST(req: Request) {
     const metadata = verifyData.data?.metadata || {};
     const planFromMeta = metadata.plan || metadata.custom_fields?.plan;
 
-    // Paystack reports amounts in the smallest currency unit (pesewas/kobo/cents),
-    // matching the amounts charged by /api/paystack/init.
-    const MIN_AMOUNTS: Record<string, Record<string, number>> = {
-      GHS: { pro: 1500, family: 2800 },
-      NGN: { pro: 250000, family: 450000 },
-      ZAR: { pro: 5900, family: 10900 },
-      KES: { pro: 30000, family: 55000 },
-    };
-
     let plan: string;
     if (planFromMeta && ["pro", "family"].includes(planFromMeta)) {
       plan = planFromMeta;
-    } else if (paidAmount && MIN_AMOUNTS[paidCurrency]) {
-      const min = MIN_AMOUNTS[paidCurrency];
+    } else if (paidAmount && PLAN_MIN_AMOUNTS[paidCurrency]) {
+      const min = PLAN_MIN_AMOUNTS[paidCurrency];
       if (paidAmount >= min.family) plan = "family";
       else if (paidAmount >= min.pro) plan = "pro";
       else return NextResponse.json({ ok: false, error: "Insufficient payment amount or unsupported currency" }, { status: 400 });

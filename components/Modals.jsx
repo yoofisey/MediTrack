@@ -219,7 +219,7 @@ export function UpgradeModal({ country, userEmail, currentPlan, onClose, onUpgra
             const verifyRes = await fetch("/api/paystack/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ reference: transaction.reference }),
+              body: JSON.stringify({ reference: transaction.reference, country }),
             });
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok || !verifyData.ok) {
