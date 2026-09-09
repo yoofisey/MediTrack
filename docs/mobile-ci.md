@@ -80,8 +80,8 @@ Prerequisites in the Apple Developer portal (one-time, $99/yr membership):
 1. Commit and push `codemagic.yaml`, then push a tag or merge to `main` and
    open the repo in Codemagic (Settings → Integrations → GitHub).
 2. Add the secret groups above to the app: `android_keystore`,
-   `google_services`, `appstore_connect` (and `supabase`/`vercel` for the web
-   workflow).
+   `google_services`, `appstore_connect`. (The web app is deployed by
+   Vercel's GitHub integration, not by Codemagic.)
 3. Trigger the `android-release` workflow. Download the AAB from the artifacts
    tab. Verify the APK installs on a device and that it is signed with the
    Adhera key (SHA-256 `81:85:E5:43:...:52`).
