@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "gen:store-assets": "node scripts/gen_store_assets.mjs",
     "mobile:sync": "npx cap sync",
     "mobile:open:android": "npx cap open android",
     "mobile:open:ios": "npx cap open ios"

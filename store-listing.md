@@ -38,11 +38,11 @@ medication tracker, pill reminder, health, adherence, medicine
 
 ### App Icon
 - 512x512 PNG (upload to Play Console listing)
-- Use the app icon from `public/icon.svg` (generate a 512px PNG)
+- Generated: `store/icon-512.png` (full-bleed, no alpha)
 
 ### Feature Graphic
 - 1024x500 PNG (no alpha channel)
-- Placeholder: use a gradient with the Adhera teal + the app name
+- Generated: `store/feature-graphic.png` (regenerate with `npm run gen:store-assets`)
 
 ### Screenshots
 - 2-8 phone screenshots (min 320px, max 3840px wide)
@@ -60,10 +60,10 @@ Adhera
 Smart medication tracker
 
 ### Privacy Policy URL
-https://useadhera.com/privacy
+https://www.useadhera.com/privacy
 
 ### Support URL
-https://useadhera.com/support
+https://www.useadhera.com/
 
 ### Marketing URL (Optional)
 https://useadhera.com
@@ -81,6 +81,7 @@ Same as Play Store full description.
 
 ### App Icon
 - 1024x1024 PNG (no transparency)
+- Generated: `store/icon-1024.png`
 - Upload in App Store Connect
 
 ### Age Rating
@@ -116,14 +117,14 @@ Same as Play Store full description.
 
 ## Assets Needed (External/Creative)
 
-| Asset | Size | Format | Where to Upload |
-|-------|------|--------|-----------------|
-| Feature Graphic | 1024×500 | PNG (no alpha) | Play Console |
-| Phone Screenshots | 1242×2688+ | PNG/JPG | Play Console + App Store Connect |
-| iPad Screenshots | 2048×2732+ | PNG/JPG | App Store Connect (optional) |
-| Promo Video | Any | M4V/MP4 | Both stores (optional) |
-| App Icon (Play) | 512×512 | PNG | Play Console |
-| App Icon (iOS) | 1024×1024 | PNG (no alpha) | App Store Connect |
+| Asset | Size | Format | Where to Upload | Source |
+|-------|------|--------|-----------------|--------|
+| Feature Graphic | 1024×500 | PNG (no alpha) | Play Console | `store/feature-graphic.png` |
+| Phone Screenshots | 1242×2688+ | PNG/JPG | Play Console + App Store Connect | You (on-device) |
+| iPad Screenshots | 2048×2732+ | PNG/JPG | App Store Connect (optional) | You (on-device) |
+| Promo Video | Any | M4V/MP4 | Both stores (optional) | You |
+| App Icon (Play) | 512×512 | PNG | Play Console | `store/icon-512.png` |
+| App Icon (iOS) | 1024×1024 | PNG (no alpha) | App Store Connect | `store/icon-1024.png` |
 
 > Note: The app binary icon is embedded in the APK/IPA (already configured).
 > The store listing icons are uploaded separately to each console.
