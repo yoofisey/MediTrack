@@ -106,6 +106,7 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
     } catch {}
     popupRef.current = null;
     try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+    try { sessionStorage.removeItem("adhera_fastspring"); } catch {}
     document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('iframe[src*="paystack"]').forEach(el => el.remove());
     document.querySelectorAll('.paystack-iframe-modal, .paystack-overlay, .paystack-backdrop').forEach(el => el.remove());
@@ -263,7 +264,44 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
     }
   }
 
+  async function handleFastSpringPayment() {
+    setBusy(true);
+    setErr("");
+
+    if (!pay.ready) {
+      setErr(pay.reason);
+      setBusy(false);
+      return;
+    }
+
+    try {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
+      const initRes = await fetch("/api/fastspring/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: selected, country }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok || !initData.ok || !initData.url || !initData.reference) {
+        setErr(initData.error || "Failed to start payment. Please try again.");
+        setBusy(false);
+        setPhase("checkout");
+        return;
+      }
+      try { sessionStorage.setItem("adhera_fastspring", JSON.stringify({ plan: selected, country })); } catch {}
+      setPhase("launch");
+      window.location.assign(initData.url);
+    } catch (e) {
+      setErr(e.message || "Payment failed. Please try again.");
+      setBusy(false);
+      setPhase("checkout");
+    }
+  }
+
 const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", "Unlocking your plan"];
+
+  const gatewayName = pay.gateway === "fastspring" ? "FastSpring" : "Paystack";
 
   if (phase === "checkout") {
     return (
@@ -272,12 +310,12 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
         billing={{ amountLabel: plan.price }}
         countryName={selCountry.name}
         email={userEmail || "Your account email"}
-        gatewayLabel="Paystack"
+        gatewayLabel={gatewayName}
         busy={busy}
         err={err}
         canPay={pay.ready}
         ctaLabel={`Subscribe · ${plan.price}/month`}
-        onPay={handlePayment}
+        onPay={pay.gateway === "fastspring" ? handleFastSpringPayment : handlePayment}
         onClose={() => setPhase("pick")}
       />
     );
@@ -311,7 +349,7 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
           <div style={{fontSize:14,color:"var(--t3)"}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
               {currentPlan === "pro" && <span style={{background:"var(--teal)",color:"white",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:99,letterSpacing:".3px"}}>PRO</span>}
-              <Globe size={13}/> {selCountry.name} · Paystack <Check size={11} strokeWidth={3}/>
+              <Globe size={13}/> {selCountry.name} · {gatewayName} <Check size={11} strokeWidth={3}/>
             </span>
           </div>
         </div>
@@ -381,7 +419,7 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
             Maybe later
           </button>
           <div style={{fontSize:10,color:"var(--t3)",textAlign:"center",marginTop:8,lineHeight:1.4}}>
-            {pay.ready ? "Secure payment via Paystack. Cancel anytime." : `Payments coming soon in ${selCountry.name} — free tier stays free.`}
+            {pay.ready ? `Secure payment via ${gatewayName}. Cancel anytime.` : `Payments coming soon in ${selCountry.name} — free tier stays free.`}
           </div>
         </div>
       </div>

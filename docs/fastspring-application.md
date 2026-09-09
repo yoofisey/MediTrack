@@ -72,6 +72,7 @@ The form asks for a company/product description. Draft you can use:
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `FASTSPRING_STORE_ID` | yes | e.g. `adhera`. Used for store URLs / dashboard. |
+| `NEXT_PUBLIC_FASTSPRING_STORE_ID` | yes | **Public** store id. Client uses it to flip the UI from "coming soon" to the FastSpring checkout. Same value as above. |
 | `FASTSPRING_USERNAME` | yes | API credential (Basic auth) from Dashboard → API access. |
 | `FASTSPRING_PASSWORD` | yes | API credential secret. Server-only. |
 | `FASTSPRING_WEBHOOK_SECRET` | yes | Webhook signing secret. Server-only. |
@@ -79,8 +80,9 @@ The form asks for a company/product description. Draft you can use:
 | `FASTSPRING_PRODUCT_PRO` | no | Product path; defaults to `plan-pro`. |
 | `FASTSPRING_PRODUCT_FAMILY` | no | Product path; defaults to `plan-family`. |
 
-Set the first five on Vercel (server env). `FASTSPRING_PRODUCT_*` only needs to match
-the Store Builder product paths.
+Set the first three and `NEXT_PUBLIC_FASTSPRING_STORE_ID` on Vercel (the two `NEXT_PUBLIC_*`
+values are visible to the browser; the rest are server-only). `FASTSPRING_PRODUCT_*` only needs
+to match the Store Builder product paths.
 
 ## Notes
 
