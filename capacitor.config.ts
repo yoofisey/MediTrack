@@ -11,6 +11,11 @@ const config: CapacitorConfig = {
       'www.useadhera.com',
       'luxtopkzdyflbejwgniq.supabase.co',
       'accounts.google.com',
+      'checkout.paystack.com',
+      'paystack.com',
+      'standard.paystack.co',
+      'sites.fastspring.com',
+      'fastspring.com',
     ],
   },
   plugins: {
