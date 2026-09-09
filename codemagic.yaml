@@ -25,6 +25,12 @@ workflows:
       groups:
         - android_keystore
         - google_services
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
     scripts:
       - name: Install npm dependencies
         script: npm ci --no-audit --no-fund
@@ -60,6 +66,9 @@ workflows:
     name: iOS Release (IPA)
     instance_type: mac_mini_m2
     max_build_duration: 45
+    triggering:
+      events:
+        - tag
     environment:
       ios_signing:
         distribution_type: app_store
