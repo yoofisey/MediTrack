@@ -15,7 +15,7 @@ export default function RefundPolicyPage() {
         <p style={{fontSize:14,color:"#64748b",marginBottom:32}}>Effective date: September 8, 2026</p>
 
         <div style={{fontSize:15,color:"#334155",display:"flex",flexDirection:"column",gap:20}}>
-          <p>Adhera (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) sells subscriptions to our medication tracking and health management application. This policy explains how refunds are handled. It applies to both our Paystack billing for Ghana and our Paddle billing (Merchant of Record) for every other country.</p>
+          <p>Adhera (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) sells subscriptions to our medication tracking and health management application. This policy explains how refunds are handled. It applies to both our Paystack billing (Ghana, Nigeria, Kenya, South Africa) and our FastSpring billing (Merchant of Record) for every other country.</p>
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>1. Subscriptions Are Not Auto-Refunded</h2>
@@ -43,13 +43,13 @@ export default function RefundPolicyPage() {
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>5. How to Request a Refund</h2>
-            <p>Email <a href="mailto:support@useadhera.com" style={{color:"#2563eb"}}>support@useadhera.com</a> (or Paddle&apos;s self-service at <a href="https://www.paddle.com" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>paddle.com</a> for international purchases) with your account email and, if available, the transaction reference. Include the reason so we can assist. Most refunds are processed within 5–10 business days after approval, which is then returned to your original payment method.</p>
+            <p>Email <a href="mailto:support@useadhera.com" style={{color:"#2563eb"}}>support@useadhera.com</a> (or FastSpring&apos;s buyer support at <a href="https://www.fastspring.com" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>fastspring.com</a> for international purchases) with your account email and, if available, the transaction reference. Include the reason so we can assist. Most refunds are processed within 5–10 business days after approval, which is then returned to your original payment method.</p>
           </div>
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>6. Contact</h2>
             <p>For refund requests or questions, contact us at <a href="mailto:support@useadhera.com" style={{color:"#2563eb"}}>support@useadhera.com</a>. We typically respond within 2 business days.</p>
-            <p style={{marginTop:8}}><strong>Note on Merchant of Record:</strong> For purchases made outside Ghana, Paddle acts as our Merchant of Record and handles sales tax/VAT. Paddle&apos;s own refund policy and chargeback process apply to those transactions; please see Paddle for the exact terms.</p>
+            <p style={{marginTop:8}}><strong>Note on Merchant of Record:</strong> For purchases made outside our Paystack markets, FastSpring acts as our Merchant of Record and handles sales tax/VAT. FastSpring&apos;s own refund policy and chargeback process apply to those transactions; please see FastSpring for the exact terms.</p>
           </div>
         </div>
 

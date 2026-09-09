@@ -92,5 +92,6 @@ to match the Store Builder product paths.
 - If you ever want the hosted checkout in an in-app overlay instead of a redirect, you
   must add `frame-src https://sites.fastspring.com` to the CSP in `next.config.ts`.
   The redirect flow needs no CSP change.
-- `app/api/paddle/webhook` and the old `lib/payments-server.ts` Paddle helpers are now
-  dead code and can be deleted once the FastSpring flow is proven in production.
+- The Paddle integration has been fully removed from the codebase: `app/api/paddle/webhook`,
+  the `lib/payments-server.ts` Paddle helpers, the Paddle CSP directives in `next.config.ts`,
+  `.env.example`, and the legal-page references were deleted.

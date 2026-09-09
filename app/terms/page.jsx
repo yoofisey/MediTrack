@@ -44,7 +44,7 @@ export default function TermsPage() {
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>6. Subscription &amp; Payments</h2>
-            <p>Premium features require a paid subscription. Prices are displayed in local currency and may change with notice. Subscriptions recur monthly until cancelled. Cancellation takes effect at the end of the current billing period. Payment processing is provided by Paystack (Ghana) and Paddle (Merchant of Record, all other countries). Refunds are handled per our <a href="/refund-policy" style={{color:"#2563eb"}}>Refund Policy</a>.</p>
+            <p>Premium features require a paid subscription. Prices are displayed in local currency and may change with notice. Subscriptions recur monthly until cancelled. Cancellation takes effect at the end of the current billing period. Payment processing is provided by Paystack (Ghana, Nigeria, Kenya, South Africa) and FastSpring (Merchant of Record, all other countries). Refunds are handled per our <a href="/refund-policy" style={{color:"#2563eb"}}>Refund Policy</a>.</p>
           </div>
 
           <div>
