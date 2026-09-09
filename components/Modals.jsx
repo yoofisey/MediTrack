@@ -191,35 +191,51 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
         return;
       }
 
-      await new Promise((resolve, reject) => {
-        if (typeof window.PaystackPop !== "undefined") {
-          resolve();
+      try { sessionStorage.setItem("adhera_pending_plan", selected); } catch {}
+      setPhase("launch");
+
+      let sdkReady = false;
+      try {
+        await new Promise((resolve, reject) => {
+          if (typeof window.PaystackPop !== "undefined") {
+            resolve();
+            return;
+          }
+          let attempts = 0;
+          function attemptLoad() {
+            attempts++;
+            const s = document.createElement("script");
+            s.src = "https://js.paystack.co/v2/inline.js";
+            s.async = true;
+            s.onload = () => { setTimeout(resolve, 300); };
+            s.onerror = () => {
+              try { s.remove(); } catch {}
+              if (attempts < 2) {
+                setTimeout(attemptLoad, 600);
+              } else {
+                reject(new Error("PAYSTACK_SDK_FAILED"));
+              }
+            };
+            document.head.appendChild(s);
+          }
+          attemptLoad();
+        });
+        sdkReady = typeof window.PaystackPop !== "undefined";
+      } catch {
+        sdkReady = false;
+      }
+
+      if (!sdkReady) {
+        if (initData.authorization_url) {
+          window.location.assign(initData.authorization_url);
           return;
         }
-        let attempts = 0;
-        function attemptLoad() {
-          attempts++;
-          const s = document.createElement("script");
-          s.src = "https://js.paystack.co/v2/inline.js";
-          s.async = true;
-          s.onload = () => { setTimeout(resolve, 300); };
-          s.onerror = () => {
-            try { s.remove(); } catch {}
-            if (attempts < 2) {
-              setTimeout(attemptLoad, 600);
-            } else {
-              reject(new Error("Couldn't load Paystack. Check your connection and disable ad blockers, then try again."));
-            }
-          };
-          document.head.appendChild(s);
-        }
-        attemptLoad();
-      });
+        setErr("Couldn't load Paystack. Check your connection and disable ad blockers, then try again.");
+        setBusy(false);
+        setPhase("checkout");
+        return;
+      }
 
-      if (typeof window.PaystackPop === "undefined") throw new Error("Paystack SDK not ready. Please try again.");
-
-      sessionStorage.setItem("adhera_pending_plan", selected);
-      setPhase("launch");
       const popup = new window.PaystackPop();
       popupRef.current = popup;
       popup.resumeTransaction(initData.access_code, {
@@ -267,6 +283,11 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
           popupRef.current = null;
           try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
           closePaystack();
+          if (initData.authorization_url) {
+            try { sessionStorage.setItem("adhera_pending_plan", selected); } catch {}
+            window.location.assign(initData.authorization_url);
+            return;
+          }
           setErr(err?.message || "Payment window failed to open. Please try again.");
         },
       });
