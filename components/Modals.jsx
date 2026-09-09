@@ -192,15 +192,28 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
       }
 
       await new Promise((resolve, reject) => {
-        if (typeof window.PaystackPop === "undefined") {
+        if (typeof window.PaystackPop !== "undefined") {
+          resolve();
+          return;
+        }
+        let attempts = 0;
+        function attemptLoad() {
+          attempts++;
           const s = document.createElement("script");
           s.src = "https://js.paystack.co/v2/inline.js";
+          s.async = true;
           s.onload = () => { setTimeout(resolve, 300); };
-          s.onerror = () => reject(new Error("Failed to load Paystack. Check your internet connection."));
+          s.onerror = () => {
+            try { s.remove(); } catch {}
+            if (attempts < 2) {
+              setTimeout(attemptLoad, 600);
+            } else {
+              reject(new Error("Couldn't load Paystack. Check your connection and disable ad blockers, then try again."));
+            }
+          };
           document.head.appendChild(s);
-        } else {
-          resolve();
         }
+        attemptLoad();
       });
 
       if (typeof window.PaystackPop === "undefined") throw new Error("Paystack SDK not ready. Please try again.");
