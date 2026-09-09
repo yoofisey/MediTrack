@@ -98,9 +98,16 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
   const [err, setErr] = useState("");
   const [phase, setPhase] = useState("pick"); // pick → launch → popup → verify → done
   const popupRef = useRef(null);
+  const revealRef = useRef(null);
   const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
   function closePaystack() {
+    if (revealRef.current) {
+      revealRef.current.cancelled = true;
+      if (revealRef.current.interval) clearInterval(revealRef.current.interval);
+      if (revealRef.current.timeout) clearTimeout(revealRef.current.timeout);
+      revealRef.current = null;
+    }
     try {
       if (popupRef.current && typeof popupRef.current.close === "function") popupRef.current.close();
     } catch {}
@@ -236,12 +243,35 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
         return;
       }
 
+      // Keep the Adhera loading screen visible until the Paystack
+      // payment iframe has finished rendering, so the grey/empty
+      // modal flash is never shown.
+      const finishReveal = function () {
+        if (!revealRef.current || revealRef.current.done || revealRef.current.cancelled) return;
+        revealRef.current.done = true;
+        if (revealRef.current.interval) clearInterval(revealRef.current.interval);
+        if (revealRef.current.timeout) clearTimeout(revealRef.current.timeout);
+        setPhase("popup");
+      };
+
       const popup = new window.PaystackPop();
       popupRef.current = popup;
       popup.resumeTransaction(initData.access_code, {
         onLoad: function() {
-          setPhase("popup");
           setBusy(false);
+          revealRef.current = { done: false, cancelled: false, interval: null, timeout: null };
+          revealRef.current.interval = setInterval(function () {
+            try {
+              const iframe = document.querySelector(
+                'iframe[src*="checkout.paystack.com"], .paystack-iframe-modal iframe, .paystack-iframe-content iframe, [class*="paystack"] iframe'
+              );
+              if (iframe && !iframe.dataset.adheraWatch) {
+                iframe.dataset.adheraWatch = "1";
+                iframe.addEventListener("load", finishReveal);
+              }
+            } catch {}
+          }, 100);
+          revealRef.current.timeout = setTimeout(finishReveal, 6000);
         },
         onSuccess: async function(transaction) {
           popupRef.current = null;
@@ -275,11 +305,13 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
           setBusy(false);
         },
         onCancel: function() {
+          if (revealRef.current) revealRef.current.cancelled = true;
           popupRef.current = null;
           try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
           closePaystack();
         },
         onError: function(err) {
+          if (revealRef.current) revealRef.current.cancelled = true;
           popupRef.current = null;
           try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
           closePaystack();

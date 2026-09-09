@@ -161,7 +161,7 @@ export function CheckoutLoading({ plan, color, onCancel, steps = LOADER_STEPS })
 
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 99998,
+      position: "fixed", inset: 0, zIndex: 2147483000,
       background: "var(--bg)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       animation: "fadeIn .25s ease both",
