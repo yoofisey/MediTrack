@@ -231,6 +231,55 @@ export function CheckoutLoading({ plan, color, onCancel, steps = LOADER_STEPS })
   );
 }
 
+export function CheckoutFrame({ url, visible = true, tone = "#2563eb", onLoaded, onClose }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 2147483000,
+      background: "#fff",
+      display: "flex", flexDirection: "column",
+      opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none",
+      transition: "opacity .25s ease",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px",
+        background: "rgba(255,255,255,.96)",
+        backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+        borderBottom: "0.5px solid rgba(0,0,0,.08)",
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: 7,
+            background: `linear-gradient(135deg, ${tone}, #5856D6)`,
+            display: "grid", placeItems: "center",
+          }}>
+            <svg viewBox="0 0 48 48" width={13} height={13} fill="white">
+              <rect x="17" y="4" width="14" height="40" rx="5" fill="white" />
+              <rect x="4" y="17" width="40" height="14" rx="5" fill="white" />
+            </svg>
+          </div>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", letterSpacing: "-.2px" }}>Secure checkout</span>
+        </div>
+        <button onClick={onClose} style={{
+          border: "none", background: "transparent", cursor: "pointer", padding: "6px 8px",
+          fontSize: 13, fontWeight: 600, color: "#2563eb", fontFamily: "inherit",
+        }}>
+          Cancel
+        </button>
+      </div>
+      <iframe
+        key={url}
+        src={url}
+        onLoad={onLoaded}
+        title="Adhera secure payment"
+        referrerPolicy="no-referrer-when-downgrade"
+        style={{ flex: 1, width: "100%", border: "none", background: "#fff" }}
+      />
+    </div>
+  );
+}
+
 export function CheckoutSuccess({ plan, color, onDone }) {
   useEffect(() => {
     const id = setTimeout(onDone, 1400);

@@ -8,7 +8,7 @@ import { useSwipe } from "@/lib/useSwipe";
 import { FormControl, FormRow } from "@/components/FormControls";
 import { getTierConfig } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
-import { CheckoutSheet, CheckoutLoading, CheckoutSuccess } from "@/components/CheckoutSheet";
+import { CheckoutSheet, CheckoutFrame, CheckoutLoading, CheckoutSuccess } from "@/components/CheckoutSheet";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
 
 function Ico({ children, ...props }) {
@@ -96,22 +96,14 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
   );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [phase, setPhase] = useState("pick"); // pick → launch → popup → verify → done
-  const popupRef = useRef(null);
-  const revealRef = useRef(null);
+  const [phase, setPhase] = useState("pick"); // pick → launch → popup → done
+  const [auth, setAuth] = useState(null); // { url, ref } for the in-app Paystack frame
+  const iframeReadyRef = useRef(false);
   const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
   function closePaystack() {
-    if (revealRef.current) {
-      revealRef.current.cancelled = true;
-      if (revealRef.current.interval) clearInterval(revealRef.current.interval);
-      if (revealRef.current.timeout) clearTimeout(revealRef.current.timeout);
-      revealRef.current = null;
-    }
-    try {
-      if (popupRef.current && typeof popupRef.current.close === "function") popupRef.current.close();
-    } catch {}
-    popupRef.current = null;
+    setAuth(null);
+    iframeReadyRef.current = false;
     try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
     try { sessionStorage.removeItem("adhera_fastspring"); } catch {}
     document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
@@ -120,6 +112,38 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
     setPhase("pick");
     setBusy(false);
   }
+
+  useEffect(() => {
+    if (phase === "launch" && auth) {
+      const id = setTimeout(() => { iframeReadyRef.current = true; setPhase("popup"); }, 9000);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [phase, auth]);
+
+  useEffect(() => {
+    if (phase !== "popup" || !auth?.ref) return;
+    let alive = true;
+    const id = setInterval(async () => {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
+      try {
+        const res = await fetch("/api/paystack/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ reference: auth.ref, country }),
+        });
+        if (!alive) return;
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          clearInterval(id);
+          try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+          setPhase("done");
+        }
+      } catch {}
+    }, 7000);
+    return () => { alive = false; clearInterval(id); };
+  }, [phase, auth?.ref, country]);
 
   useEffect(() => {
     if (phase === "popup" || phase === "verify") {
@@ -192,141 +216,20 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose,
         body: JSON.stringify({ plan: selected, country }),
       });
       const initData = await initRes.json();
-      if (!initRes.ok || !initData.ok || !initData.access_code) {
+      if (!initRes.ok || !initData.ok || !initData.access_code || !initData.reference) {
         setErr(initData.error || "Failed to start payment. Please try again.");
         setBusy(false);
         return;
       }
 
       try { sessionStorage.setItem("adhera_pending_plan", selected); } catch {}
+      iframeReadyRef.current = false;
+      setAuth({ url: initData.authorization_url, ref: initData.reference });
       setPhase("launch");
-
-      let sdkReady = false;
-      try {
-        await new Promise((resolve, reject) => {
-          if (typeof window.PaystackPop !== "undefined") {
-            resolve();
-            return;
-          }
-          let attempts = 0;
-          function attemptLoad() {
-            attempts++;
-            const s = document.createElement("script");
-            s.src = "https://js.paystack.co/v2/inline.js";
-            s.async = true;
-            s.onload = () => { setTimeout(resolve, 300); };
-            s.onerror = () => {
-              try { s.remove(); } catch {}
-              if (attempts < 2) {
-                setTimeout(attemptLoad, 600);
-              } else {
-                reject(new Error("PAYSTACK_SDK_FAILED"));
-              }
-            };
-            document.head.appendChild(s);
-          }
-          attemptLoad();
-        });
-        sdkReady = typeof window.PaystackPop !== "undefined";
-      } catch {
-        sdkReady = false;
-      }
-
-      if (!sdkReady) {
-        if (initData.authorization_url) {
-          window.location.assign(initData.authorization_url);
-          return;
-        }
-        setErr("Couldn't load Paystack. Check your connection and disable ad blockers, then try again.");
-        setBusy(false);
-        setPhase("checkout");
-        return;
-      }
-
-      // Keep the Adhera loading screen visible until the Paystack
-      // payment iframe has finished rendering, so the grey/empty
-      // modal flash is never shown.
-      const finishReveal = function () {
-        if (!revealRef.current || revealRef.current.done || revealRef.current.cancelled) return;
-        revealRef.current.done = true;
-        if (revealRef.current.interval) clearInterval(revealRef.current.interval);
-        if (revealRef.current.timeout) clearTimeout(revealRef.current.timeout);
-        setPhase("popup");
-      };
-
-      const popup = new window.PaystackPop();
-      popupRef.current = popup;
-      popup.resumeTransaction(initData.access_code, {
-        onLoad: function() {
-          setBusy(false);
-          revealRef.current = { done: false, cancelled: false, interval: null, timeout: null };
-          revealRef.current.interval = setInterval(function () {
-            try {
-              const iframe = document.querySelector(
-                'iframe[src*="checkout.paystack.com"], .paystack-iframe-modal iframe, .paystack-iframe-content iframe, [class*="paystack"] iframe'
-              );
-              if (iframe && !iframe.dataset.adheraWatch) {
-                iframe.dataset.adheraWatch = "1";
-                iframe.addEventListener("load", finishReveal);
-              }
-            } catch {}
-          }, 100);
-          revealRef.current.timeout = setTimeout(finishReveal, 6000);
-        },
-        onSuccess: async function(transaction) {
-          popupRef.current = null;
-          setPhase("verify");
-          setBusy(true);
-          setErr("");
-          try {
-            let token = "";
-            try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
-            const verifyRes = await fetch("/api/paystack/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ reference: transaction.reference, country }),
-            });
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok || !verifyData.ok) {
-              if (verifyData?.error === "Email mismatch" || verifyRes.status === 400) {
-                setErr("This paystack account's email doesn't match your Adhera account. Please contact support.");
-              } else {
-                setErr("Payment verification failed. Please contact support.");
-              }
-              setPhase("pick");
-              setBusy(false);
-              return;
-            }
-            try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
-            setPhase("done");
-          } catch (e) {
-            setErr("Payment verification failed. Please contact support.");
-          }
-          setBusy(false);
-        },
-        onCancel: function() {
-          if (revealRef.current) revealRef.current.cancelled = true;
-          popupRef.current = null;
-          try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
-          closePaystack();
-        },
-        onError: function(err) {
-          if (revealRef.current) revealRef.current.cancelled = true;
-          popupRef.current = null;
-          try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
-          closePaystack();
-          if (initData.authorization_url) {
-            try { sessionStorage.setItem("adhera_pending_plan", selected); } catch {}
-            window.location.assign(initData.authorization_url);
-            return;
-          }
-          setErr(err?.message || "Payment window failed to open. Please try again.");
-        },
-      });
-} catch (e) {
+    } catch (e) {
       setErr(e.message || "Payment failed. Please try again.");
       setBusy(false);
-      setPhase("pick");
+      setPhase("checkout");
     }
   }
 
@@ -387,12 +290,23 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
     );
   }
 
-  if (phase === "launch") {
-    return <CheckoutLoading plan={plan} color={plan.color} onCancel={closePaystack} />;
-  }
-
-  if (phase === "popup") {
-    return null;
+  if (phase === "launch" || phase === "popup") {
+    const ready = phase === "popup";
+    return (
+      <>
+        <div style={ready ? { display: "none" } : undefined}>
+          <CheckoutLoading plan={plan} color={plan.color} onCancel={closePaystack} />
+        </div>
+        {auth && (
+          <CheckoutFrame
+            url={auth.url}
+            visible={ready}
+            onLoaded={() => { if (iframeReadyRef.current) return; iframeReadyRef.current = true; setPhase("popup"); }}
+            onClose={closePaystack}
+          />
+        )}
+      </>
+    );
   }
 
   if (phase === "verify") {

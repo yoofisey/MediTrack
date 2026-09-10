@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: data.message || "Failed to initialize payment" }, { status: 502 });
     }
 
-    return NextResponse.json({ ok: true, access_code: data.data.access_code, authorization_url: data.data.authorization_url });
+    return NextResponse.json({ ok: true, access_code: data.data.access_code, reference: data.data.reference, authorization_url: data.data.authorization_url });
   } catch (e) {
     console.error("Paystack init failed:", e);
     return NextResponse.json({ ok: false, error: "Payment initialization failed" }, { status: 500 });
