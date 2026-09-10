@@ -277,9 +277,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: false, error: `medications query failed: ${medErr.message}` }), { status: 200 });
     }
 
-    const [visitsRes, vitalRemindersRes] = await Promise.all([
+    const [visitsRes, vitalRemindersRes, personalRes] = await Promise.all([
       supabase.from("visits").select("*"),
       supabase.from("vital_reminders").select("*"),
+      supabase.from("personal_details").select("user_id, dob").not("dob", "is", null),
     ]);
 
     if (visitsRes.error) {
@@ -288,24 +289,29 @@ serve(async (req) => {
     if (vitalRemindersRes.error) {
       return new Response(JSON.stringify({ ok: false, error: `vital_reminders query failed: ${vitalRemindersRes.error.message}` }), { status: 200 });
     }
+    if (personalRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `personal_details query failed: ${personalRes.error.message}` }), { status: 200 });
+    }
 
     const visits = (visitsRes.data || []).filter((v: any) => {
       if (v.status === "attended" || v.status === "missed") return false;
       return v.reminder_minutes && v.reminder_minutes > 0;
     });
     const vitalReminders = (vitalRemindersRes.data || []).filter((r: any) => r.interval_id && r.interval_id !== "off");
+    const personalDetails = (personalRes.data || []).filter((p: any) => p.dob && String(p.dob).trim() !== "");
 
     const medUserIds = (meds || []).map((m: any) => m.user_id);
     const visitUserIds = visits.map((v: any) => v.user_id);
     const vitalUserIds = vitalReminders.map((r: any) => r.user_id);
-    const userIds = [...new Set([...medUserIds, ...visitUserIds, ...vitalUserIds])];
+    const birthdayUserIds = personalDetails.map((p: any) => p.user_id);
+    const userIds = [...new Set([...medUserIds, ...visitUserIds, ...vitalUserIds, ...birthdayUserIds])];
 
     if (!userIds.length) {
       return new Response(JSON.stringify({ ok: true, msg: "No users", sent: 0 }), { status: 200 });
     }
 
     const [profilesRes, logsRes, subsRes] = await Promise.all([
-      supabase.from("profiles").select("id, timezone, country, wake_time, reminder_lead, last_checkin_date").in("id", userIds),
+      supabase.from("profiles").select("id, timezone, country, wake_time, reminder_lead, last_checkin_date, full_name").in("id", userIds),
       supabase.from("dose_logs").select("medication_id, taken_at, user_id").in("user_id", userIds).gte("taken_at", new Date(Date.now() - 86400000 * 180).toISOString()),
       supabase.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds),
     ]);
@@ -692,6 +698,42 @@ serve(async (req) => {
       }
     }
 
+    // Birthday greetings (matches the saved DOB's month/day against the user's
+    // local date; deduped per user per day so the daily cron only sends once)
+    let birthdaySent = 0;
+    for (const pd of personalDetails) {
+      const dobMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(pd.dob).trim());
+      if (!dobMatch) continue;
+
+      const tz = tzFor(pd.user_id);
+      const todayStr = getLocalTodayStr(tz);
+      if (todayStr.slice(5) !== `${dobMatch[2]}-${dobMatch[3]}`) continue;
+
+      const userSubs = subMap.get(pd.user_id);
+      if (!userSubs?.length) continue;
+
+      const tag = `mt-bday-${pd.user_id}-${todayStr}`;
+      if (!(await claimTag(supabase, tag))) continue;
+
+      const prof = profiles.find((p: any) => p.id === pd.user_id);
+      const firstName = prof?.full_name ? String(prof.full_name).trim().split(/\s+/)[0] : "";
+      const namePart = firstName ? `, ${firstName}` : "";
+      const payload = JSON.stringify({
+        title: `Happy Birthday${namePart}!`,
+        body: `Wishing you a wonderful day full of health and happiness. Take your medication and keep taking care of yourself!`,
+        tag,
+      });
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) birthdaySent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
     try {
       await supabase
         .from("notification_dedup")
@@ -699,7 +741,7 @@ serve(async (req) => {
         .lt("sent_at", new Date(Date.now() - 7 * 86400000).toISOString());
     } catch {}
 
-    return new Response(JSON.stringify({ ok: true, sent, native: results.filter(r => r.type === "fcm" && r.ok).length, results }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, sent, birthday: birthdaySent, native: results.filter(r => r.type === "fcm" && r.ok).length, results }), { status: 200 });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
