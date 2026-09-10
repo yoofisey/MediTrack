@@ -128,7 +128,7 @@ export default function App() {
     return () => { cancelled = true; clearTimeout(fallback); };
   }, []);
 
-  if (screen === "loading")    return <LanguageProvider><ErrorBoundary><TransitionScreen showMessages={hasSession} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
+  if (screen === "loading")    return <LanguageProvider><ErrorBoundary><LandingPage onGetStarted={() => setScreen("auth")} /><TransitionScreen showMessages={hasSession} />{offline && <OfflineScreen onClose={() => setOffline(false)} />}</ErrorBoundary></LanguageProvider>;
   if (screen === "fading")     return (
     <LanguageProvider>
       <ErrorBoundary>
