@@ -132,7 +132,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
           { value:"pro", icon:<Star size={24} style={{verticalAlign:"middle"}}/>, title:"Pro", sub:"Everything you need for full adherence", price: obPricing.pro.label === "Coming soon" ? "Coming soon" : `${obPricing.pro.label}/mo`, features:["Unlimited medications","Full history & analytics","Caregiver sharing","Refill reminders","Adherence PDF reports"] },
           { value:"family", icon:<Users size={24} style={{verticalAlign:"middle"}}/>, title:"Family", sub:"One account for the whole household", price: obPricing.family.label === "Coming soon" ? "Coming soon" : `${obPricing.family.label}/mo`, features:["5 family profiles","Per-member tracking","Shared family dashboard","Per-member vitals & reports","Caregiver alerts"] },
         ].map(p=>(
-          <div key={p.value} className={`ob-option${data.plan===p.value?" sel":""}`} style={{alignItems:"flex-start",padding:"16px"}}>
+          <div key={p.value} className={`ob-option${data.plan===p.value?" sel":""}`} style={{alignItems:"flex-start",padding:"16px"}} onClick={()=>set("plan",p.value)}>
             <div className="ob-option-icon" style={{marginTop:2}}>{p.icon}</div>
             <div className="ob-option-text">
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>

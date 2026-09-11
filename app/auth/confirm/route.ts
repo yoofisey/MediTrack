@@ -5,9 +5,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? "/reset-password";
+  const fallback = type === "email" ? "/" : "/reset-password";
+  const next = searchParams.get("next") ?? fallback;
 
-  const safeNext = next.startsWith("/") && !next.includes("://") ? next : "/reset-password";
+  const safeNext = next.startsWith("/") && !next.includes("://") ? next : fallback;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co",
@@ -15,7 +16,10 @@ export async function GET(request: NextRequest) {
   );
 
   if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: "magiclink" });
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type === "email" ? "email" : "magiclink",
+    });
     if (!error) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = safeNext;
@@ -24,6 +28,6 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = "/reset-password";
+  redirectUrl.pathname = fallback;
   return NextResponse.redirect(redirectUrl);
 }
