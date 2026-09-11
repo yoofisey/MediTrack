@@ -43,7 +43,7 @@ function Toggle({ on, onChange, disabled }) {
   );
 }
 
-export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, meds, logs, onGoBadges, onGoCommunity }) {
+export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, meds, logs, onGoBadges, onGoCommunity, drillTarget, onDrillDone }) {
   const { t, lang, setLang } = useLang();
   const [notifPerm, setNotifPerm] = useState(() => { if (isNativePlatform()) return "default"; if (!("Notification" in window)) return "unsupported"; return Notification.permission; });
   const [appVersion, setAppVersion] = useState("1.0.0");
@@ -124,6 +124,12 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     setPersonalDetails(details);
     try { localStorage.setItem("adhera_personal", JSON.stringify(details)); } catch {}
     savePersonalToServer(details).catch(() => {});
+  }
+
+  const openPersonal = showPersonalDetails || drillTarget === "personal";
+  function closePersonal() {
+    setShowPersonalDetails(false);
+    if (drillTarget === "personal") onDrillDone?.();
   }
 
   async function enableNotifs() {
@@ -722,8 +728,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         )}
         {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-        {showPersonalDetails && (
-          <PersonalDetailsModal details={personalDetails} onSave={savePersonalDetails} onClose={() => setShowPersonalDetails(false)}/>
+        {openPersonal && (
+          <PersonalDetailsModal details={personalDetails} onSave={(d) => { savePersonalDetails(d); closePersonal(); }} onClose={closePersonal}/>
         )}
         {medSection && <MedicalID meds={meds} section={medSection} onClose={() => { setMedSection(null); refreshMedicalID(); }}/>}
         {showDeleteAccount && (

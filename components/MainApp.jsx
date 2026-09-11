@@ -70,6 +70,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [vitalsSubTab, setVitalsSubTab] = useState("vitals");
   const [reportMemberKey, setReportMemberKey] = useState(null);
   const [visitHistoryFrom, setVisitHistoryFrom] = useState("reports");
+  const [profileDrill, setProfileDrill] = useState(null);
 
   const navigateFromReports = (id) => {
     if (id === "profile") setTab("me");
@@ -79,7 +80,16 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     }
   };
   const [medSheetFor, setMedSheetFor] = useState(null);
-  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [pendingUpgradePlan] = useState(() => {
+    let plan = null;
+    try { plan = sessionStorage.getItem("adhera_pending_upgrade"); } catch {}
+    return plan === "pro" || plan === "family" ? plan : null;
+  });
+  const [showUpgrade, setShowUpgrade] = useState(() => {
+    let plan = null;
+    try { plan = sessionStorage.getItem("adhera_pending_upgrade"); } catch {}
+    return plan === "pro" || plan === "family";
+  });
 
   const notifOn = () => { const s = ls(); try { const v = s?.getItem("mt_notif_on"); return v === "1"; } catch { return false; } };
   function ls() { try { return localStorage; } catch { return null; } }
@@ -98,6 +108,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  useEffect(() => {
+    try { sessionStorage.removeItem("adhera_pending_upgrade"); } catch {}
+  }, []);
 
   async function handleAcceptInvite(id) {
     try {
@@ -912,7 +926,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         <>
           <div {...mainSwipe}>
             <div className="content-reveal">
-              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => { setReportMemberKey(null); setTab("reports"); }} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
+              {tab === "today" && <TodayTab household={household} user={user} profile={profile} plan={profile?.plan || "free"} onGoMe={() => setTab("me")} onGoMeds={() => setTab("meds")} onGoVitals={() => setTab("vitals")} onGoReports={() => { setReportMemberKey(null); setTab("reports"); }} onGoProfileDetails={() => { setProfileDrill("personal"); setTab("me"); }} onUpgrade={() => setShowUpgrade(true)} notifPerm={notifPerm} onEnableNotif={enableNotif} onMarkDose={markDose} onScheduleVisit={() => { setEditVisit(null); setShowVisitSheet(true); }} onEditVisit={(v) => { setEditVisit(v); setShowVisitSheet(true); }} onOpenVisits={() => { setEditVisit(null); setShowVisitList(true); }} onOpenAlerts={() => setOverlayTab("alerts")} alertCount={alertCount} />}
               {tab === "meds" && <MedsTab meds={selfMember.meds || []} logs={selfMember.logs || []} onAdd={() => openMedSheet(selfMember, null)} onEdit={(med) => openMedSheet(selfMember, med)} onDelete={(id) => deleteMed(selfMember, id)} onRefill={(med) => memberRefill(selfMember, med)} plan={profile?.plan || "free"} />}
               {tab === "vitals" && (hasFeature("vitals") || hasFeature("perMemberVitals")) && (
                 vitalsSubTab === "reports"
@@ -922,7 +936,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               {tab === "vitals" && !hasFeature("vitals") && !hasFeature("perMemberVitals") && <ReportsTab logs={logs} meds={meds} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={navigateFromReports} />}
               {tab === "reports" && <ReportsTab logs={logs} meds={meds} vitals={vitals} plan={profile?.plan || "free"} tz={profile?.timezone} onNavigate={navigateFromReports} />}
               {tab === "family" && <FamilyTab household={household} onMarkDose={markDose} onOpenVitals={(m) => openMemberVitals(m)} onGoReports={openMemberReport} user={user} onRefresh={reload} onScheduleVisitForMember={(key) => { setVisitMemberKey(key); setEditVisit(null); setShowVisitSheet(true); }} onEditMed={(m, med) => openMedSheet(m, med)} onDeleteMed={(m, med) => deleteMed(m, med.id)} onRemoveMember={removeMember} />}
-              {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} onGoBadges={() => setTab("badges")} onGoCommunity={() => setTab("community")} />}
+              {tab === "me" && <ProfileTab user={user} profile={profile} meds={meds} logs={logs} onSaveProfile={saveProfile} onSignOut={onSignOut} onGoBadges={() => setTab("badges")} onGoCommunity={() => setTab("community")} drillTarget={profileDrill} onDrillDone={() => setProfileDrill(null)} />}
               {tab === "badges" && <GamificationTab user={user} profile={profile} member={selfMember} onBack={() => setTab("me")} />}
               {tab === "community" && <CommunityTab user={user} profile={profile} onBack={() => setTab("me")} />}
               {tab === "visits" && <VisitHistoryTab onBack={() => { if (visitHistoryFrom === "vitals") { setTab("vitals"); setVitalsSubTab("reports"); } else { setTab("reports"); } }} />}
@@ -982,6 +996,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
           userEmail={user?.email}
           userId={user?.id}
           currentPlan={profile?.plan || "free"}
+          initialPlan={pendingUpgradePlan || undefined}
           onClose={() => setShowUpgrade(false)}
           onUpgrade={p => { setProfile(prev => ({ ...prev, plan: p })); setShowUpgrade(false); }}
         />

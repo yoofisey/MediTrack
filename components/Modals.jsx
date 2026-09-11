@@ -89,10 +89,12 @@ export function TermsModal({ onClose }) {
   );
 }
 
-export function UpgradeModal({ country, userEmail, userId, currentPlan, onClose, onUpgrade }) {
+export function UpgradeModal({ country, userEmail, userId, currentPlan, initialPlan, onClose, onUpgrade }) {
   const upgradeTarget = getTierConfig(currentPlan || "free").upgradeTarget || "pro";
   const [selected, setSelected] = useState(
-    currentPlan === "pro" || currentPlan === "family" ? (currentPlan === "pro" ? "family" : "family") : upgradeTarget
+    initialPlan && ["pro", "family"].includes(initialPlan)
+      ? initialPlan
+      : currentPlan === "pro" || currentPlan === "family" ? (currentPlan === "pro" ? "family" : "family") : upgradeTarget
   );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");

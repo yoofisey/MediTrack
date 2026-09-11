@@ -55,7 +55,12 @@ export default function App() {
   }
 
   async function handleOnboardDone(prefs) {
-    setProfile(p => ({ ...p, ...prefs, onboarded: true }));
+    setProfile(p => ({ ...p, ...prefs, plan: p?.plan || "free", onboarded: true }));
+    try {
+      if (prefs?.plan === "pro" || prefs?.plan === "family") {
+        sessionStorage.setItem("adhera_pending_upgrade", prefs.plan);
+      }
+    } catch {}
     smoothTransition("app");
   }
 

@@ -8,7 +8,7 @@ import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import MedLogButton from "@/components/MedLogButton";
-import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X, Hand } from "lucide-react";
+import { Bell, Building2, CalendarDays, Check, ChevronRight, HeartPulse, Lock, Phone, Pill, Plus, User, X, Hand, ClipboardList } from "lucide-react";
 
 const VITAL_LABELS = {
   blood_pressure: "BP", weight: "Weight", glucose: "Glucose", heart_rate: "Heart rate",
@@ -90,7 +90,7 @@ function VisitStatusControl({ v, now, onMark }) {
   );
 }
 
-export default function TodayTab({ household, user, profile, plan, onGoMe, onGoMeds, onGoVitals, onGoReports, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onScheduleVisit, onEditVisit, onOpenVisits, onOpenAlerts, alertCount }) {
+export default function TodayTab({ household, user, profile, plan, onGoMe, onGoMeds, onGoVitals, onGoReports, onGoProfileDetails, onUpgrade, notifPerm, onEnableNotif, onMarkDose, onScheduleVisit, onEditVisit, onOpenVisits, onOpenAlerts, alertCount }) {
   const { t } = useLang();
   const [, setTick] = useState(0);
   useEffect(() => { const id = setInterval(() => setTick(n => n + 1), 30000); return () => clearInterval(id); }, []);
@@ -143,13 +143,32 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const upLabel = getTierConfig(config.upgradeTarget).label;
   const adh = selected ? weekAdherence(selected) : null;
   const stk = selected ? streak(selected) : 0;
-  const upcomingVisits = getUpcomingVisits(60);
+  const upcomingVisits = getUpcomingVisits(60, user?.id);
   const [, setVisitsTick] = useState(0);
   function markVisit(id, status) {
     markVisitStatus(id, status);
     setVisitsTick(x => x + 1);
   }
   const hasAnyMeds = household.some(m => !m.pending && (m.meds || []).length);
+
+  const personalDetails = (() => { try { const v = JSON.parse(localStorage.getItem("adhera_personal") || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch { return {}; } })();
+  const medicalID = (() => { try { return JSON.parse(localStorage.getItem("mt_medical_id") || "null") || {}; } catch { return {}; } })();
+  const profileChecks = [
+    !!(personalDetails.dob),
+    !!(personalDetails.age),
+    !!(personalDetails.gender),
+    !!(personalDetails.height),
+    !!(personalDetails.weight),
+    !!(medicalID.blood_type),
+    !!((medicalID.allergies || []).length),
+    !!((medicalID.conditions || []).length),
+    !!((medicalID.medication_ids || []).length),
+    !!(medicalID.emergency_name && medicalID.emergency_phone),
+  ];
+  const profileDone = profileChecks.filter(Boolean).length;
+  const profileTotal = profileChecks.length;
+  const profilePct = Math.round((profileDone / profileTotal) * 100);
+  const profileComplete = profileDone === profileTotal;
 
   return (
     <div className="scroll">
@@ -177,6 +196,30 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           </div>
         </div>
       </div>
+
+      {!profileComplete && (
+        <div style={{ margin: "14px 20px 4px" }}>
+          <div className="glass-card" style={{ padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--t1)", display: "flex", alignItems: "center", gap: 8 }}>
+                <ClipboardList size={15} color="var(--teal)" strokeWidth={2.2} /> Complete your profile
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "var(--t3)" }}>{profileDone}/{profileTotal}</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: "var(--sep)", marginTop: 10, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${profilePct}%`, background: "var(--teal)", borderRadius: 3, transition: "width .4s ease" }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
+              <div style={{ fontSize: 12, color: "var(--t3)", lineHeight: 1.4 }}>
+                Add your age &amp; demographics and medical ID so we can personalize your care.
+              </div>
+              <button onClick={onGoProfileDetails} style={{ background: "none", border: "none", color: "var(--teal)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3, flexShrink: 0, padding: 0 }}>
+                Fill in <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(has("reports") || has("perMemberReports")) && adh !== null && (
         <div style={{ margin: "14px 20px 4px" }}>
