@@ -433,23 +433,25 @@ serve(async (req) => {
 
       // Appointment-is-now push — fires at the visit time itself (only when a
       // separate earlier reminder exists, so "At time" reminders don't duplicate).
-      const visitNowDiff = visitMs - nowMs;
-      if (visitNowDiff > -600000 && visitNowDiff < 600000) {
-        const tag = `mt-visit-now-${visit.id}-${visitMs}`;
-        if (await claimTag(supabase, tag)) {
-          const when = visit.time || "09:00";
-          const place = visit.facility ? ` at ${visit.facility}` : visit.doctor ? ` with ${visit.doctor}` : "";
-          const title = "Appointment now";
-          const body = `${visit.reason || "Your scheduled visit"}${place} is starting now (${when}). Tap to log it as attended after your visit.`;
-          const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
-          const userSubs = subMap.get(visit.user_id) || [];
+      if ((visit.reminder_minutes || 0) > 0) {
+        const visitNowDiff = visitMs - nowMs;
+        if (visitNowDiff > -600000 && visitNowDiff < 600000) {
+          const tag = `mt-visit-now-${visit.id}-${visitMs}`;
+          if (await claimTag(supabase, tag)) {
+            const when = visit.time || "09:00";
+            const place = visit.facility ? ` at ${visit.facility}` : visit.doctor ? ` with ${visit.doctor}` : "";
+            const title = "Appointment now";
+            const body = `${visit.reason || "Your scheduled visit"}${place} is starting now (${when}). Tap to log it as attended after your visit.`;
+            const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
+            const userSubs = subMap.get(visit.user_id) || [];
 
-          for (const sub of userSubs) {
-            const r = await sendPush(sub, payload);
-            results.push(r);
-            if (r.ok) sent++;
-            else if (r.statusCode === 404 || r.statusCode === 410) {
-              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            for (const sub of userSubs) {
+              const r = await sendPush(sub, payload);
+              results.push(r);
+              if (r.ok) sent++;
+              else if (r.statusCode === 404 || r.statusCode === 410) {
+                await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+              }
             }
           }
         }
