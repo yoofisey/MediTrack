@@ -430,10 +430,10 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 <style>
   @page{size:A4;margin:18mm 16mm}
   *,:after,:before{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:hidden;background:#f1f5f9;-webkit-font-smoothing:antialiased}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:clip;background:#f1f5f9;-webkit-font-smoothing:antialiased}
   img{max-width:100%;height:auto;display:block}
 
-  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:hidden}
+  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:clip}
   @media(max-width:640px){.report-wrap{padding:16px 18px 32px}}
 
   .top-bar{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;margin-bottom:20px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;gap:8px}
@@ -822,8 +822,8 @@ ${has("reports") ? `
 <style>
   @page{size:A4;margin:18mm 16mm}
   *,:after,:before{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:hidden;background:#f1f5f9;-webkit-font-smoothing:antialiased}
-  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:clip;background:#f1f5f9;-webkit-font-smoothing:antialiased}
+  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:clip}
   @media(max-width:640px){.report-wrap{padding:16px 18px 32px}}
   .report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #f1f5f9}
   .report-header-left h1{font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.4px;margin-bottom:2px}
