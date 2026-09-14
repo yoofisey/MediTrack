@@ -154,21 +154,22 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const personalDetails = (() => { try { const v = JSON.parse(localStorage.getItem("adhera_personal") || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch { return {}; } })();
   const medicalID = (() => { try { return JSON.parse(localStorage.getItem("mt_medical_id") || "null") || {}; } catch { return {}; } })();
   const profileChecks = [
-    !!(personalDetails.dob),
-    !!(personalDetails.age),
-    !!(personalDetails.gender),
-    !!(personalDetails.height),
-    !!(personalDetails.weight),
-    !!(medicalID.blood_type),
-    !!((medicalID.allergies || []).length),
-    !!((medicalID.conditions || []).length),
-    !!((medicalID.medication_ids || []).length),
-    !!(medicalID.emergency_name && medicalID.emergency_phone),
+    { key: "dob", done: !!(personalDetails.dob), drill: "personal" },
+    { key: "age", done: !!(personalDetails.age), drill: "personal" },
+    { key: "gender", done: !!(personalDetails.gender), drill: "personal" },
+    { key: "height", done: !!(personalDetails.height), drill: "personal" },
+    { key: "weight", done: !!(personalDetails.weight), drill: "personal" },
+    { key: "blood_type", done: !!(medicalID.blood_type), drill: "blood_type" },
+    { key: "allergies", done: Array.isArray(medicalID.allergies), drill: "allergies" },
+    { key: "conditions", done: Array.isArray(medicalID.conditions), drill: "conditions" },
+    { key: "medications", done: Array.isArray(medicalID.medication_ids), drill: "medications" },
+    { key: "contact", done: !!(medicalID.emergency_name && medicalID.emergency_phone), drill: "contact" },
   ];
-  const profileDone = profileChecks.filter(Boolean).length;
+  const profileDone = profileChecks.filter(c => c.done).length;
   const profileTotal = profileChecks.length;
   const profilePct = Math.round((profileDone / profileTotal) * 100);
   const profileComplete = profileDone === profileTotal;
+  const profileFirstMissing = profileChecks.find(c => !c.done)?.drill || "personal";
 
   return (
     <div className="scroll">
@@ -213,7 +214,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
               <div style={{ fontSize: 12, color: "var(--t3)", lineHeight: 1.4 }}>
                 Add your age &amp; demographics and medical ID so we can personalize your care.
               </div>
-              <button onClick={onGoProfileDetails} style={{ background: "none", border: "none", color: "var(--teal)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3, flexShrink: 0, padding: 0 }}>
+              <button onClick={() => onGoProfileDetails(profileFirstMissing)} style={{ background: "none", border: "none", color: "var(--teal)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3, flexShrink: 0, padding: 0 }}>
                 Fill in <ChevronRight size={14} />
               </button>
             </div>

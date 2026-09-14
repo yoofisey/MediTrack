@@ -127,6 +127,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   }
 
   const openPersonal = showPersonalDetails || drillTarget === "personal";
+  const openMedSection = medSection || (drillTarget && drillTarget !== "personal" ? drillTarget : null);
   function closePersonal() {
     setShowPersonalDetails(false);
     if (drillTarget === "personal") onDrillDone?.();
@@ -624,10 +625,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     <div className="section" style={{marginBottom:16}}>
       <div className="section-header">Medical ID</div>
         <div className="list">
-          <Row icon={<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Current medications" sub={(medicalID.medication_ids||[]).length ? `${(medicalID.medication_ids||[]).length} listed in Medical ID` : "Not set"} onClick={()=>setMedSection("medications")}/>
+          <Row icon={<Ico><Pill size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)" title="Current medications" sub={medicalID.medication_ids != null ? ((medicalID.medication_ids||[]).length ? `${(medicalID.medication_ids||[]).length} listed in Medical ID` : "None listed") : "Not set"} onClick={()=>setMedSection("medications")}/>
           <Row icon={<Ico><Droplet size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib6)" title="Blood type" sub={medicalID.blood_type || "Not set"} onClick={()=>setMedSection("blood_type")}/>
-          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={(medicalID.allergies||[]).length ? medicalID.allergies.join(", ") : "None recorded"} onClick={()=>setMedSection("allergies")}/>
-          <Row icon={<Ico><Info size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title="Medical conditions" sub={(medicalID.conditions||[]).length ? medicalID.conditions.join(", ") : "None recorded"} onClick={()=>setMedSection("conditions")}/>
+          <Row icon={<Ico><AlertTriangle size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib3)" title="Allergies" sub={medicalID.allergies != null ? ((medicalID.allergies||[]).length ? medicalID.allergies.join(", ") : "None recorded") : "Not set"} onClick={()=>setMedSection("allergies")}/>
+          <Row icon={<Ico><Info size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib2)" title="Medical conditions" sub={medicalID.conditions != null ? ((medicalID.conditions||[]).length ? medicalID.conditions.join(", ") : "None recorded") : "Not set"} onClick={()=>setMedSection("conditions")}/>
           <Row icon={<Ico><Phone size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)" title="Emergency contact" sub={medicalID.emergency_name ? `${medicalID.emergency_name}${medicalID.emergency_relation ? ` · ${medicalID.emergency_relation}` : ""}${medicalID.emergency_phone ? ` · ${medicalID.emergency_code || "+233"} ${medicalID.emergency_phone}` : ""}` : "Not set"} onClick={()=>setMedSection("contact")}/>
         </div>
       </div>
@@ -731,7 +732,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         {openPersonal && (
           <PersonalDetailsModal details={personalDetails} onSave={(d) => { savePersonalDetails(d); closePersonal(); }} onClose={closePersonal}/>
         )}
-        {medSection && <MedicalID meds={meds} section={medSection} onClose={() => { setMedSection(null); refreshMedicalID(); }}/>}
+        {openMedSection && <MedicalID meds={meds} section={openMedSection} onClose={() => { setMedSection(null); if (drillTarget && drillTarget !== "personal") onDrillDone?.(); refreshMedicalID(); }}/>}
         {showDeleteAccount && (
           <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
             <div className="sheet" style={{maxHeight:"80dvh"}} onClick={e => e.stopPropagation()}>

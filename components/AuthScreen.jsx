@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
-import { COUNTRIES, getPricing } from "@/lib/data";
+import { COUNTRIES } from "@/lib/data";
 import { isDisposableEmail, checkSignupRate, recordSignupAttempt, checkOtpAttempts, recordOtpAttempt, resetOtpAttempts } from "@/lib/antispam";
 import SentOtpView from "./SentOtpView";
 import { CheckCircle2, Bell, Flame, BarChart3, Check, Circle, Globe } from "lucide-react";
@@ -187,9 +187,6 @@ export default function AuthScreen({ onAuth }) {
     } finally { setBusy(false); }
   }
 
-  const selCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
-  const { pricing } = getPricing(country);
-
   const pwColors = ["rgba(255,255,255,.1)","#FF453A","#FF9500","#FFD60A","#34C759","#34C759"];
 
   if (view === "welcome") return (
@@ -343,31 +340,6 @@ export default function AuthScreen({ onAuth }) {
               <select className="auth-select" style={{paddingLeft:40}} value={country} onChange={e=>setCountry(e.target.value)}>
                 {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
               </select>
-            </div>
-            <div style={{border:"1px solid rgba(255,255,255,.1)",borderRadius:16,padding:"14px 16px",background:"rgba(255,255,255,.04)"}}>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:".5px",marginBottom:10}}>
-                <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={12}/> {selCountry.name} — Free to start</span>
-              </div>
-              <div className="auth-plan-grid">
-                <div className="auth-plan selected">
-                  <div className="auth-plan-name">Free</div>
-                  <div className="auth-plan-price">Free</div>
-                  <div className="auth-plan-desc">2 meds · 7-day history</div>
-                </div>
-                <div className="auth-plan">
-                  <div className="auth-plan-name">Pro</div>
-                  <div className="auth-plan-price">{pricing.pro.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>{pricing.pro.label !== "Coming soon" ? "/mo" : ""}</span></div>
-                  <div className="auth-plan-desc">After checkout</div>
-                </div>
-                <div className="auth-plan">
-                  <div className="auth-plan-name">Family</div>
-                  <div className="auth-plan-price">{pricing.family.label}<span style={{fontSize:10,fontWeight:400,opacity:.6}}>{pricing.family.label !== "Coming soon" ? "/mo" : ""}</span></div>
-                  <div className="auth-plan-desc">After checkout</div>
-                </div>
-              </div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:10,lineHeight:1.5}}>
-                Pro and Family are activated after payment — upgrade anytime from your profile.
-              </div>
             </div>
           </div>
           <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>

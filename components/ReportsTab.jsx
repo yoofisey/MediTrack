@@ -800,81 +800,120 @@ ${has("reports") ? `
     }
   }
 
-  async function exportBasicPdf() {
-    try {
-      const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF("p", "mm", "a4");
-      const pageW = 210, pageH = 297, ml = 20, mr = 20;
-      let y = 20;
+  function viewBasicReport() {
+    const activeMeds = meds.filter(m => m.active);
+    const pm = perMedAdherence();
+    const badgeCls = m => m.pct >= 80 ? "badge-good" : m.pct >= 50 ? "badge-fair" : "badge-poor";
+    const statusLbl = m => m.pct >= 80 ? "Good" : m.pct >= 50 ? "Fair" : "Poor";
+    const medRows = pm.map(m => `
+        <tr>
+          <td>${escapeHtml(m.name)}</td>
+          <td>${escapeHtml(`${m.dosage_amount || ""} ${m.dosage_unit || ""}`.trim())}</td>
+          <td>${m.taken}/${m.expected}</td>
+          <td>${m.pct}% <span class="badge ${badgeCls(m)}">${statusLbl(m)}</span></td>
+        </tr>`).join("");
 
-      doc.setFont("helvetica", "bold"); doc.setFontSize(22);
-      doc.setTextColor(37, 99, 235);
-      doc.text("Adhera", ml, y); y += 4;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-      doc.setTextColor(140, 140, 140);
-      doc.text("Basic Medication Report", ml, y); y += 3;
-      doc.text(`${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, ml, y);
-      y += 8;
-      doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
-      doc.line(ml, y, pageW - mr, y); y += 10;
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Adhera Medication Report</title>
+<style>
+  @page{size:A4;margin:18mm 16mm}
+  *,:after,:before{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:hidden;background:#f1f5f9;-webkit-font-smoothing:antialiased}
+  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:hidden}
+  @media(max-width:640px){.report-wrap{padding:16px 18px 32px}}
+  .report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #f1f5f9}
+  .report-header-left h1{font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.4px;margin-bottom:2px}
+  .report-header-left .tagline{font-size:12px;color:#64748b}
+  .report-header-right{text-align:right}
+  .report-header-right .date{font-size:14px;font-weight:700;color:#0f172a}
+  .report-header-right .period{font-size:12px;color:#94a3b8;margin-top:2px}
+  .patient-badge{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:24px}
+  .patient-badge-item{display:flex;flex-direction:column;gap:2px}
+  .patient-badge-label{font-size:11px;font-weight:500;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px}
+  .patient-badge-value{font-size:15px;font-weight:700;color:#0f172a}
+  .metric-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:28px}
+  @media(max-width:480px){.metric-row{grid-template-columns:1fr 1fr;gap:8px}}
+  .metric-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 12px;text-align:center}
+  .metric-card-value{font-size:26px;font-weight:800;line-height:1.1}
+  .metric-card-value.green{color:#059669}
+  .metric-card-value.blue{color:#2563eb}
+  .metric-card-value.orange{color:#d97706}
+  .metric-card-value.purple{color:#7c3aed}
+  .metric-card-label{font-size:11px;color:#64748b;margin-top:4px;line-height:1.3}
+  .section-title{font-size:16px;font-weight:700;color:#0f172a;margin-bottom:14px;margin-top:28px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+  .data-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+  .data-table thead th{padding:10px 10px;text-align:left;font-weight:600;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+  .data-table tbody td{padding:10px;border-bottom:1px solid #f1f5f9;color:#334155}
+  .data-table tbody tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+  .badge-good{background:#dcfce7;color:#059669}
+  .badge-fair{background:#fef3c7;color:#d97706}
+  .badge-poor{background:#fee2e2;color:#dc2626}
+  .report-footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .report-footer-text{font-size:10px;color:#94a3b8}
+  .report-footer-logo{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="report-wrap">
 
-      doc.setFont("helvetica", "bold"); doc.setFontSize(13);
-      doc.setTextColor(37, 99, 235);
-      doc.text("Medications", ml, y); y += 8;
-      const active = meds.filter(m => m.active);
-      if (active.length === 0) {
-        doc.setFont("helvetica", "italic"); doc.setFontSize(10);
-        doc.setTextColor(140, 140, 140);
-        doc.text("No active medications.", ml, y); y += 6;
-      } else {
-        active.forEach(med => {
-          if (y > pageH - 30) { doc.addPage(); y = 20; }
-          doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-          doc.setTextColor(30, 30, 30);
-          doc.text(`\u2022 ${med.name}`, ml, y); y += 5;
-          doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-          doc.setTextColor(100, 100, 100);
-          doc.text(`  ${med.dosage_amount} ${med.dosage_unit} \u00B7 ${med.times_per_day}x daily`, ml + 4, y); y += 6;
-        });
-      }
+<div class="report-header">
+  <div class="report-header-left">
+    <h1>Medication Report</h1>
+    <div class="tagline">Basic summary generated by Adhera</div>
+  </div>
+  <div class="report-header-right">
+    <div class="date">${today.toLocaleDateString("en",{year:"numeric",month:"long",day:"numeric"})}</div>
+    <div class="period">Basic report</div>
+  </div>
+</div>
 
-      y += 4;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(13);
-      doc.setTextColor(37, 99, 235);
-      doc.text("Adherence", ml, y); y += 8;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60);
-      doc.text(`Overall: ${adherence}%`, ml, y); y += 5;
-      doc.text(`Streak: ${streak} day${streak !== 1 ? "s" : ""}`, ml, y); y += 5;
-      doc.text(`Days tracked: ${daysTracked}`, ml, y); y += 5;
-      doc.text(`Total doses: ${totalDoses}`, ml, y); y += 8;
+<div class="patient-badge">
+  <div class="patient-badge-item">
+    <span class="patient-badge-label">Plan</span>
+    <span class="patient-badge-value">${escapeHtml(plan.charAt(0).toUpperCase()+plan.slice(1))}</span>
+  </div>
+  <div class="patient-badge-item">
+    <span class="patient-badge-label">Active Medications</span>
+    <span class="patient-badge-value">${activeMeds.length}</span>
+  </div>
+  <div class="patient-badge-item">
+    <span class="patient-badge-label">Current Streak</span>
+    <span class="patient-badge-value">${streak} days</span>
+  </div>
+  <div class="patient-badge-item">
+    <span class="patient-badge-label">Adherence Rate</span>
+    <span class="patient-badge-value">${adherence}%</span>
+  </div>
+</div>
 
-      const pm = perMedAdherence();
-      if (pm.length > 0) {
-        doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-        doc.setTextColor(30, 30, 30);
-        doc.text("Per Medication:", ml, y); y += 6;
-        pm.forEach(m => {
-          if (y > pageH - 25) { doc.addPage(); y = 20; }
-          const status = m.pct >= 80 ? "Good" : m.pct >= 50 ? "Fair" : "Poor";
-          doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-          doc.setTextColor(60, 60, 60);
-          doc.text(`\u2022 ${m.name}: ${m.pct}% (${status}) \u2014 ${m.taken}/${m.expected} doses`, ml + 2, y); y += 5;
-        });
-      }
+<div class="metric-row">
+  <div class="metric-card"><div class="metric-card-value green">${adherence}%</div><div class="metric-card-label">Overall<br>Adherence</div></div>
+  <div class="metric-card"><div class="metric-card-value blue">${streak}</div><div class="metric-card-label">Best<br>Streak</div></div>
+  <div class="metric-card"><div class="metric-card-value orange">${daysTracked}</div><div class="metric-card-label">Days<br>Tracked</div></div>
+  <div class="metric-card"><div class="metric-card-value purple">${totalDoses}</div><div class="metric-card-label">Total<br>Doses</div></div>
+</div>
 
-      y += 10;
-      doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.3);
-      doc.line(ml, y, pageW - mr, y); y += 6;
-      doc.setFont("helvetica", "italic"); doc.setFontSize(9);
-      doc.setTextColor(140, 140, 140);
-      doc.text("Upgrade to Pro for detailed charts, clinical insights, and doctor-ready reports.", ml, y); y += 5;
-      doc.text("Generated by Adhera \u00B7 adhera.app \u00B7 Confidential", ml, y);
+${pm.length > 0 ? `
+<div class="section-title">Medication Adherence</div>
+<table class="data-table">
+  <thead><tr><th>Medication</th><th>Dosage</th><th>Taken</th><th>Adherence</th></tr></thead>
+  <tbody>${medRows}</tbody>
+</table>` : ""}
 
-      doc.save(`adhera_basic_report_${new Date().toISOString().split("T")[0]}.pdf`);
-    } catch (e) {
-      console.error("Basic PDF export error:", e);
-    }
+<div class="report-footer">
+  <div class="report-footer-logo">ADHERA</div>
+  <div class="report-footer-text">Medication Report · Generated ${today.toISOString().split("T")[0]} · Confidential</div>
+</div>
+
+</div>
+</body></html>`;
+
+    setPdfHtml(html);
   }
 
   const pm = perMedAdherence();
@@ -1282,10 +1321,10 @@ ${has("reports") ? `
 
        {has("basicReports") && !has("reports") && (
          <div style={{padding:"4px 20px 16px"}}>
-           <button className="btn" onClick={exportBasicPdf} disabled={meds.length === 0}
+           <button className="btn" onClick={viewBasicReport} disabled={meds.length === 0}
              style={{width:"100%",background:"var(--card)",color:"var(--t1)",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"14px 16px",borderRadius:14,border:"1px solid var(--sep)",boxShadow:"var(--card-shadow)"}}>
              <Ico><FileText size={18} strokeWidth={2.2} color="var(--teal2)"/></Ico>
-             <span>Download Basic Report</span>
+             <span>View Report</span>
            </button>
            <div style={{fontSize:12,color:"var(--t3)",textAlign:"center",marginTop:8}}>Upgrade to Pro for charts, clinical insights, and doctor-ready reports</div>
          </div>

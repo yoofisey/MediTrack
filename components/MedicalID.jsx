@@ -203,9 +203,9 @@ export default function MedicalID({ meds = [], onClose, section }) {
     );
   }
 
-  const noneAllergy = (data.allergies || []).length === 0;
-  const noneCondition = (data.conditions || []).length === 0;
-  const noneMeds = (data.medication_ids || []).length === 0;
+  const noneAllergy = Array.isArray(data.allergies) && data.allergies.length === 0;
+  const noneCondition = Array.isArray(data.conditions) && data.conditions.length === 0;
+  const noneMeds = Array.isArray(data.medication_ids) && data.medication_ids.length === 0;
 
   return (
     <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
