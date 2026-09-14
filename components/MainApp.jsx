@@ -57,6 +57,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [visitMemberKey, setVisitMemberKey] = useState(null);
   const [showVisitList, setShowVisitList] = useState(false);
   const [editVisit, setEditVisit] = useState(null);
+  const [visitReview, setVisitReview] = useState(false);
   const [journalEntries, setJournalEntries] = useState([]);
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntry, setJournalEntry] = useState(null);
@@ -540,6 +541,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         }
         if (visit) {
           setEditVisit(visit);
+          setVisitReview(true);
           setShowVisitSheet(true);
         }
       }).catch(() => {});
@@ -985,7 +987,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       )}
       <AlarmOverlay alarm={alarmData} onDismiss={dismissAlarm} onLogDose={(med) => { setAlarmData(null); setAlarmQueue([]); stopAlarmSound(); setLogDoseMed(med); }}/>
       <ForegroundAlert alert={foregroundAlert} onDismiss={() => setForegroundAlert(null)} />
-      {(showVisitSheet||showVisitList) && <VisitSheet memberKey={visitMemberKey} userId={user?.id} initialView={showVisitList?"list":"form"} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); reload(); }}/>}
+      {(showVisitSheet||showVisitList) && <VisitSheet memberKey={visitMemberKey} userId={user?.id} initialView={showVisitList?"list":"form"} review={visitReview} onClose={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); setVisitReview(false); }} editingVisit={editVisit} onSaved={() => { setShowVisitSheet(false); setShowVisitList(false); setEditVisit(null); setVisitMemberKey(null); setVisitReview(false); reload(); }}/>}
       {journalDate && <JournalEntrySheet date={journalDate} entry={journalEntry} onSave={() => { try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch {} saveProfile({ last_checkin_date: new Date().toISOString().split("T")[0] }); }} onClose={() => { setJournalDate(null); setJournalEntry(null); }}/>}
       {showInviteSheet && pendingInvites.length > 0 && (
         <FamilyInviteSheet invites={pendingInvites} onAccept={handleAcceptInvite} onDismiss={() => setShowInviteSheet(false)}/>

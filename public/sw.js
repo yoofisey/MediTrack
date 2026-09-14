@@ -13,6 +13,11 @@ const doseDB = {};
 
 function deepLinkFromTag(tag) {
   const t = String(tag || "");
+  if (t.startsWith("mt-visit-now-")) {
+    const visitId = t.slice("mt-visit-now-".length, t.lastIndexOf("-"));
+    if (visitId) return { type: "mt-open-visit", data: { visitId } };
+    return null;
+  }
   if (t.startsWith("mt-visit-")) {
     const visitId = t.slice("mt-visit-".length, t.lastIndexOf("-"));
     if (visitId) return { type: "mt-open-visit", data: { visitId } };

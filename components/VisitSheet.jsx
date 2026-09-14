@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { addVisit, updateVisit, deleteVisit, getVisits } from "@/lib/data";
+import { addVisit, updateVisit, deleteVisit, getVisits, markVisitStatus } from "@/lib/data";
 import { scheduleVisitReminder, cancelVisitReminder } from "@/lib/notifications";
-import { Building2, ClipboardList } from "lucide-react";
+import { Building2, ClipboardList, Check, X } from "lucide-react";
 import { useSwipe } from "@/lib/useSwipe";
 import { FormControl, FormRow } from "@/components/FormControls";
 
@@ -11,7 +11,7 @@ function Ico({ children, ...props }) {
   return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
 }
 
-export default function VisitSheet({ onClose, editingVisit, onSaved, initialView, memberKey, userId }) {
+export default function VisitSheet({ onClose, editingVisit, onSaved, initialView, memberKey, userId, review }) {
   const today = new Date().toISOString().split("T")[0];
   const [f, setF] = useState({
     date: editingVisit?.date || today,
@@ -26,6 +26,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   const [showList, setShowList] = useState(initialView === "list");
   const [delId, setDelId] = useState(null);
   const [editingId, setEditingId] = useState(editingVisit?.id || null);
+  const [viewMode, setViewMode] = useState(() => Boolean(review && editingVisit && editingVisit.status !== "attended" && editingVisit.status !== "missed"));
 
   useEffect(() => {}, []);
 
@@ -66,6 +67,41 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   ];
 
   const handleSwipe = useSwipe({ onSwipeDown: onClose });
+
+  const activeVisit = editingId ? getVisits().find(v => v.id === editingId) || editingVisit : editingVisit;
+
+  if (viewMode && activeVisit) {
+    return (
+      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" {...handleSwipe}/>
+          <div style={{padding:"14px 20px 24px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
+            <div className="sheet-title">Your appointment</div>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,paddingTop:8}}>
+              <div className="row-icon" style={{background:"var(--ib5)",width:48,height:48,flexShrink:0}}><Ico><Building2 size={22} strokeWidth={2} color="var(--t1)"/></Ico></div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:17,fontWeight:700}}>{activeVisit.reason || "Hospital visit"}</div>
+                <div style={{fontSize:13,color:"var(--t3)"}}>{activeVisit.date} · {activeVisit.time}</div>
+              </div>
+            </div>
+            <div className="list" style={{marginBottom:20}}>
+              {activeVisit.doctor && <div className="row"><div className="row-body"><div className="row-title">Doctor / Specialist</div><div className="row-sub">{activeVisit.doctor}</div></div></div>}
+              {activeVisit.facility && <div className="row"><div className="row-body"><div className="row-title">Hospital / Facility</div><div className="row-sub">{activeVisit.facility}</div></div></div>}
+              {activeVisit.notes && <div className="row"><div className="row-body"><div className="row-title">Notes</div><div className="row-sub" style={{whiteSpace:"pre-wrap"}}>{activeVisit.notes}</div></div></div>}
+            </div>
+            <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",textAlign:"center",marginBottom:12}}>Log how it went</div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn" style={{flex:1,background:"var(--green)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => { markVisitStatus(activeVisit.id, "attended"); onSaved?.(); }}><Check size={16} strokeWidth={3}/> Attended</button>
+              <button className="btn" style={{flex:1,background:"var(--red)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => { markVisitStatus(activeVisit.id, "missed"); onSaved?.(); }}><X size={16} strokeWidth={3}/> Missed</button>
+            </div>
+            <div style={{textAlign:"center",marginTop:12}}>
+              <button className="btn btn-sm" style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,fontWeight:600}} onClick={() => setViewMode(false)}>Edit details</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showList) {
     return (

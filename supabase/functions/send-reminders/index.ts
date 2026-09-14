@@ -410,23 +410,48 @@ serve(async (req) => {
     for (const visit of visits) {
       const visitMs = zonedTimeToEpoch(visit.date, visit.time || "09:00", tzFor(visit.user_id));
       const reminderMs = visitMs - (visit.reminder_minutes || 0) * 60000;
-      const diff = reminderMs - nowMs;
-      if (diff > 600000 || diff < -600000) continue;
+      const reminderDiff = reminderMs - nowMs;
 
-      const tag = `mt-visit-${visit.id}-${reminderMs}`;
-      if (!(await claimTag(supabase, tag))) continue;
+      if (reminderDiff > -600000 && reminderDiff < 600000) {
+        const tag = `mt-visit-${visit.id}-${reminderMs}`;
+        if (await claimTag(supabase, tag)) {
+          const title = `Visit: ${visit.reason || "Doctor appointment"}`;
+          const body = `${visit.facility || visit.doctor || ""} at ${visit.time || "09:00"}${visit.notes ? "\n" + visit.notes : ""}`;
+          const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
+          const userSubs = subMap.get(visit.user_id) || [];
 
-      const title = `Visit: ${visit.reason || "Doctor appointment"}`;
-      const body = `${visit.facility || visit.doctor || ""} at ${visit.time || "09:00"}${visit.notes ? "\n" + visit.notes : ""}`;
-      const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
-      const userSubs = subMap.get(visit.user_id) || [];
+          for (const sub of userSubs) {
+            const r = await sendPush(sub, payload);
+            results.push(r);
+            if (r.ok) sent++;
+            else if (r.statusCode === 404 || r.statusCode === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            }
+          }
+        }
+      }
 
-      for (const sub of userSubs) {
-        const r = await sendPush(sub, payload);
-        results.push(r);
-        if (r.ok) sent++;
-        else if (r.statusCode === 404 || r.statusCode === 410) {
-          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+      // Appointment-is-now push — fires at the visit time itself (only when a
+      // separate earlier reminder exists, so "At time" reminders don't duplicate).
+      const visitNowDiff = visitMs - nowMs;
+      if (visitNowDiff > -600000 && visitNowDiff < 600000) {
+        const tag = `mt-visit-now-${visit.id}-${visitMs}`;
+        if (await claimTag(supabase, tag)) {
+          const when = visit.time || "09:00";
+          const place = visit.facility ? ` at ${visit.facility}` : visit.doctor ? ` with ${visit.doctor}` : "";
+          const title = "Appointment now";
+          const body = `${visit.reason || "Your scheduled visit"}${place} is starting now (${when}). Tap to log it as attended after your visit.`;
+          const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
+          const userSubs = subMap.get(visit.user_id) || [];
+
+          for (const sub of userSubs) {
+            const r = await sendPush(sub, payload);
+            results.push(r);
+            if (r.ok) sent++;
+            else if (r.statusCode === 404 || r.statusCode === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            }
+          }
         }
       }
     }
