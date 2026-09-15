@@ -78,10 +78,7 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
           <div className="trans-ring trans-ring-outer" />
           <div className="trans-ring trans-ring-inner" />
           <div className="trans-logo">
-            <svg viewBox="0 0 48 48" width="52" height="52" fill="white">
-              <rect x="17" y="4" width="14" height="40" rx="5" fill="white" />
-              <rect x="4" y="17" width="40" height="14" rx="5" fill="white" />
-            </svg>
+            <img src="/icon-512.png" alt="Adhera" />
           </div>
         </div>
 

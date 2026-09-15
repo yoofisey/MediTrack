@@ -67,7 +67,7 @@ export default function ResetPassword({ onDone }) {
           <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>{busy ? "Saving..." : "Update password"}</button>
         </form>
         <div className="auth-switch">
-          <button type="button" onClick={() => setVis(v => !v)} style={{ background: "none", border: "none", color: "rgba(255,255,255,.5)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
+          <button type="button" onClick={() => setVis(v => !v)} style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
             {vis ? "Hide passwords" : "Show passwords"}
           </button>
         </div>
