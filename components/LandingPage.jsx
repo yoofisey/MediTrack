@@ -27,7 +27,7 @@ export default function LandingPage({ onGetStarted }) {
 
       <div style={{maxWidth:480,margin:"0 auto",padding:"72px 24px 44px",textAlign:"center"}}>
         <div style={{width:72,height:72,borderRadius:20,overflow:"hidden",margin:"0 auto 16px",boxShadow:"0 10px 36px rgba(0,122,255,.26),0 2px 8px rgba(0,0,0,.05)",animation:"fadeUp .6s ease both"}}>
-          <img src="/icon-512.png" alt="Adhera" width="72" height="72" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+          <img src="/icon-512.png?v=3" alt="Adhera" width="72" height="72" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
         </div>
         <div style={{fontSize:21,fontWeight:700,color:"#1C1C1E",marginBottom:26,letterSpacing:"-.3px",animation:"fadeUp .6s .1s ease both"}}>Adhera</div>
 

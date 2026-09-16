@@ -78,7 +78,7 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
           <div className="trans-ring trans-ring-outer" />
           <div className="trans-ring trans-ring-inner" />
           <div className="trans-logo">
-            <img src="/icon-512.png" alt="Adhera" />
+            <img src="/icon-512.png?v=3" alt="Adhera" />
           </div>
         </div>
 

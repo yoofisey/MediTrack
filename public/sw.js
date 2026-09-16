@@ -1,4 +1,4 @@
-const CACHE = "adhera-v2";
+const CACHE = "adhera-v3";
 const API_CACHE = "adhera-api-v1";
 
 self.addEventListener("install", () => self.skipWaiting());

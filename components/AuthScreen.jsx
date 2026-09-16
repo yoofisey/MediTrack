@@ -194,7 +194,7 @@ export default function AuthScreen({ onAuth }) {
       <style>{CSS}</style>
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"64px 32px 24px",position:"relative",zIndex:1}}>
         <div style={{width:104,height:104,borderRadius:30,overflow:"hidden",marginBottom:26,boxShadow:"0 12px 48px rgba(0,122,255,.28),0 2px 8px rgba(0,0,0,.06)",animation:"logoPop 1s cubic-bezier(.175,.885,.32,1.275) both"}}>
-          <img src="/icon-512.png" alt="Adhera" width="104" height="104" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+          <img src="/icon-512.png?v=3" alt="Adhera" width="104" height="104" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
         </div>
         <div style={{fontSize:34,fontWeight:800,letterSpacing:"-.6px",textAlign:"center",lineHeight:1.1,marginBottom:10,color:"var(--t1)",animation:"fadeUp .6s .15s cubic-bezier(.22,1,.36,1) both"}}>Adhera</div>
         <div style={{fontSize:17,fontWeight:500,color:"var(--t3)",textAlign:"center",lineHeight:1.55,maxWidth:300,marginBottom:32,animation:"fadeUp .65s .3s cubic-bezier(.22,1,.36,1) both"}}>
