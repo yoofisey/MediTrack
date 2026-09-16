@@ -45,10 +45,6 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
       <div key={key} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 32px", zIndex: 1 }}>
         <div className="trans-logo-wrap">
           <div className="trans-logo-glow" />
-          <div className="trans-orbit">
-            <span className="trans-orbit-dot" />
-            <span className="trans-orbit-dot alt" />
-          </div>
           <div className="trans-logo">
             <img src="/icon-512.png?v=3" alt="Adhera" />
           </div>
