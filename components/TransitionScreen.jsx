@@ -47,17 +47,17 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
 
       <div className="trans-aurora" style={{
         top: "-30%", right: "-20%", width: "80%", height: "80%",
-        background: "radial-gradient(circle, rgba(0,100,255,.18) 0%, transparent 60%)",
+        background: "radial-gradient(circle, rgba(0,122,255,.14) 0%, transparent 60%)",
         animation: "aurora1 12s ease-in-out infinite",
       }} />
       <div className="trans-aurora" style={{
         bottom: "-30%", left: "-20%", width: "70%", height: "70%",
-        background: "radial-gradient(circle, rgba(0,180,255,.1) 0%, transparent 55%)",
+        background: "radial-gradient(circle, rgba(88,86,214,.11) 0%, transparent 55%)",
         animation: "aurora2 14s ease-in-out infinite",
       }} />
       <div className="trans-aurora" style={{
         top: "30%", left: "30%", width: "55%", height: "55%",
-        background: "radial-gradient(circle, rgba(80,140,255,.07) 0%, transparent 50%)",
+        background: "radial-gradient(circle, rgba(0,180,255,.08) 0%, transparent 50%)",
         animation: "aurora3 16s ease-in-out infinite",
       }} />
 
@@ -107,8 +107,8 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
               {icon && (
                 <div style={{ marginTop: 24, marginBottom: 4, lineHeight: 1, animation: "fadeUp .5s cubic-bezier(.175,.885,.32,1.275) both", display:"inline-flex", justifyContent:"center" }}>{icon}</div>
               )}
-              <div style={{ marginTop: icon ? 4 : 0, marginBottom: 4, fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.95)", textAlign: "center", letterSpacing: "-.3px" }}>{message || "Loading…"}</div>
-              {sub && <div style={{ fontSize: 15, color: "rgba(255,255,255,.65)", textAlign: "center", padding: "0 20px", lineHeight: 1.5, marginTop: 6, fontWeight: 400 }}>{sub}</div>}
+              <div style={{ marginTop: icon ? 4 : 0, marginBottom: 6, fontSize: 20, fontWeight: 700, color: "var(--t1)", textAlign: "center", letterSpacing: "-.3px" }}>{message || "Loading…"}</div>
+              {sub && <div style={{ fontSize: 15, color: "var(--t3)", textAlign: "center", padding: "0 20px", lineHeight: 1.5, marginTop: 6, fontWeight: 500 }}>{sub}</div>}
             </>
           )}
         </div>

@@ -850,6 +850,12 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     <div style={{background:"var(--bg)",minHeight:"100dvh"}}>
       <style>{CSS}</style>
       <div className="scroll">
+        <div className="section" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "20px 0 6px" }}>
+          <div style={{ width: 52, height: 52, borderRadius: 15, overflow: "hidden", boxShadow: "0 6px 20px rgba(0,122,255,.22)", marginBottom: 8 }}>
+            <img src="/icon-512.png?v=3" alt="" width="52" height="52" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
+          <div className="skel-line skel-pulse" style={{ width: 76, height: 12 }} />
+        </div>
         <div className="skel-hero">
           <div className="skel-line skel-pulse" style={{width:"40%",height:14,marginBottom:14}}/>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
