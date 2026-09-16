@@ -1,29 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
 
 export default function TransitionScreen({ icon, message, sub, showMessages = false, fadeOut = false }) {
   const [step, setStep] = useState(0);
   const [fading, setFading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const showDefault = !message && !sub;
   const key = showDefault ? "default" : `${message}-${sub}`;
 
   const msgs = ["Verifying your session", "Syncing your data", "Almost ready"];
-
-  const particles = useMemo(() =>
-    Array.from({ length: 7 }, (_, i) => ({
-      id: i,
-      size: 1.5 + Math.random() * 2.5,
-      left: 8 + Math.random() * 84,
-      bottom: -5 - Math.random() * 15,
-      duration: 8 + Math.random() * 10,
-      delay: Math.random() * 6,
-      opacity: 0.15 + Math.random() * 0.25,
-    })), []);
-
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!showDefault || !showMessages) return;
@@ -46,37 +32,23 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
       <style>{CSS}</style>
 
       <div className="trans-aurora" style={{
-        top: "-30%", right: "-20%", width: "80%", height: "80%",
-        background: "radial-gradient(circle, rgba(0,122,255,.14) 0%, transparent 60%)",
-        animation: "aurora1 12s ease-in-out infinite",
+        top: "-28%", left: "50%", width: "70%", height: "70%", transform: "translateX(-50%)",
+        background: "radial-gradient(circle, rgba(0,122,255,.10) 0%, transparent 60%)",
+        animation: "aurora1 11s ease-in-out infinite",
       }} />
       <div className="trans-aurora" style={{
-        bottom: "-30%", left: "-20%", width: "70%", height: "70%",
-        background: "radial-gradient(circle, rgba(88,86,214,.11) 0%, transparent 55%)",
-        animation: "aurora2 14s ease-in-out infinite",
-      }} />
-      <div className="trans-aurora" style={{
-        top: "30%", left: "30%", width: "55%", height: "55%",
-        background: "radial-gradient(circle, rgba(0,180,255,.08) 0%, transparent 50%)",
-        animation: "aurora3 16s ease-in-out infinite",
+        bottom: "-30%", right: "-18%", width: "64%", height: "60%",
+        background: "radial-gradient(circle, rgba(88,86,214,.08) 0%, transparent 55%)",
+        animation: "aurora2 13s ease-in-out infinite",
       }} />
 
-      {mounted && particles.map(p => (
-        <div key={p.id} className="trans-particle" style={{
-          width: p.size, height: p.size,
-          left: `${p.left}%`, bottom: `${p.bottom}%`,
-          opacity: p.opacity,
-          animation: `particleRise ${p.duration}s ${p.delay}s linear infinite`,
-        }} />
-      ))}
-
-      <div className="trans-beam" style={{ left: "50%", transform: "translateX(-50%)" }} />
-
-      <div key={key} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 32px" }}>
+      <div key={key} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 32px", zIndex: 1 }}>
         <div className="trans-logo-wrap">
           <div className="trans-logo-glow" />
-          <div className="trans-ring trans-ring-outer" />
-          <div className="trans-ring trans-ring-inner" />
+          <div className="trans-orbit">
+            <span className="trans-orbit-dot" />
+            <span className="trans-orbit-dot alt" />
+          </div>
           <div className="trans-logo">
             <img src="/icon-512.png?v=3" alt="Adhera" />
           </div>
@@ -90,10 +62,8 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
                   <span key={i} className="trans-title-letter">{letter}</span>
                 ))}
               </div>
+              <div className="trans-underline" />
               <div className="trans-msg">Your Personal Treatment Companion</div>
-              <div className="trans-bar-wrap">
-                <div className="trans-bar-fill" />
-              </div>
               {showMessages && (
                 <div className="trans-status">
                   <div className={`trans-status-inner${fading ? " out" : ""}`}>
