@@ -39,8 +39,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const { t } = useLang();
   const [tab, setTab] = useState("today");
   useInactivityLogout(onSignOut);
-  const [meds, setMeds] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [meds, setMeds] = useState(() => getCached("meds") || []);
+  const [logs, setLogs] = useState(() => getCached("logs") || []);
   const [loading, setLoading] = useState(true);
   useEffect(() => { const t = setTimeout(() => setLoading(false), 5000); return () => clearTimeout(t); }, []);
   const [profile, setProfile] = useState(initProfile);
@@ -52,7 +52,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [alarmData, setAlarmData] = useState(null);
   const [alarmQueue, setAlarmQueue] = useState([]);
   const [foregroundAlert, setForegroundAlert] = useState(null);
-  const [vitals, setVitals] = useState([]);
+  const [vitals, setVitals] = useState(() => getCached("vitals") || []);
   const [showVisitSheet, setShowVisitSheet] = useState(false);
   const [visitMemberKey, setVisitMemberKey] = useState(null);
   const [showVisitList, setShowVisitList] = useState(false);
@@ -220,13 +220,6 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
-
-    const cachedMeds = getCached("meds");
-    const cachedLogs = getCached("logs");
-    const cachedVitals = getCached("vitals");
-    if (cachedMeds && cachedMeds.length) { setMeds(cachedMeds); }
-    if (cachedLogs && cachedLogs.length) { setLogs(cachedLogs); }
-    if (cachedVitals && cachedVitals.length) { setVitals(cachedVitals); }
 
     (async () => {
       try {
@@ -638,6 +631,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     });
 
     if (overdue.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- surface overdue alarms computed from derived meds/logs
       setAlarmQueue(overdue);
       setAlarmData(overdue[0]);
     }

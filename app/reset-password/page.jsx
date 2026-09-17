@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { sb } from "@/lib/supabase";
 import { CSS, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL } from "@/lib/constants";
 
@@ -128,7 +129,7 @@ export default function ResetPasswordPage() {
         <AuthLogo />
         <div className="auth-title">Reset failed</div>
         <div className="auth-sub">{sessionErr}</div>
-        <a className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adhera</a>
+        <Link className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adhera</Link>
       </div>
     </div>
   );
@@ -139,7 +140,7 @@ export default function ResetPasswordPage() {
         <AuthLogo />
         <div className="auth-title">Password updated</div>
         <div className="auth-sub">You can now sign in with your new password.</div>
-        <a className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adhera</a>
+        <Link className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adhera</Link>
       </div>
     </div>
   );

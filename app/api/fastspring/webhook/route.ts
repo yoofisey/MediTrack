@@ -6,23 +6,40 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const PROCESSED_EVENTS = ["order.completed", "subscription.activated", "subscription.payment.completed"];
 
-function extractPlan(data: any): string {
-  const tags = data.tags;
+function asRecord(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function extractPlan(data: unknown): string {
+  const d = asRecord(data);
+  const tags = d.tags;
   if (Array.isArray(tags)) {
     for (const t of tags) {
-      if (t && t.name === "plan" && Array.isArray(t.values) && ["pro", "family"].includes(t.values[0])) {
-        return t.values[0];
+      const tag = asRecord(t);
+      if (tag.name === "plan" && Array.isArray(tag.values) && ["pro", "family"].includes(tag.values[0])) {
+        return tag.values[0];
       }
     }
   }
-  const products = data.products || data.order?.products || data.subscription?.order?.products;
-  if (Array.isArray(products)) {
-    for (const p of products) {
-      const plan = planForFastSpringProduct(p?.product || p?.path || "");
-      if (plan) return plan;
-    }
+  const order = asRecord(d.order);
+  const sub = asRecord(d.subscription);
+  const subOrder = asRecord(sub.order);
+  const products = (
+    (Array.isArray(d.products) && d.products) ||
+    (Array.isArray(order.products) && order.products) ||
+    (Array.isArray(subOrder.products) && subOrder.products) ||
+    []
+  ) as Array<Record<string, unknown>>;
+  for (const p of products) {
+    const prod = asRecord(p);
+    const plan = planForFastSpringProduct(str(prod.product || prod.path));
+    if (plan) return plan;
   }
-  const subProduct = data.subscription?.product || data.subscription?.basedOn?.product;
+  const subProduct = str(sub.product || (sub.basedOn ? asRecord(sub.basedOn).product : ""));
   if (subProduct) {
     const plan = planForFastSpringProduct(subProduct);
     if (plan) return plan;
@@ -30,18 +47,28 @@ function extractPlan(data: any): string {
   return "";
 }
 
-function extractEmail(data: any): string {
-  return data.email || data.customer?.email || data.account?.email || data.subscription?.account?.email || "";
+function extractEmail(data: unknown): string {
+  const d = asRecord(data);
+  return (
+    str(d.email) ||
+    str(asRecord(d.customer).email) ||
+    str(asRecord(d.account).email) ||
+    str(asRecord(asRecord(d.subscription).account).email)
+  );
 }
 
-function extractReference(data: any, eventId: string): string {
+function extractReference(data: unknown, eventId: string): string {
+  const d = asRecord(data);
+  const order = asRecord(d.order);
+  const sub = asRecord(d.subscription);
   return (
-    data.reference ||
-    data.order?.reference ||
-    data.subscription?.order?.reference ||
-    data.subscription?.subscriptionId ||
-    eventId ||
-    ""
+    str(d.reference) ||
+    str(order.reference) ||
+    str(order.subscriptionId) ||
+    str(sub.reference) ||
+    str(asRecord(sub.order).reference) ||
+    str(sub.subscriptionId) ||
+    eventId
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { getPaymentsConfig } from "@/lib/payments";
 import { Check } from "lucide-react";
@@ -104,13 +105,13 @@ export default function PricingPage() {
                 background: "#f1f5f9", color: "#94a3b8", marginBottom: 18,
               }}>{p.cta}</span>
             ) : (
-            <a href="/" style={{
+            <Link href="/" style={{
               display: "block", textAlign: "center", padding: "12px 16px", borderRadius: 12, fontSize: 15, fontWeight: 700,
               textDecoration: "none", marginBottom: 18, fontFamily: "inherit",
               ...(p.solid
                 ? { background: "linear-gradient(135deg,#2563eb,#5856d6)", color: "white", boxShadow: "0 4px 16px rgba(37,99,235,.3)" }
                 : { background: "#f1f5f9", color: "#0f172a" }),
-            }}>{p.cta}</a>
+            }}>{p.cta}</Link>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {p.features.map(f => (
@@ -141,7 +142,7 @@ function PricingFooter({ enterprise, ready, country }) {
             {ready ? (
               <>{enterprise.label}/month for teams — API access, white-label branding, and HIPAA/GDPR compliance.</>
             ) : (
-              <>Free tier is fully available now. We're working on card and mobile-money payments for {country} — you'll be able to upgrade here soon.</>
+              <>Free tier is fully available now. We&apos;re working on card and mobile-money payments for {country} — you&apos;ll be able to upgrade here soon.</>
             )}
           </div>
         </div>

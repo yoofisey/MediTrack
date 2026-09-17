@@ -168,7 +168,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
 
       <div className="section" style={{ marginBottom: 12 }}>
         <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>Today's medications</span>
+          <span>Today&apos;s medications</span>
           <button className="nav-action" style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }} onClick={() => { if (member.managed) setShowAddMed(v => !v); else onEditMed(member, null); }}>
             <Plus size={15} strokeWidth={2.5} /> Add
           </button>
@@ -178,7 +178,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
           <div className="empty-state" style={{ paddingTop: 24, paddingBottom: 24 }}>
             <div className="empty-state-icon" style={{ fontSize: 36 }}><Pill size={36} strokeWidth={1.5} /></div>
             <div className="empty-state-title" style={{ fontSize: 15 }}>Nothing due today</div>
-            <div className="empty-state-sub" style={{ marginBottom: 0 }}>Add a medication to start tracking {member.name.split(" ")[0]}'s doses.</div>
+            <div className="empty-state-sub" style={{ marginBottom: 0 }}>Add a medication to start tracking {member.name.split(" ")[0]}&apos;s doses.</div>
           </div>
         ) : (
           <div className="list">
@@ -242,7 +242,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
 
       <div style={{ margin: "0 20px 20px", background: "var(--ib3)", borderRadius: 20, padding: "18px", border: "1px solid var(--sep)" }}>
         <div style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 15, lineHeight: 1.55, color: "var(--orange)" }}>
-          "{member.careNote || "Tap to add a care note — preferences, quirks, what makes them comfortable."}"
+          {"\u201C"}{member.careNote || "Tap to add a care note — preferences, quirks, what makes them comfortable."}{"\u201D"}
         </div>
         {editNote ? (
           <div style={{ marginTop: 12 }}>

@@ -151,10 +151,13 @@ export function CheckoutSheet({
 }
 
 export function CheckoutLoading({ plan, color, onCancel, steps = LOADER_STEPS }) {
+  return <CheckoutLoadingInner key={`${plan?.id ?? ""}-${steps && steps.join ? steps.join("|") : ""}`} plan={plan} color={color} onCancel={onCancel} steps={steps} />;
+}
+
+function CheckoutLoadingInner({ plan, color, onCancel, steps = LOADER_STEPS }) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    setStep(0);
     const id = setInterval(() => setStep(s => Math.min(s + 1, steps.length - 1)), 900);
     return () => clearInterval(id);
   }, [steps.length]);

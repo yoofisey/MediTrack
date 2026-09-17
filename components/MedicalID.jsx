@@ -19,6 +19,18 @@ function save(data) {
   saveMedicalProfile(data).catch(() => {});
 }
 
+function NoneChip({ active, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      padding:"6px 12px",borderRadius:8,
+      border:active?"2px solid var(--t3)":"0.5px solid var(--sep)",
+      background:active?"var(--hover)":"var(--card)",
+      fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
+      color:active?"var(--t1)":"var(--t3)",
+    }}>None</button>
+  );
+}
+
 const SECTION_TITLES = {
   blood_type: "Blood Type",
   allergies: "Allergies",
@@ -189,18 +201,6 @@ export default function MedicalID({ meds = [], onClose, section }) {
       fontSize:13,cursor:"pointer",fontFamily:"inherit",
       color:active?activeColor:"var(--t1)",
     };
-  }
-
-  function NoneChip({ active, onClick }) {
-    return (
-      <button onClick={onClick} style={{
-        padding:"6px 12px",borderRadius:8,
-        border:active?"2px solid var(--t3)":"0.5px solid var(--sep)",
-        background:active?"var(--hover)":"var(--card)",
-        fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",
-        color:active?"var(--t1)":"var(--t3)",
-      }}>None</button>
-    );
   }
 
   const noneAllergy = Array.isArray(data.allergies) && data.allergies.length === 0;

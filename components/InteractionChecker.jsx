@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { CircleAlert, TriangleAlert, CheckCircle2 } from "lucide-react";
 
 const INTERACTIONS_DB = [
@@ -104,21 +104,17 @@ export function InteractionBadge({ interactions }) {
 }
 
 export default function InteractionChecker({ meds, currentName, onClose }) {
-  const [results, setResults] = useState([]);
-
-  useEffect(() => {
-    if (currentName) {
-      setResults(checkInteractions(currentName, meds));
-    } else {
-      const allResults = [];
-      meds.forEach(med => {
-        const found = checkInteractions(med.name, meds);
-        found.forEach(r => {
-          if (!allResults.find(e => e.a === r.a && e.b === r.b)) allResults.push(r);
-        });
+  const results = useMemo(() => {
+    if (!meds || !meds.length) return [];
+    if (currentName) return checkInteractions(currentName, meds);
+    const allResults = [];
+    meds.forEach(med => {
+      const found = checkInteractions(med.name, meds);
+      found.forEach(r => {
+        if (!allResults.find(e => e.a === r.a && e.b === r.b)) allResults.push(r);
       });
-      setResults(allResults);
-    }
+    });
+    return allResults;
   }, [meds, currentName]);
 
   return (

@@ -21,7 +21,9 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   const { t } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
-  const [journalEntries, setJournalEntries] = useState([]);
+  const [journalEntries, setJournalEntries] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mt_journal") || "[]"); } catch { return []; }
+  });
   const [pdfHtml, setPdfHtml] = useState(null);
   const [range, setRange] = useState("all");
   const [expandedVisit, setExpandedVisit] = useState(null);
@@ -40,11 +42,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     missed: allVisits.filter(v => v.status === "missed").length,
   };
 
-  useEffect(() => {
-    try { setJournalEntries(JSON.parse(localStorage.getItem("mt_journal") || "[]")); } catch { setJournalEntries([]); }
-  }, [showHistory]);
-
-  const cutoff = range === "7d" ? new Date(Date.now() - 6 * 86400000) : range === "30d" ? new Date(Date.now() - 29 * 86400000) : null;
+  const cutoff = range === "7d" ? new Date(now.getTime() - 6 * 86400000) : range === "30d" ? new Date(now.getTime() - 29 * 86400000) : null;
   const rangedLogs = cutoff ? logs.filter(l => new Date(l.taken_at) >= cutoff) : logs;
   const streak = calcStreak(logs, meds, tz);
   const grouped = {};

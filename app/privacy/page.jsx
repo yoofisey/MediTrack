@@ -1,5 +1,7 @@
 export const metadata = { title: "Privacy Policy — Adhera" };
 
+import Link from "next/link";
+
 export default function PrivacyPage() {
   return (
     <div style={{minHeight:"100vh",background:"#f8fafc",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif",color:"#0f172a",lineHeight:1.7,padding:"40px 20px"}}>
@@ -96,7 +98,7 @@ export default function PrivacyPage() {
         </div>
 
         <div style={{marginTop:40,paddingTop:20,borderTop:"1px solid #e2e8f0",textAlign:"center"}}>
-          <a href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adhera</a>
+          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adhera</Link>
         </div>
       </div>
     </div>

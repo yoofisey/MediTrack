@@ -12,19 +12,30 @@ const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-function extractPlan(data: any): string {
-  const tags = data.tags;
+function asRecord(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function extractPlan(data: unknown): string {
+  const d = asRecord(data);
+  const tags = d.tags;
   if (Array.isArray(tags)) {
     for (const t of tags) {
-      if (t && t.name === "plan" && Array.isArray(t.values) && ["pro", "family"].includes(t.values[0])) {
-        return t.values[0];
+      const tag = asRecord(t);
+      if (tag.name === "plan" && Array.isArray(tag.values) && ["pro", "family"].includes(tag.values[0])) {
+        return tag.values[0];
       }
     }
   }
-  const products = data.products;
+  const products = d.products;
   if (Array.isArray(products)) {
     for (const p of products) {
-      const plan = planForFastSpringProduct(p?.product || p?.path || "");
+      const prod = asRecord(p);
+      const plan = planForFastSpringProduct(str(prod.product || prod.path));
       if (plan) return plan;
     }
   }

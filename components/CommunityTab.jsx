@@ -43,16 +43,19 @@ function fallbackEmoji(userId) {
   return AVATAR_ICONS[Math.abs(hash) % AVATAR_ICONS.length];
 }
 
+function AvatarIcon({ icon: Icon, size }) {
+  return <Icon size={size * 0.5} color="var(--t3)" strokeWidth={1.8} />;
+}
+
 function UserAvatar({ userId, profileMap, size = 36 }) {
   const prof = profileMap?.[userId];
   const imgUrl = prof?.avatar_url;
   const emoji = prof?.avatar_emoji;
-  const FallbackIcon = fallbackEmoji(userId);
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--ib1)", display: "grid", placeItems: "center", flexShrink: 0, overflow: "hidden" }}>
       {imgUrl ? <img src={imgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : emoji ? <span style={{ fontSize: size * 0.5 }}>{emoji}</span>
-        : <FallbackIcon size={size * 0.5} color="var(--t3)" strokeWidth={1.8} />}
+        : <AvatarIcon key={userId} icon={fallbackEmoji(userId)} size={size} />}
     </div>
   );
 }
@@ -112,6 +115,7 @@ export default function CommunityTab({ user, profile, onBack }) {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; writes are async (after await)
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const filteredPosts = activeCategory === "all"

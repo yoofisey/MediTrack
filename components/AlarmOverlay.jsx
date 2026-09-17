@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Flame, Check } from "lucide-react";
 
 export default function AlarmOverlay({ alarm, onDismiss, onLogDose }) {
-  const [shake, setShake] = useState(false);
-
-  useEffect(() => {
-    if (!alarm) return;
-    setShake(true);
-    const t = setTimeout(() => setShake(false), 600);
-    return () => clearTimeout(t);
-  }, [alarm]);
+  const shakeKey = alarm ? `${alarm.med?.id ?? "m"}-${alarm.day ?? "d"}-${alarm.streak ?? 0}-${alarm.isReminder ? 1 : 0}` : "none";
 
   useEffect(() => {
     if (!alarm) return;
@@ -41,12 +34,12 @@ export default function AlarmOverlay({ alarm, onDismiss, onLogDose }) {
         @keyframes alarmGlow{0%,100%{box-shadow:0 0 20px rgba(255,59,48,.3)}50%{box-shadow:0 0 40px rgba(255,59,48,.6)}}
       `}</style>
 
-      <div style={{
+      <div key={shakeKey} style={{
         width:96,height:96,borderRadius:"50%",
         background:"linear-gradient(135deg,#ff3b30,#ff6b3d)",
         display:"grid",placeItems:"center",
         marginBottom:24,
-        animation: shake ? "alarmShake .5s ease" : "alarmPulse 1.5s ease-in-out infinite",
+        animation: "alarmShake .5s ease, alarmPulse 1.5s ease-in-out .55s infinite",
       }}>
         <svg viewBox="0 0 100 100" width={48} height={48}>
           <text x="50" y="62" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="52" fontWeight="700" fill="white">!</text>

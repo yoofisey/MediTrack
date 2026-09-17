@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { sb } from "@/lib/supabase";
 import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
 import { COUNTRIES } from "@/lib/data";
@@ -26,8 +26,12 @@ export default function AuthScreen({ onAuth }) {
   const [forgotDone, setForgotDone] = useState(false);
   const [consent, setConsent] = useState(false);
   const [honeypot, setHoneypot] = useState("");
-  const [otpAttempts, setOtpAttempts] = useState({ allowed: true, remaining: 5, waitMin: 0 });
   const oauthBusyRef = useRef(false);
+
+  const otpAttempts = useMemo(() => {
+    const def = { allowed: true, remaining: 5, waitMin: 0 };
+    return sent && email ? (checkOtpAttempts(email) || def) : def;
+  }, [sent, email]);
 
   function goWelcome() { setView("welcome"); setErr(""); setObl(""); setSent(false); setOtp(""); }
   function goSignIn() { setView("signin"); setErr(""); setObl(""); setSent(false); setOtp(""); }
@@ -109,10 +113,6 @@ export default function AuthScreen({ onAuth }) {
   }
 
   function isValidEmail(e) { return RE_EMAIL.test(e); }
-
-  useEffect(() => {
-    if (sent && email) setOtpAttempts(checkOtpAttempts(email));
-  }, [sent, email]);
 
   async function handleSignUp(e) {
     e.preventDefault(); setBusy(true); setErr("");
