@@ -21,7 +21,7 @@ workflows:
     max_build_duration: 45
     environment:
       java: 21
-      node: 20
+      node: 22
       groups:
         - android_keystore
         - google_services
@@ -73,7 +73,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.useadhera.app
-      node: 20
+      node: 22
       groups:
         - appstore_connect
     scripts:
