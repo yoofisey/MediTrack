@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pill, BarChart3, FileText, Users } from "lucide-react";
+import { Pill, BarChart3, FileText, Users, ShieldCheck, HeartPulse } from "lucide-react";
 
 export default function LandingPage({ onGetStarted }) {
   const [fading, setFading] = useState(false);
@@ -56,7 +56,9 @@ export default function LandingPage({ onGetStarted }) {
             { icon:<Pill size={20} color="#007AFF"/>, title:"Medication reminders", desc:"Smart alerts that adapt to your schedule so you never miss a dose.", tile:"rgba(0,122,255,.08)" },
             { icon:<BarChart3 size={20} color="#5856D6"/>, title:"Adherence tracking", desc:"See your consistency at a glance with daily streaks and progress charts.", tile:"rgba(88,86,214,.08)" },
             { icon:<FileText size={20} color="#AF52DE"/>, title:"Doctor reports", desc:"Generate clinical summaries to share with your healthcare provider.", tile:"rgba(175,82,222,.08)" },
+            { icon:<ShieldCheck size={20} color="#34C759"/>, title:"Interaction checker", desc:"Flag risky drug combinations before a dose so your whole household stays safer.", tile:"rgba(52,199,89,.08)" },
             { icon:<Users size={20} color="#FF9500"/>, title:"Family sharing", desc:"Manage medications for your whole household from one account.", tile:"rgba(255,149,0,.08)" },
+            { icon:<HeartPulse size={20} color="#FF3B30"/>, title:"Treatment insights", desc:"Spot patterns in vitals and symptoms to spot what's working - and what isn't.", tile:"rgba(255,59,48,.08)" },
           ].map((f, i) => (
             <div key={f.title} style={{display:"flex",gap:14,alignItems:"flex-start",background:"#FFFFFF",borderRadius:20,padding:18,boxShadow:"0 0 0 0.5px rgba(0,0,0,.02),0 1px 2px rgba(0,0,0,.02),0 4px 8px rgba(0,0,0,.03),0 12px 24px rgba(0,0,0,.04)",border:"0.5px solid rgba(0,0,0,.04)",animation:`fadeUp .6s ${.5 + i * .08}s ease both`}}>
               <div style={{width:42,height:42,borderRadius:13,background:f.tile,display:"grid",placeItems:"center",flexShrink:0}}>{f.icon}</div>
