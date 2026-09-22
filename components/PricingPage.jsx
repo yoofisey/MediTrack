@@ -12,8 +12,6 @@ const FEATURES = {
     { label: "7-day history", ok: true },
     { label: "Dose reminders", ok: true },
     { label: "Adherence streaks", ok: true },
-    { label: "Adherence reports", ok: false },
-    { label: "Family profiles", ok: false },
   ],
   pro: [
     { label: "Unlimited medications", ok: true },
@@ -21,14 +19,14 @@ const FEATURES = {
     { label: "Adherence reports", ok: true },
     { label: "Doctor report sharing", ok: true },
     { label: "Refill reminders", ok: true },
-    { label: "Interaction checker", ok: true },
-    { label: "Caregiver sharing", ok: true },
   ],
   family: [
     { label: "Up to 5 profiles", ok: true },
     { label: "Family dashboard", ok: true },
     { label: "Per-member vitals & reports", ok: true },
     { label: "Caregiver alerts", ok: true },
+    { label: "Interaction checker", ok: true },
+    { label: "Caregiver sharing", ok: true },
   ],
 };
 
