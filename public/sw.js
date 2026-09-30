@@ -13,6 +13,11 @@ const doseDB = {};
 
 function deepLinkFromTag(tag) {
   const t = String(tag || "");
+  if (t.startsWith("mt-dose-") || t.startsWith("mt-rem-")) {
+    const m = t.match(/^mt-(?:dose|rem)-(.+)-(\d+)$/);
+    if (m) return { type: "mt-open-alarm", data: { medId: m[1], doseAt: m[2] }, isReminder: t.startsWith("mt-rem-") };
+    return null;
+  }
   if (t.startsWith("mt-visit-now-")) {
     const visitId = t.slice("mt-visit-now-".length, t.lastIndexOf("-"));
     if (visitId) return { type: "mt-open-visit", data: { visitId } };
@@ -33,6 +38,13 @@ self.addEventListener("notificationclick", e => {
   const dl = deepLinkFromTag(e.notification.tag);
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(cls => {
+      if (dl?.type === "mt-open-alarm") {
+        const msg = { type: "mt-open-alarm", medId: dl.data.medId, doseAt: dl.data.doseAt, isReminder: !!dl.isReminder };
+        cls.forEach(c => c.postMessage?.(msg));
+        if (cls.length > 0) { cls[0].focus(); return; }
+        clients.openWindow(`/?mt=alarm&medId=${encodeURIComponent(dl.data.medId)}&doseAt=${encodeURIComponent(dl.data.doseAt)}&isReminder=${dl.isReminder ? "1" : ""}`);
+        return;
+      }
       if (dl) {
         cls.forEach(c => c.postMessage?.({ type: dl.type, ...(dl.data || {}) }));
       } else {
@@ -60,20 +72,23 @@ self.addEventListener("message", e => {
       const timerId = `mt-${item.medId}-${item.doseAt}`;
       const delay = item.doseAt - Date.now();
       if (delay <= 0) return;
-      doseDB[timerId] = {
-        timer: setTimeout(() => {
-          const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
-          self.registration.showNotification(`${item.name}`, {
-            body: `Take ${item.dosageAmount} ${item.dosageUnit}${item.notes ? `\n\n${item.notes}` : ""}\nDay ${daysSince}/${item.courseDays}${item.streak > 0 ? `\n${item.streak} day streak` : ""}`,
-            icon: "/icon.svg",
-            tag: `mt-dose-${item.medId}-${item.doseAt}`,
-            vibrate: [500, 200, 500, 200, 500],
-            requireInteraction: true,
-          });
-          delete doseDB[timerId];
-        }, delay),
-        item,
-      };
+      const alertAtDose = item.alertAtDose !== false;
+      if (alertAtDose) {
+        doseDB[timerId] = {
+          timer: setTimeout(() => {
+            const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
+            self.registration.showNotification(`${item.name}`, {
+              body: `Take ${item.dosageAmount} ${item.dosageUnit}${item.notes ? `\n\n${item.notes}` : ""}\nDay ${daysSince}/${item.courseDays}${item.streak > 0 ? `\n${item.streak} day streak` : ""}`,
+              icon: "/icon.svg",
+              tag: `mt-dose-${item.medId}-${item.doseAt}`,
+              vibrate: [500, 200, 500, 200, 500],
+              requireInteraction: true,
+            });
+            delete doseDB[timerId];
+          }, delay),
+          item,
+        };
+      }
       const leadTimerId = `${timerId}-lead`;
       const leadDelay = delay - item.lead * 60000;
       if (item.lead > 0 && leadDelay > 0) {

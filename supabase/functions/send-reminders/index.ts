@@ -387,6 +387,7 @@ serve(async (req) => {
         body = `${doseInfo} · ${day}${streak > 0 ? `\nStreak: ${streak} days` : ""}`;
         tag = `mt-rem-${med.id}-${nextMs}`;
       } else {
+        if (med.remind_at_dose === false) continue;
         title = `${med.name}`;
         body = `Take ${doseInfo}${med.notes ? `\n\n${med.notes}` : ""}\n${day}${streak > 0 ? `\n${streak} day streak` : ""}`;
         tag = `mt-dose-${med.id}-${nextMs}`;

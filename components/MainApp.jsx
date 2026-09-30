@@ -51,6 +51,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   const [logDoseMed, setLogDoseMed] = useState(null);
   const [alarmData, setAlarmData] = useState(null);
   const [alarmQueue, setAlarmQueue] = useState([]);
+  const pendingAlarmRef = useRef(null);
   const [foregroundAlert, setForegroundAlert] = useState(null);
   const [vitals, setVitals] = useState(() => getCached("vitals") || []);
   const [showVisitSheet, setShowVisitSheet] = useState(false);
@@ -484,6 +485,9 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     function onMsg(e) {
       const d = e.data || {};
       if (d.type === "alarm-ack") stopAlarmSound();
+      if (d.type === "mt-open-alarm" && d.medId) {
+        window.dispatchEvent(new CustomEvent("mt-open-alarm", { detail: { medId: d.medId, doseAt: d.doseAt, isReminder: !!d.isReminder } }));
+      }
       if (d.type === "mt-open-checkin") {
         window.dispatchEvent(new CustomEvent("mt-open-checkin", {}));
       } else if (d.type === "mt-open-vitals") {
@@ -519,6 +523,52 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     window.addEventListener("mt-deeplink", onDeeplink);
     return () => window.removeEventListener("mt-deeplink", onDeeplink);
   }, [meds]);
+
+  useEffect(() => {
+    function showAlarm(medId, isReminder) {
+      const med = meds.find(m => m.id === medId);
+      if (!med) return false;
+      const dayNum = Math.max(1, Math.floor((Date.now() - new Date(med.start_date)) / 86400000) + 1);
+      const streak = calcStreak(logs, meds, profile?.timezone);
+      window.dispatchEvent(new CustomEvent("mt-alarm", {
+        detail: {
+          med: { id: med.id, name: med.name, dosage_amount: med.dosage_amount, dosage_unit: med.dosage_unit, notes: med.notes },
+          day: `Day ${dayNum}/${med.course_duration_days}`,
+          streak,
+          isReminder: !!isReminder,
+        },
+      }));
+      return true;
+    }
+    function onOpenAlarm(e) {
+      const { medId, isReminder } = e.detail || {};
+      if (!medId) return;
+      if (showAlarm(medId, isReminder)) { pendingAlarmRef.current = null; return; }
+      // meds not loaded yet (cold start from notification) — retry once they arrive
+      pendingAlarmRef.current = { medId, isReminder };
+    }
+    window.addEventListener("mt-open-alarm", onOpenAlarm);
+    return () => window.removeEventListener("mt-open-alarm", onOpenAlarm);
+  }, [meds, logs, profile]);
+
+  useEffect(() => {
+    if (loading || !meds.length) return;
+    const p = pendingAlarmRef.current;
+    if (!p) return;
+    pendingAlarmRef.current = null;
+    const med = meds.find(m => m.id === p.medId);
+    if (!med) return;
+    const dayNum = Math.max(1, Math.floor((Date.now() - new Date(med.start_date)) / 86400000) + 1);
+    const streak = calcStreak(logs, meds, profile?.timezone);
+    window.dispatchEvent(new CustomEvent("mt-alarm", {
+      detail: {
+        med: { id: med.id, name: med.name, dosage_amount: med.dosage_amount, dosage_unit: med.dosage_unit, notes: med.notes },
+        day: `Day ${dayNum}/${med.course_duration_days}`,
+        streak,
+        isReminder: !!p.isReminder,
+      },
+    }));
+  }, [loading, meds, logs, profile]);
 
   useEffect(() => {
     function onOpenVisit(e) {
@@ -573,6 +623,11 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       else if (mt === "visit") {
         const visitId = params.get("visitId");
         if (visitId) dispatch("mt-open-visit", { detail: { visitId } });
+      } else if (mt === "alarm") {
+        const medId = params.get("medId");
+        const doseAt = params.get("doseAt");
+        const isReminder = params.get("isReminder") === "1";
+        if (medId) dispatch("mt-open-alarm", { detail: { medId, doseAt, isReminder } });
       }
       history.replaceState({}, "", window.location.pathname);
     } catch {}

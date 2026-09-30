@@ -29,6 +29,7 @@ export interface Medication {
   start_date: string;
   active?: boolean;
   reminder_minutes?: number;
+  remind_at_dose?: boolean;
   reminder_times?: string;
   pills_per_package?: number;
   refill_reminder_at?: number;

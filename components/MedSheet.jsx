@@ -14,8 +14,8 @@ import { FormControl, FormRow } from "@/components/FormControls";
 export default function MedSheet({ med, userId, reminderLead, plan, medCount, onSave, onClose, onUpgrade, allMeds, managed, memberId }) {
   const { tier, config: limits, has } = useTier();
   const upLabel = getTierConfig(limits.upgradeTarget).label;
-  const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
-  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
+  const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), remind_at_dose:true, pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
+  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), remind_at_dose:med.remind_at_dose !== false, pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [capHit, setCapHit] = useState(false);
   const sheetRef = useRef(null);
   useEffect(() => { if (err) sheetRef.current?.scrollTo?.({ top: 0, behavior: "smooth" }); }, [err]);
@@ -51,7 +51,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
     const maxDuration = 3650;
     if (parseInt(f.course_duration_days) > maxDuration) { setErr(`Duration seems too long (max ${maxDuration} days).`); return; }
     setBusy(true); setErr("");
-    const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, cost_per_package:f.cost_per_package?parseFloat(f.cost_per_package):null, cost_currency:f.cost_currency||null, notes:f.notes, active:true };
+    const payload = { user_id:userId, name:f.name.trim(), dosage_amount:parseFloat(f.dosage_amount), dosage_unit:f.dosage_unit, times_per_day:parseInt(f.times_per_day)||1, dose_interval_hours:parseFloat(f.dose_interval_hours), course_duration_days:parseInt(f.course_duration_days), start_date:f.start_date, reminder_minutes:parseInt(f.reminder_minutes), remind_at_dose:f.remind_at_dose !== false, pills_per_package:f.pills_per_package?parseInt(f.pills_per_package):null, refill_reminder_at:f.refill_reminder_at?parseInt(f.refill_reminder_at):null, cost_per_package:f.cost_per_package?parseFloat(f.cost_per_package):null, cost_currency:f.cost_currency||null, notes:f.notes, active:true };
     if (managed) {
       try {
         if (med?.id) updateManagedMed(memberId, med.id, payload);
@@ -139,15 +139,19 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
         </div>
 
         <div className="sheet-section">
-          <FormControl label="Remind me">
+          <FormControl label="Remind me before each dose">
             <select className="sheet-input" value={f.reminder_minutes} onChange={e=>set("reminder_minutes",e.target.value)}>
-              <option value="0">At dose time</option>
+              <option value="0">None</option>
               <option value="15">15 minutes before</option>
               <option value="30">30 minutes before</option>
               <option value="60">1 hour before</option>
               <option value="120">2 hours before</option>
             </select>
           </FormControl>
+          <label className="form-hint" style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, cursor:"pointer" }}>
+            <input type="checkbox" style={{ width:18, height:18, accentColor:"var(--teal)" }} checked={f.remind_at_dose} onChange={e=>set("remind_at_dose", e.target.checked)} />
+            Also alert me at the exact dose time
+          </label>
         </div>
 
         <div className="sheet-section">
