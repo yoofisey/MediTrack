@@ -57,7 +57,7 @@ export default function AlertsTab({ household, onOpenMember, hasRefill = true })
                         </div>
                       )}
                       <button onClick={() => onOpenMember(a.member)} style={{ flex: 1, background: "rgba(0,0,0,.18)", border: "none", color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-                        Open member
+                        Open {a.member.kind === "self" ? "profile" : "member"}
                       </button>
                     </div>
                   </div>

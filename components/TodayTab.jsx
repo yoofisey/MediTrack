@@ -134,6 +134,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const slots = medRows.flatMap(r => r.slots);
 
   const overdueTotal = household.reduce((s, m) => s + missedDoses(m, now).length, 0);
+  const hasCareObservers = household.some(m => m.kind !== "self");
 
   const progressTotal = slots.length;
   const progressLogged = slots.filter(s => s.logged).length;
@@ -303,7 +304,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
           <Bell size={20} strokeWidth={2.2} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>{overdueTotal} dose{overdueTotal > 1 ? "s" : ""} missed today</div>
-            <div style={{ fontSize: 12, opacity: .85 }}>Check on them — a call beats a notification</div>
+            <div style={{ fontSize: 12, opacity: .85 }}>{hasCareObservers ? "Check on them — a call beats a notification" : "Log your dose to stay on track"}</div>
           </div>
         </div>
       )}
