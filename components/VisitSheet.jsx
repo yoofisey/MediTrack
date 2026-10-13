@@ -72,7 +72,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
 
   if (viewMode && activeVisit) {
     return (
-      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" {...handleSwipe}/>
           <div style={{padding:"14px 20px 24px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
@@ -105,7 +105,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
 
   if (showList) {
     return (
-      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" {...handleSwipe}/>
           <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
@@ -163,7 +163,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
             )}
           </div>
           {delId && (
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:310,display:"grid",placeItems:"center"}} onClick={()=>setDelId(null)}>
+            <div role="dialog" aria-modal="true" aria-label="Delete visit" style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",zIndex:310,display:"grid",placeItems:"center"}} onClick={()=>setDelId(null)}>
               <div style={{background:"var(--card)",borderRadius:16,padding:24,width:"80%",maxWidth:300,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
                 <div style={{fontSize:17,fontWeight:600,marginBottom:8}}>Delete visit?</div>
                 <div style={{fontSize:14,color:"var(--t3)",marginBottom:16}}>This cannot be undone.</div>
@@ -180,7 +180,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title">{editingId ? "Edit visit" : "Schedule a visit"}</div>
@@ -207,7 +207,7 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
           </FormControl>
 
           <FormControl label="Remind me">
-            <select className="sheet-input" value={f.reminder_minutes} onChange={e => set("reminder_minutes", e.target.value)}>
+            <select className="sheet-input" style={{fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={f.reminder_minutes} onChange={e => set("reminder_minutes", e.target.value)}>
               {reminderOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </FormControl>

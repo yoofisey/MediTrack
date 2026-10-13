@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CSS, Chevron } from "@/lib/constants";
 import { useLang } from "@/lib/i18n";
+import { toastError } from "@/lib/toast";
 import { COUNTRIES, getPricing } from "@/lib/data";
-import { getTierConfig } from "@/lib/tiers";
+import { getTierConfig, featureLabels } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers, getNotifPerm, isNativePlatform } from "@/lib/notifications";
 import { canScheduleExactAlarms, openExactAlarmSettings, openAppSettings } from "@/lib/local-notifs";
@@ -166,8 +167,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       onSaveProfile({ avatar_url: publicUrl });
       setEditData(p => ({ ...p, avatar_url: publicUrl }));
     } catch (err) {
-      console.error("Upload error:", err);
-      alert(`Upload failed: ${err?.message || err}. Make sure the 'avatars' storage bucket exists and has INSERT policies for authenticated users.`);
+      console.error("Upload error:", err?.message || err);
+      toastError(t("profile.uploadFailed"));
     } finally {
       setUploading(false);
       if (e.target) e.target.value = "";
@@ -260,7 +261,8 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       sessionStorage.clear();
       window.location.reload();
     } catch (e) {
-      alert("Error deleting account: " + (e?.message || "Unknown error"));
+      console.error("Delete account:", e?.message || e);
+      toastError(t("profile.deleteFailed"));
     }
   }
 
@@ -350,7 +352,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <div className="section">
         <div className="section-header">{t("profile.country")}</div>
         <div style={{padding:"0 16px"}}>
-          <select className="sheet-input" value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))} style={{width:"100%"}}>
+          <select className="sheet-input" style={{width:"100%",fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))}>
             {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
           </select>
         </div>
@@ -416,7 +418,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         <div style={{position:"relative",width:88,height:88}}>
           <div className="profile-avatar" style={{cursor:profile?.avatar_url?"pointer":"default",overflow:"hidden",margin:0,boxShadow:"0 4px 16px rgba(0,0,0,.12)"}} onClick={() => profile?.avatar_url && setShowLightbox(true)}>
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>
+              <img src={profile.avatar_url} alt="Profile photo" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>
             ) : (
               (() => { const A = avatarIcon(profile?.avatar_emoji); return <A size={34}/>; })()
             )}
@@ -468,9 +470,12 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
 
       {showLightbox && profile?.avatar_url && (
         <div onClick={() => setShowLightbox(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Profile photo preview"
           style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.85)",display:"grid",placeItems:"center",cursor:"pointer",animation:"fadeIn .2s"}}>
           <div style={{position:"relative",maxWidth:"90vw",maxHeight:"90vh"}}>
-            <img src={profile.avatar_url} alt="" style={{width:"auto",height:"auto",maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,boxShadow:"0 8px 40px rgba(0,0,0,.5)"}}/>
+            <img src={profile.avatar_url} alt="Profile photo" style={{width:"auto",height:"auto",maxWidth:"90vw",maxHeight:"90vh",borderRadius:12,boxShadow:"0 8px 40px rgba(0,0,0,.5)"}}/>
           </div>
         </div>
       )}
@@ -505,10 +510,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
           <div className="upgrade-sub">{plan === "pro" ? "Track up to 5 family members with shared dashboards" : t("profile.unlimitedMedsAd")}</div>
           <div className="upgrade-features">
             {(plan === "pro"
-              ? [t("profile.unlimitedMeds"),t("profile.fullHistory"),"Up to 5 family profiles",t("profile.adherenceReports"),"Caregiver mode with alerts"]
-              : [t("profile.unlimitedMeds"),t("profile.fullHistory"),t("profile.refillReminders"),t("profile.adherenceReports"),t("profile.drugCheck")]
+              ? ["unlimitedMeds","fullHistory","upToFiveProfiles","reports","caregiverAlerts"]
+              : ["unlimitedMeds","fullHistory","refillReminder","reports","interactionCheck"]
             ).map(f => (
-              <div key={f} className="upgrade-feature"><Check size={13} color="var(--teal)" strokeWidth={3} style={{verticalAlign:"-2px"}}/> {f}</div>
+              <div key={f} className="upgrade-feature"><Check size={13} color="var(--teal)" strokeWidth={3} style={{verticalAlign:"-2px"}}/> {featureLabels(f, t)}</div>
             ))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
@@ -592,9 +597,10 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                 <div className="row-body"><div className="row-title">{t("profile.reminderBeforeDose")}</div><div className="row-sub">{t("profile.getNotified")}</div></div>
                 <div style={{position:"relative",flexShrink:0}}>
                   <select
+                    className="sheet-input"
                     value={reminderLead}
                     onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
-                    style={{border:"1.5px solid var(--sep)",background:"var(--card)",color:"var(--t1)",fontSize:14,fontWeight:600,fontFamily:"inherit",cursor:"pointer",borderRadius:10,padding:"8px 30px 8px 12px",outline:"none",appearance:"none",WebkitAppearance:"none",minWidth:120}}
+                    style={{fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}}
                   >
                     <option value={0}>At time</option>
                     <option value={15}>15 min</option>
@@ -643,8 +649,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div className="row-icon" style={{background:"var(--ib4)",marginTop:2}}><Ico><Globe size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
               <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">Country</div>
-                <select className="sheet-input" value={country} onChange={e=>{const v=e.target.value; setEditCountryPick(false); onSaveProfile({country:v});}}
-                  style={{marginTop:8,fontSize:14}} autoFocus>
+                <select className="sheet-input" style={{marginTop:8,fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={country} onChange={e=>{const v=e.target.value; setEditCountryPick(false); onSaveProfile({country:v});}} autoFocus>
             {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
               </div>
@@ -661,8 +666,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div className="row-icon" style={{background:"var(--ib2)",marginTop:2}}><Ico><Languages size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
               <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">{t("profile.language")}</div>
-                <select className="sheet-input" value={lang} onChange={e=>{const v=e.target.value; setLang(v); setEditLang(false);}}
-                  style={{marginTop:8,fontSize:14}} autoFocus>
+                <select className="sheet-input" style={{marginTop:8,fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={lang} onChange={e=>{const v=e.target.value; setLang(v); setEditLang(false);}} autoFocus>
                   {LANGUAGES.map(l=><option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
               </div>
@@ -734,7 +738,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
         )}
         {openMedSection && <MedicalID meds={meds} section={openMedSection} onClose={() => { setMedSection(null); if (drillTarget && drillTarget !== "personal") onDrillDone?.(); refreshMedicalID(); }}/>}
         {showDeleteAccount && (
-          <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
+          <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && setShowDeleteAccount(false)}>
             <div className="sheet" style={{maxHeight:"80dvh"}} onClick={e => e.stopPropagation()}>
               <div className="sheet-handle"/>
               <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
@@ -775,7 +779,7 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div className="sheet-title">Age &amp; Demographics</div>
@@ -789,7 +793,7 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
               <input className="sheet-input" type="number" inputMode="numeric" placeholder="e.g. 35" value={f.age || ""} onChange={e => set("age", e.target.value)}/>
             </FormControl>
             <FormControl label="Gender" className="!mb-0">
-              <select className="sheet-input" value={f.gender || ""} onChange={e => set("gender", e.target.value)}>
+              <select className="sheet-input" style={{fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={f.gender || ""} onChange={e => set("gender", e.target.value)}>
                 <option value="">Select</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>

@@ -334,7 +334,8 @@ export default function AuthScreen({ onAuth }) {
             <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} pwColors={pwColors} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
             <div style={{position:"relative"}}>
               <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",zIndex:1,display:"inline-flex",color:"var(--t3)"}}><Globe size={18}/></div>
-              <select className="auth-select" style={{paddingLeft:40}} value={country} onChange={e=>setCountry(e.target.value)}>
+              <select className="auth-select" style={{paddingLeft:40, fontSize:16, touchAction:"manipulation"}} value={country} 
+onChange={e=>setCountry(e.target.value)}>
                 {COUNTRIES.map(c=>(<option key={c.code} value={c.code}>{c.name}</option>))}
               </select>
             </div>
