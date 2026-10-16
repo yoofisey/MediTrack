@@ -79,6 +79,8 @@ export function updateMedication(id: string, updates: Partial<Medication>) {
   return sb.from("medications").update(updates).eq("id", id);
 }
 
+// Soft-delete so dose history (which joins on medications(name)) is preserved.
+// The medication row stays; it is hidden from lists via the `active` flag.
 export function deleteMedication(id: string) {
-  return sb.from("medications").delete().eq("id", id);
+  return sb.from("medications").update({ active: false }).eq("id", id);
 }

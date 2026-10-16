@@ -644,10 +644,10 @@ export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
           <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><Trash2 size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Delete medication?</div>
           <div style={{fontSize:15,color:"var(--t3)",lineHeight:1.5,marginBottom:20}}>
-            This will permanently remove <strong style={{color:"var(--t1)"}}>{medName}</strong> and all its dose history. This cannot be undone.
+            This removes <strong style={{color:"var(--t1)"}}>{medName}</strong> from your list. Its dose history is kept in your records.
           </div>
           <div className="sheet-actions">
-            <button className="btn btn-red" onClick={onConfirm}>Delete permanently</button>
+            <button className="btn btn-red" onClick={onConfirm}>Delete</button>
             <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
           </div>
         </div>

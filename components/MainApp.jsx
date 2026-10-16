@@ -232,14 +232,15 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         ]);
         if (!cancelled) {
           if (Array.isArray(mr.data)) {
-            setMeds(mr.data);
-            setCache("meds", mr.data);
-            mr.data.filter(m => m.pills_per_package && m.active).forEach(m => initStockForMed(m));
+            const visibleMeds = mr.data.filter(m => m.active !== false);
+            setMeds(visibleMeds);
+            setCache("meds", visibleMeds);
+            visibleMeds.filter(m => m.pills_per_package && m.active).forEach(m => initStockForMed(m));
           }
           if (Array.isArray(lr.data)) { setLogs(lr.data); setCache("logs", lr.data); }
           if (Array.isArray(vr.data)) { setVitals(vr.data); setCache("vitals", vr.data); }
           try { const j = JSON.parse(localStorage.getItem("mt_journal") || "[]"); setJournalEntries(j); } catch (e) { console.error("journal load:", e); }
-          try { const { checkRefillReminders } = await import("@/lib/notifications"); if (getTierConfig(profile?.plan || "free").refillReminder) checkRefillReminders(mr.data||[], lr.data||[]); } catch (e) { console.error("refill check:", e); }
+          try { const { checkRefillReminders } = await import("@/lib/notifications"); if (getTierConfig(profile?.plan || "free").refillReminder) checkRefillReminders((mr.data||[]).filter(m => m.active !== false), lr.data||[]); } catch (e) { console.error("refill check:", e); }
           flushQueue();
           try { await syncVisits(user.id); if (!cancelled) setVisitsTick(t => t + 1); } catch (e) { console.error("visit sync:", e); }
         }
@@ -272,7 +273,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
               sb.from("vitals").select("*").eq("user_id", m.member_user_id).order("created_at", { ascending: false }).limit(200),
               sb.from("profiles").select("full_name, avatar_url, wake_time, reminder_lead").eq("id", m.member_user_id).maybeSingle(),
             ]);
-            map[m.id] = { meds: medsRes.data || [], logs: logsRes.data || [], vitals: vitalsRes.data || [], profile: profRes.data || null };
+            map[m.id] = { meds: (medsRes.data || []).filter(x => x.active !== false), logs: logsRes.data || [], vitals: vitalsRes.data || [], profile: profRes.data || null };
           } catch (e) { console.error("linked load:", e); }
         }));
         if (!cancelled) setLinkedData(map);
@@ -800,8 +801,10 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
     const id = deleteMedId;
     setDeleteMedId(null);
     try {
-      await sb.from("dose_logs").delete().eq("medication_id", id);
-      await sb.from("medications").delete().eq("id", id);
+      // Soft-delete: keep the medication row so its dose history (which joins on
+      // medications(name)) stays intact. The med is hidden from lists via the
+      // active flag, and all dose_logs are preserved.
+      await sb.from("medications").update({ active: false }).eq("id", id);
       reload();
     } catch (e) {
       console.error("deleteMed error:", e?.message || e);
