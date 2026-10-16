@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function PrivacyPage() {
   return (
-    <div style={{minHeight:"100vh",background:"#f8fafc",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif",color:"#0f172a",lineHeight:1.7,padding:"40px 20px"}}>
+    <div style={{minHeight:"100dvh",background:"#f8fafc",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif",color:"#0f172a",lineHeight:1.7,padding:"40px 20px"}}>
       <div style={{maxWidth:680,margin:"0 auto"}}>
         <div style={{marginBottom:32}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>

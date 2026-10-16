@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLang, formatDate } from "@/lib/i18n";
 import { Laugh, Smile, Meh, Frown, CloudRain, MoonStar, CircleAlert, Zap, Moon, Waves, Biohazard, Wind, Droplets, Thermometer, AlertTriangle, Utensils, NotebookPen, BarChart3, ArrowLeft } from "lucide-react";
 import { useSwipe } from "@/lib/useSwipe";
 import { FormControl } from "@/components/FormControls";
@@ -67,13 +68,14 @@ export function getJournalEntry(dateStr) {
 }
 
 export function JournalMiniCalendar({ entries, selectedDate, onSelect }) {
+  const { lang } = useLang();
   const [viewDate, setViewDate] = useState(() => selectedDate ? new Date(selectedDate) : new Date());
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date().toISOString().split("T")[0];
-  const monthName = viewDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  const monthName = formatDate(viewDate, lang, { month: "short", year: "numeric" });
   const entryDates = new Set(entries.map(e => e.date));
 
   const cells = [];
@@ -100,7 +102,13 @@ export function JournalMiniCalendar({ entries, selectedDate, onSelect }) {
           const entry = entries.find(e => e.date === ds);
           const mood = entry?.mood ? MOODS.find(m => m.id === entry.mood) : null;
           return (
-            <div key={ds} onClick={() => onSelect(ds)} style={{
+            <div key={ds} onClick={() => onSelect(ds)}
+              role="button"
+              tabIndex={0}
+              aria-label={formatDate(new Date(year, month, d), lang, { weekday: "long", month: "long", day: "numeric" })}
+              aria-pressed={isSelected}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(ds); } }}
+              style={{
               width:"100%",aspectRatio:"1",borderRadius:8,display:"grid",placeItems:"center",cursor:"pointer",fontSize:13,fontWeight:500,
               background: isSelected ? "var(--teal)" : isToday ? "var(--sel)" : "transparent",
               color: isSelected ? "white" : isToday ? "var(--teal)" : "var(--t1)",
@@ -117,6 +125,7 @@ export function JournalMiniCalendar({ entries, selectedDate, onSelect }) {
 }
 
 function MoodTrendChart({ entries }) {
+  const { lang } = useLang();
   const today = new Date();
   const days = [];
   for (let i = 6; i >= 0; i--) {
@@ -127,7 +136,7 @@ function MoodTrendChart({ entries }) {
     const score = entry?.mood ? MOOD_SCORES[entry.mood] : null;
     days.push({
       date: dateStr,
-      dayLabel: d.toLocaleDateString("en-US", { weekday: "short" }),
+      dayLabel: formatDate(d, lang, { weekday: "short" }),
       score,
     });
   }
@@ -262,6 +271,7 @@ function SymptomFrequencyChart({ entries }) {
 }
 
 function SleepTrendChart({ entries }) {
+  const { lang } = useLang();
   const today = new Date();
   const days = [];
   for (let i = 6; i >= 0; i--) {
@@ -272,7 +282,7 @@ function SleepTrendChart({ entries }) {
     const sq = entry?.sleep ? SLEEP_QUALITY.find(s => s.id === entry.sleep) : null;
     days.push({
       date: dateStr,
-      dayLabel: d.toLocaleDateString("en-US", { weekday: "short" }),
+      dayLabel: formatDate(d, lang, { weekday: "short" }),
       score: sq?.score || null,
     });
   }
@@ -422,7 +432,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
 
   if (saved) {
     return (
-      <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={onClose}>
         <div className="sheet" style={{maxHeight:"50dvh"}} onClick={e => e.stopPropagation()}>
           <div style={{padding:32,textAlign:"center"}}>
             <div style={{display:"grid",placeItems:"center",marginBottom:12}}><NotebookPen size={48} strokeWidth={1.5}/></div>
@@ -435,7 +445,7 @@ export function JournalEntrySheet({ date, entry, onSave, onClose }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{display:"flex",alignItems:"center",padding:"0 20px 12px",borderBottom:"0.5px solid var(--sep)",marginBottom:8,position:"relative"}}>

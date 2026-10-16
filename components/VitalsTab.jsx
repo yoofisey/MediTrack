@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useLang } from "@/lib/i18n";
+import { useLang, formatDate, formatTime, dayKey } from "@/lib/i18n";
+import { toastError } from "@/lib/toast";
 import { sb } from "@/lib/supabase";
 import { Stethoscope, Scale, Droplets, Heart, Thermometer, Wind, FlaskConical, Ruler, Droplet, Gauge, BarChart3 } from "lucide-react";
 
@@ -56,6 +57,22 @@ function statusColor(status) {
   return "#30D158";
 }
 
+// Cumulative metrics are the ones you add up across a day (e.g. litres of
+// water), so they are the ones a target makes sense for. Weight/BMI/BP are
+// point-in-time readings — a "target" there is a range you already get from
+// `normal`, so we don't pretend to track a goal for them.
+const CUMULATIVE_TYPES = new Set(["water_intake"]);
+
+export function dailyTotal(entries, dateStr) {
+  return entries
+    .filter(v => dayKey(v.created_at) === dateStr)
+    .reduce((s, v) => s + (Number(v.value) || 0), 0);
+}
+
+function formatNum(n) {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+}
+
 function MiniSparkline({ data, color, width = 120, height = 32 }) {
   if (!data || data.length < 2) return null;
   const values = data.map(d => d.value);
@@ -84,11 +101,42 @@ function MiniSparkline({ data, color, width = 120, height = 32 }) {
   );
 }
 
-function VitalCard({ vitalType, entries, onLog, onHistory }) {
+function TargetProgress({ current, target, unit, color }) {
   const { t } = useLang();
+  const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+  const met = target > 0 && current >= target;
+  const remaining = Math.max(0, Math.round((target - current) * 100) / 100);
+
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
+        <span style={{fontSize:12,color:"var(--t3)"}}>{t("vitals.dailyProgress")}</span>
+        <span style={{fontSize:12,fontWeight:700,color:met ? "#30D158" : "var(--t2)"}}>
+          {formatNum(current)} / {formatNum(target)} {unit}
+        </span>
+      </div>
+      <div style={{height:8,borderRadius:4,background:"var(--hover)",overflow:"hidden"}}>
+        <div style={{
+          width:`${pct}%`,height:"100%",borderRadius:4,
+          background:met ? "#30D158" : color,
+          transition:"width .3s ease",
+        }}/>
+      </div>
+      <div style={{fontSize:11,color:met ? "#30D158" : "var(--t3)",marginTop:4,fontWeight:met ? 600 : 400}}>
+        {met ? t("vitals.targetMet") : `${formatNum(remaining)} ${unit} ${t("vitals.toGo")}`}
+      </div>
+    </div>
+  );
+}
+
+function VitalCard({ vitalType, entries, onLog, onHistory, target }) {
+  const { t, lang } = useLang();
   const latest = entries[0];
   const status = latest ? getStatus(latest) : null;
   const recent7 = entries.slice(0, 7).reverse();
+  const todayStr = dayKey();
+  const showTarget = CUMULATIVE_TYPES.has(vitalType.id) && target > 0;
+  const todaySum = showTarget ? dailyTotal(entries, todayStr) : 0;
 
   return (
     <div style={{
@@ -122,14 +170,37 @@ function VitalCard({ vitalType, entries, onLog, onHistory }) {
         )}
       </div>
 
-      {latest ? (
+      {showTarget ? (
+        <>
+          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:12}}>
+            <div>
+              <div style={{fontSize:28,fontWeight:700,letterSpacing:-.5,color:"var(--t1)",lineHeight:1}}>
+                {formatNum(todaySum)}
+                <span style={{fontSize:18,fontWeight:600,color:"var(--t3)"}}> {vitalType.unit}</span>
+              </div>
+              <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{t("vitals.todayTotal")}</div>
+            </div>
+            {latest && (
+              <div style={{
+                padding:"4px 10px",borderRadius:8,
+                background:`${vitalType.color}12`,
+                color:vitalType.color,
+                fontSize:12,fontWeight:600,
+              }}>
+                +{formatNum(latest.value)} {vitalType.unit}
+              </div>
+            )}
+          </div>
+          <TargetProgress current={todaySum} target={target} unit={vitalType.unit} color={vitalType.color}/>
+        </>
+      ) : latest ? (
         <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:12}}>
           <div>
             <div style={{fontSize:28,fontWeight:700,letterSpacing:-.5,color:"var(--t1)",lineHeight:1}}>
               {latest.value}
               {latest.value_secondary != null && <span style={{fontSize:20,fontWeight:600}}>/{latest.value_secondary}</span>}
             </div>
-            <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{vitalType.unit} · {new Date(latest.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div>
+            <div style={{fontSize:12,color:"var(--t3)",marginTop:2}}>{vitalType.unit} · {formatDate(latest.created_at, lang, {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div>
           </div>
           {status && (
             <div style={{
@@ -193,7 +264,7 @@ function LogSheet({ vitalType, onSave, onClose }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"85dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
@@ -249,9 +320,9 @@ function LogSheet({ vitalType, onSave, onClose }) {
 }
 
 function HistorySheet({ vitalType, entries, onClose }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
@@ -278,9 +349,9 @@ function HistorySheet({ vitalType, entries, onClose }) {
                       {e.notes && <div className="row-sub">{e.notes}</div>}
                     </div>
                     <div style={{fontSize:13,color:"var(--t3)",textAlign:"right"}}>
-                      {new Date(e.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+                      {formatDate(e.created_at, lang, {month:"short",day:"numeric"})}
                       <br/>
-                      <span style={{fontSize:12}}>{new Date(e.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</span>
+                      <span style={{fontSize:12}}>{formatTime(e.created_at, lang)}</span>
                     </div>
                   </div>
                 );
@@ -295,10 +366,10 @@ function HistorySheet({ vitalType, entries, onClose }) {
   );
 }
 
-function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalReminders, onUpdateReminder, onClose }) {
+function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalReminders, onUpdateReminder, targets, onTarget, onClose }) {
   const { t } = useLang();
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"70dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
@@ -350,6 +421,38 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
             </div>
           </div>
 
+          {enabled.some(id => CUMULATIVE_TYPES.has(id)) && (
+            <div style={{marginTop:20}}>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:6}}>{t("vitals.dailyTargets")}</div>
+              <div style={{fontSize:12,color:"var(--t3)",marginBottom:12}}>{t("vitals.dailyTargetsHint")}</div>
+              {enabled.filter(id => CUMULATIVE_TYPES.has(id)).map(vtId => {
+                const vt = VITAL_TYPES.find(v => v.id === vtId);
+                if (!vt) return null;
+                return (
+                  <div key={vtId} style={{marginBottom:14}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <span style={{display:"inline-flex"}}><vt.icon size={16}/></span>
+                      <span style={{fontSize:14,fontWeight:600,color:"var(--t1)",flex:1}}>{vt.label}</span>
+                      <input
+                        className="sheet-input"
+                        type="number"
+                        inputMode="decimal"
+                        placeholder={t("vitals.noTarget")}
+                        value={targets[vtId] ?? ""}
+                        onChange={e => onTarget(vtId, e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                        style={{
+                          width:96,padding:"9px 12px",textAlign:"right",
+                          fontSize:15,fontWeight:600,
+                        }}
+                      />
+                      <span style={{fontSize:13,color:"var(--t3)",fontWeight:600}}>{vt.unit}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div style={{marginTop:20}}>
             <div style={{fontSize:13,fontWeight:600,color:"var(--t2)",marginBottom:6}}>{t("vitals.reminderIntervals")}</div>
             <div style={{fontSize:12,color:"var(--t3)",marginBottom:10}}>{t("vitals.setReminder")}</div>
@@ -388,7 +491,7 @@ function ConfigureSheet({ enabled, onToggle, frequency, onFrequency, vitalRemind
 }
 
 export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoReports }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [logType, setLogType] = useState(null);
   const [historyType, setHistoryType] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
@@ -404,14 +507,64 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
     if (typeof window === "undefined") return { blood_pressure:{ intervalId:"off" }, glucose:{ intervalId:"off" } };
     try { return JSON.parse(localStorage.getItem("mt_vital_reminders") || '{"blood_pressure":{"intervalId":"off"},"glucose":{"intervalId":"off"}}'); } catch { return { blood_pressure:{ intervalId:"off" }, glucose:{ intervalId:"off" } }; }
   });
+  const [targets, setTargets] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("mt_vital_targets") || "{}"); } catch { return {}; }
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("mt_vitals_enabled", JSON.stringify(enabled));
       localStorage.setItem("mt_vitals_freq", frequency);
       localStorage.setItem("mt_vital_reminders", JSON.stringify(vitalReminders));
+      localStorage.setItem("mt_vital_targets", JSON.stringify(targets));
     }
-  }, [enabled, frequency, vitalReminders]);
+  }, [enabled, frequency, vitalReminders, targets]);
+
+  // Targets are owner-scoped, so only the signed-in user's own rows apply.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!mounted || !user?.id) return;
+        if (member && member.kind !== "self") return;
+        const { data } = await sb.from("vital_targets").select("type,target_value").eq("user_id", user.id);
+        if (!mounted || !data) return;
+        const next = {};
+        for (const row of data) next[row.type] = Number(row.target_value);
+        setTargets(next);
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, [member?.kind]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!mounted || !user?.id) return;
+        if (member && member.kind !== "self") return;
+        for (const [type, value] of Object.entries(targets)) {
+          if (!CUMULATIVE_TYPES.has(type)) continue;
+          if (!value || value <= 0) {
+            await sb.from("vital_targets").delete().eq("user_id", user.id).eq("type", type);
+          } else {
+            await sb.from("vital_targets").upsert(
+              { user_id: user.id, type, target_value: value },
+              { onConflict: "user_id,type" }
+            );
+          }
+        }
+      } catch {}
+    })();
+    return () => { mounted = false; };
+  }, [targets, member?.kind]);
+
+  const setTarget = useCallback((type, value) => {
+    setTargets(prev => ({ ...prev, [type]: value }));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -444,9 +597,9 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
   }, []);
 
   const totalReadings = allVitals.length;
-  const todayStr = new Date().toLocaleDateString("en-CA");
+  const todayStr = dayKey();
   const todayReadings = allVitals.filter(v => {
-    const d = new Date(v.created_at).toLocaleDateString("en-CA");
+    const d = dayKey(v.created_at);
     return d === todayStr;
   }).length;
   const lastLogged = allVitals[0];
@@ -492,7 +645,7 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
           </div>
           {lastLogged ? (
             <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(255,255,255,.2)",fontSize:12,opacity:.85}}>
-              {t("vitals.lastLogged")}: {VITAL_TYPES.find(v => v.id === lastLogged.type)?.label || lastLogged.type} {lastLogged.value}{lastLogged.value_secondary != null ? `/${lastLogged.value_secondary}` : ""}{lastLogged.unit ? ` ${lastLogged.unit}` : ""} · {new Date(lastLogged.created_at).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}
+              {t("vitals.lastLogged")}: {VITAL_TYPES.find(v => v.id === lastLogged.type)?.label || lastLogged.type} {lastLogged.value}{lastLogged.value_secondary != null ? `/${lastLogged.value_secondary}` : ""}{lastLogged.unit ? ` ${lastLogged.unit}` : ""} · {formatTime(lastLogged.created_at, lang)}
             </div>
           ) : null}
         </div>
@@ -543,7 +696,7 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
             const entries = allVitals.filter(v => v.type === id);
             return (
               <div key={id} style={{animation:`fadeUp .3s ${i * .06}s ease both`}}>
-                <VitalCard vitalType={vt} entries={entries} onLog={setLogType} onHistory={setHistoryType}/>
+                <VitalCard vitalType={vt} entries={entries} onLog={setLogType} onHistory={setHistoryType} target={targets[id] || 0}/>
               </div>
             );
           })
@@ -564,12 +717,13 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
             } else {
               const { sb } = await import("@/lib/supabase");
               const { error } = await sb.from("vitals").insert({ user_id: member?.userId, ...reading });
-              if (error) { alert(error.message || "Could not save reading"); return; }
+              if (error) { console.error("save vitals:", error); toastError(error.message || "Could not save reading"); return; }
             }
             setLogType(null);
             if (onRefresh) onRefresh();
           } catch (e) {
-            alert(e?.message || "Could not save reading");
+            console.error("save vitals:", e);
+            toastError(e?.message || "Could not save reading");
           }
         }}/>
       )}
@@ -577,7 +731,7 @@ export default function VitalsTab({ vitals: allVitals, onRefresh, member, onGoRe
         <HistorySheet vitalType={historyType} entries={allVitals.filter(v => v.type === historyType.id)} onClose={() => setHistoryType(null)}/>
       )}
       {showConfig && (
-        <ConfigureSheet enabled={enabled} onToggle={toggleVital} frequency={frequency} onFrequency={setFrequency} vitalReminders={vitalReminders} onUpdateReminder={updateVitalReminder} onClose={() => setShowConfig(false)}/>
+        <ConfigureSheet enabled={enabled} onToggle={toggleVital} frequency={frequency} onFrequency={setFrequency} vitalReminders={vitalReminders} onUpdateReminder={updateVitalReminder} targets={targets} onTarget={setTarget} onClose={() => setShowConfig(false)}/>
       )}
     </div>
   );

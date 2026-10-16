@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { WifiOff, RefreshCw } from "lucide-react";
+import { WifiOff, X } from "lucide-react";
 import { CSS } from "@/lib/constants";
 
+// Non-blocking offline banner. navigator.onLine is unreliable (false negatives
+// on cache hits), so previously this was a full-screen modal that hid an app
+// that actually still works from the SW cache. Now it's a dismissible pill that
+// lets the user keep using the app and queueing writes.
 export default function OfflineScreen({ onClose }) {
   const [visible, setVisible] = useState(false);
 
@@ -23,40 +27,57 @@ export default function OfflineScreen({ onClose }) {
   }
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9998,
-      background: "rgba(0,0,0,.35)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none",
-      transition: "opacity .35s ease",
-    }}>
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        top: "calc(env(safe-area-inset-top, 0px) + 10px)",
+        left: "max(12px, env(safe-area-inset-left, 0px))",
+        right: "max(12px, env(safe-area-inset-right, 0px))",
+        zIndex: 9998,
+        display: "flex",
+        justifyContent: "center",
+        pointerEvents: "none",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(-12px)",
+        transition: "opacity .3s ease, transform .3s ease",
+      }}
+    >
       <style>{CSS}</style>
-      <div style={{
-        background: "var(--card)", borderRadius: "var(--rxl)",
-        padding: "32px 28px 28px", width: "90%", maxWidth: 340,
-        textAlign: "center", boxShadow: "var(--card-hover)",
-        transform: visible ? "translateY(0) scale(1)" : "translateY(20px) scale(.96)",
-        transition: "transform .4s cubic-bezier(.22,1,.36,1), opacity .35s ease",
-      }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: "50%",
-          background: "var(--hover)", display: "grid", placeItems: "center",
-          margin: "0 auto 18px", position: "relative",
-        }}>
-          <div style={{
-            position: "absolute", inset: -10, borderRadius: "50%",
-            background: "rgba(255,59,48,.08)", animation: "bgPulse 2s ease-in-out infinite",
-          }} />
-          <WifiOff size={32} color="var(--red)" strokeWidth={1.8} />
+      <div
+        style={{
+          pointerEvents: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          maxWidth: 420,
+          width: "100%",
+          background: "var(--card)",
+          borderRadius: 999,
+          padding: "10px 12px 10px 14px",
+          boxShadow: "var(--card-hover)",
+          border: "0.5px solid var(--sep)",
+        }}
+      >
+        <WifiOff size={18} color="var(--red)" strokeWidth={2.2} style={{ flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: "var(--t2)", lineHeight: 1.35 }}>
+          You&apos;re offline — changes will sync when you reconnect.
         </div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--t1)", marginBottom: 6, letterSpacing: "-.3px" }}>
-          You&apos;re offline
-        </div>
-        <div style={{ fontSize: 14, color: "var(--t3)", lineHeight: 1.5, marginBottom: 24 }}>
-          Some features may be limited. Your changes will sync automatically when you reconnect.
-        </div>
-        <button className="btn btn-primary" onClick={dismiss}>
-          <RefreshCw size={16} /> Continue offline
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={dismiss}
+          style={{ width: "auto", padding: "6px 10px", fontSize: 12, flexShrink: 0 }}
+          aria-label="Dismiss offline notice"
+        >
+          Dismiss
+        </button>
+        <button
+          onClick={dismiss}
+          aria-label="Dismiss offline notice"
+          style={{ background: "none", border: "none", padding: 2, cursor: "pointer", color: "var(--t3)", display: "grid", placeItems: "center", flexShrink: 0 }}
+        >
+          <X size={16} />
         </button>
       </div>
     </div>

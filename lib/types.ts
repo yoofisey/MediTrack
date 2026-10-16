@@ -72,6 +72,13 @@ export interface Vital {
 
 export type VitalType = "blood_pressure" | "weight" | "glucose" | "heart_rate" | "temperature" | "spo2" | "cholesterol" | "bmi" | "hba1c" | "water_intake" | "peak_flow";
 
+export interface VitalTarget {
+  user_id: string;
+  type: VitalType;
+  target_value: number;
+  updated_at?: string;
+}
+
 export interface PushSubscription {
   user_id: string;
   endpoint: string;

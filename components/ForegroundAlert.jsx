@@ -20,7 +20,7 @@ export default function ForegroundAlert({ alert, onDismiss }) {
   else if (isVital) { icon = <HeartPulse size={22} color="white" />; bg = "linear-gradient(135deg, #10b981, #059669)"; }
 
   return (
-    <div key={alertKey} onAnimationEnd={(e) => { if (e.animationName === "fgAlertOut") onDismiss(); }}
+    <div key={alertKey} role="alert" aria-live="assertive" onAnimationEnd={(e) => { if (e.animationName === "fgAlertOut") onDismiss(); }}
       style={{
       position: "fixed", top: 16, left: 16, right: 16, zIndex: 9998,
       background: bg, borderRadius: 16, padding: 16,

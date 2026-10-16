@@ -4,7 +4,16 @@ import { initials } from "@/lib/household";
 
 export function Card({ children, style, onClick, pad = true }) {
   return (
-    <div className="card" style={{ ...(pad ? { padding: 16 } : { padding: 0 }), ...style }} onClick={onClick}>
+    <div
+      className="card"
+      style={{ ...(pad ? { padding: 16 } : { padding: 0 }), ...style }}
+      onClick={onClick}
+      {...(onClick ? {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(e); } },
+      } : {})}
+    >
       {children}
     </div>
   );
@@ -26,7 +35,16 @@ export function Section({ title, right, children, style }) {
 
 export function ListRow({ icon, iconBg, title, sub, value, right, onClick }) {
   return (
-    <div className="row" style={onClick ? undefined : { cursor: "default" }} onClick={onClick}>
+    <div
+      className="row"
+      style={onClick ? { cursor: "pointer" } : { cursor: "default" }}
+      onClick={onClick}
+      {...(onClick ? {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(e); } },
+      } : {})}
+    >
       {icon && <div className="row-icon" style={iconBg ? { background: iconBg } : undefined}>{icon}</div>}
       <div className="row-body">
         <div className="row-title">{title}</div>
@@ -65,7 +83,15 @@ const INSIGHT_DOT = {
 
 export function InsightCard({ tone = "good", headline, suggestion, onClick, onDismiss }) {
   return (
-    <div className="insight-card" onClick={onClick}>
+    <div
+      className="insight-card"
+      onClick={onClick}
+      {...(onClick ? {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(e); } },
+      } : {})}
+    >
       <div className="insight-head">
         <span style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "var(--t1)", fontSize: 14 }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: INSIGHT_DOT[tone] || "#34C759", flexShrink: 0 }} />
@@ -93,6 +119,11 @@ export function MemberSwitcher({ members, value, onChange, ring, style }) {
         const ringColor = m.pending ? "var(--t4)" : pct >= 1 ? "var(--green)" : pct > 0 ? "var(--teal)" : "var(--red)";
         return (
           <div key={m.key} onClick={() => onChange?.(m.key)}
+            role="button"
+            tabIndex={0}
+            aria-pressed={active}
+            aria-label={m.name}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onChange?.(m.key); } }}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 74, cursor: "pointer", userSelect: "none", WebkitTapHighlightColor: "transparent" }}>
             <div style={{
               width: 64, height: 64, borderRadius: "50%", padding: active ? 2 : 1.5,
@@ -110,7 +141,7 @@ export function MemberSwitcher({ members, value, onChange, ring, style }) {
                   )}
                 </svg>
                 <div style={{ width: 46, height: 46, borderRadius: "50%", overflow: "hidden", background: "var(--ib1)", display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: "var(--t1)" }}>
-                  {m.avatarUrl ? <img src={m.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
+                  {m.avatarUrl ? <img src={m.avatarUrl} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
                 </div>
               </div>
             </div>

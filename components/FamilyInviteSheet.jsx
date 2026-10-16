@@ -7,7 +7,7 @@ export default function FamilyInviteSheet({ invites, onAccept, onDismiss }) {
   const handleSwipe = useSwipe({ onSwipeDown: onDismiss });
   if (!invites?.length) return null;
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onDismiss()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onDismiss()}>
       <div className="sheet" style={{maxHeight:"70dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"4px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>

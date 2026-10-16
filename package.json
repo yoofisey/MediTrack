@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "gen:store-assets": "node scripts/gen-icons.mjs",
+    "test": "node --no-warnings --import ./tests/setup.mjs --test tests/*.test.mjs",
     "mobile:sync": "npx cap sync",
     "mobile:open:android": "npx cap open android",
     "mobile:open:ios": "npx cap open ios"

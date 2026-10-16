@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { localDayKey } from "@/lib/data";
+import { useLang, formatDate } from "@/lib/i18n";
 import { Target, Zap, Sparkles } from "lucide-react";
 
 function BarChart({ data, height = 120, barColor = "var(--teal)" }) {
@@ -49,6 +50,7 @@ function DonutChart({ pct, size = 100, stroke = 10, color = "var(--teal)" }) {
 }
 
 export default function AdherenceChart({ logs, meds, tz }) {
+  const { lang } = useLang();
   const [view, setView] = useState("week");
   const today = new Date();
   const todayStr = localDayKey(today, tz);
@@ -86,7 +88,7 @@ export default function AdherenceChart({ logs, meds, tz }) {
     d.setDate(d.getDate() - i);
     const ds = localDayKey(d, tz);
     const label = view === "week"
-      ? d.toLocaleDateString("en-US", { weekday: "short" }).charAt(0)
+      ? formatDate(d, lang, { weekday: "short" }).charAt(0)
       : d.getDate().toString();
     dayData.push({
       label,

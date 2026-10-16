@@ -4,34 +4,27 @@ import { useState } from "react";
 import Link from "next/link";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { getPaymentsConfig } from "@/lib/payments";
+import { getTierConfig, featureLabels } from "@/lib/tiers";
 import { Check } from "lucide-react";
+import CustomSelect from "@/components/CustomSelect";
 
+const FREE_FEATURES = [
+  ["2 medications", null],
+  ["7-day history", null],
+  ["Dose reminders", null],
+  ["Adherence streaks", null],
+];
+
+// Derived from TIER_CONFIG so the public pricing page can't drift from what a
+// tier actually unlocks. `featureLabels` maps each flag to localized copy.
 const FEATURES = {
-  free: [
-    { label: "2 medications", ok: true },
-    { label: "7-day history", ok: true },
-    { label: "Dose reminders", ok: true },
-    { label: "Adherence streaks", ok: true },
-  ],
-  pro: [
-    { label: "Unlimited medications", ok: true },
-    { label: "Full history", ok: true },
-    { label: "Adherence reports", ok: true },
-    { label: "Doctor report sharing", ok: true },
-    { label: "Refill reminders", ok: true },
-  ],
-  family: [
-    { label: "Up to 5 profiles", ok: true },
-    { label: "Family dashboard", ok: true },
-    { label: "Per-member vitals & reports", ok: true },
-    { label: "Caregiver alerts", ok: true },
-    { label: "Interaction checker", ok: true },
-    { label: "Caregiver sharing", ok: true },
-  ],
+  free: FREE_FEATURES,
+  pro: () => getTierConfig("pro").features.map(f => [featureLabels(f), "ok"]),
+  family: () => getTierConfig("family").features.map(f => [featureLabels(f), "ok"]),
 };
 
 const CARD = {
-  minHeight: "100vh",
+  minHeight: "100dvh",
   background: "linear-gradient(180deg,#f0f7ff 0%,#ffffff 40%)",
   fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif",
   color: "#0f172a",
@@ -56,8 +49,8 @@ export default function PricingPage() {
 
   const plans = [
     { id: "free", name: "Free", price: "Free", per: "forever", desc: "Getting started with your own meds.", highlight: false, cta: "Start free", solid: false, features: FEATURES.free },
-    { id: "pro", name: "Pro", price: pricing.pro.label, per: pricing.pro.label === "Coming soon" ? "" : "/mo", desc: "Full tracking, reports, and reminders.", highlight: true, cta: paidCta, solid: true, features: FEATURES.pro },
-    { id: "family", name: "Family", price: pricing.family.label, per: pricing.family.label === "Coming soon" ? "" : "/mo", desc: "Manage medications for up to 5 people.", highlight: false, cta: paidCta, solid: true, features: FEATURES.family },
+    { id: "pro", name: "Pro", price: pricing.pro.label, per: pricing.pro.label === "Coming soon" ? "" : "/mo", desc: "Full tracking, reports, and reminders.", highlight: true, cta: paidCta, solid: true, features: FEATURES.pro() },
+    { id: "family", name: "Family", price: pricing.family.label, per: pricing.family.label === "Coming soon" ? "" : "/mo", desc: "Manage medications for up to 5 people.", highlight: false, cta: paidCta, solid: true, features: FEATURES.family() },
   ];
 
   return (
@@ -70,12 +63,15 @@ export default function PricingPage() {
         </p>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", border: "1px solid #e2e8f0", borderRadius: 12, padding: "8px 14px", marginBottom: 32 }}>
           <span style={{ fontSize: 14, color: "#475569", fontWeight: 600 }}>Country</span>
-          <select value={country} onChange={e => setCountry(e.target.value)}
-            style={{ fontSize: 14, fontWeight: 600, color: "#0f172a", border: "none", background: "transparent", outline: "none", cursor: "pointer", fontFamily: "inherit" }}>
-            {COUNTRIES.filter(c => c.code !== "OTHER").map(c => (
-              <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
-            ))}
-          </select>
+          <CustomSelect
+            value={country}
+            onChange={setCountry}
+            options={COUNTRIES.filter(c => c.code !== "OTHER").map(c => ({ value: c.code, label: `${c.flag} ${c.name}` }))}
+            ariaLabel="Country"
+            className=""
+            style={{ width: "auto" }}
+            triggerStyle={{ fontSize: 14, color: "#0f172a", border: "none", background: "transparent", outline: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, fontWeight: 600 }}
+          />
         </div>
         <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 28 }}>{selCountry.flag} {selCountry.name} · {pricing.note}</div>
       </div>
@@ -112,14 +108,18 @@ export default function PricingPage() {
             }}>{p.cta}</Link>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {p.features.map(f => (
-                <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: f.ok ? "#334155" : "#cbd5e1" }}>
-                  <span style={{ width: 18, height: 18, borderRadius: "50%", background: f.ok ? "#dcfce7" : "#f1f5f9", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    <Check size={11} strokeWidth={3} color={f.ok ? "#16a34a" : "#cbd5e1"} />
+              {p.features.map((f, i) => {
+                const label = f[0];
+                const ok = Boolean(f[1]);
+                return (
+                <div key={`${label}-${i}`} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13.5, color: ok ? "#334155" : "#cbd5e1" }}>
+                  <span style={{ width: 18, height: 18, borderRadius: "50%", background: ok ? "#dcfce7" : "#f1f5f9", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <Check size={11} strokeWidth={3} color={ok ? "#16a34a" : "#cbd5e1"} />
                   </span>
-                  {f.label}
+                  {label}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

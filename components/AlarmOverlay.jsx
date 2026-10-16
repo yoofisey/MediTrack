@@ -19,6 +19,9 @@ export default function AlarmOverlay({ alarm, onDismiss, onLogDose }) {
 
   return (
     <div onClick={onDismiss}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${isReminder ? "Reminder" : "Dose due"} for ${med.name} ${med.dosage_amount} ${med.dosage_unit}`}
       style={{
         position:"fixed",inset:0,zIndex:9999,
         background:"linear-gradient(180deg,#1a1a2e 0%,#0f0f1a 100%)",

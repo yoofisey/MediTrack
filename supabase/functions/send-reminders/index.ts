@@ -12,6 +12,22 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") || "";
 
+// Shared secret must match the one configured on the Vercel cron route
+// (and in Vercel's CRON_SECRET). Fails closed: if it isn't set here, the
+// function refuses requests rather than trusting them.
+const FUNCTION_SECRET = Deno.env.get("CRON_SECRET") || "";
+
+function authorized(req: Request): boolean {
+  const expected = `Bearer ${FUNCTION_SECRET}`;
+  const provided = req.headers.get("authorization") || "";
+  if (!FUNCTION_SECRET || provided.length !== expected.length) return false;
+  const a = new TextEncoder().encode(provided);
+  const b = new TextEncoder().encode(expected);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // countries-and-timezones orders multi-zone countries by tzdb key order,
@@ -198,7 +214,10 @@ async function claimTag(supabase: any, tag: string): Promise<boolean> {
       .select("tag");
     return Array.isArray(data) && data.length > 0;
   } catch {
-    return true;
+    // Fail closed: if we can't record the dedup, don't send (avoids spamming
+    // the same notification on every retry when the dedup table is down).
+    console.error(`dedup claim failed for ${tag}`);
+    return false;
   }
 }
 
@@ -263,6 +282,9 @@ const DAILY_MSGS = [
 ];
 
 serve(async (req) => {
+  if (!authorized(req)) {
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 });
+  }
   try {
     const url = new URL(req.url);
     const mode = url.searchParams.get("mode");
@@ -355,7 +377,11 @@ serve(async (req) => {
     for (const med of medList) {
       const tz = tzFor(med.user_id);
       const prof = profiles.find(p => p.id === med.user_id);
-      const leadMin = prof?.reminder_lead ?? 30;
+      // Per-med lead wins over the profile default — matching the client.
+      const leadMin =
+        med.reminder_minutes != null && med.reminder_minutes !== ""
+          ? Number(med.reminder_minutes)
+          : (prof?.reminder_lead ?? 30);
       const medLogs = allLogs.filter((l: any) => l.user_id === med.user_id && l.medication_id === med.id);
 
       const end = new Date(med.start_date);

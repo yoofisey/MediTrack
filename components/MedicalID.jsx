@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Heart, Phone, AlertTriangle, Droplets, Info, Pill, X } from "lucide-react";
 import { fetchMedicalProfile, saveMedicalProfile } from "@/lib/healthData";
+import CustomSelect from "@/components/CustomSelect";
 
 function Ico({ children, ...props }) {
   return <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0}} {...props}>{children}</span>;
@@ -208,7 +209,7 @@ export default function MedicalID({ meds = [], onClose, section }) {
   const noneMeds = Array.isArray(data.medication_ids) && data.medication_ids.length === 0;
 
   return (
-    <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
@@ -347,15 +348,13 @@ export default function MedicalID({ meds = [], onClose, section }) {
                 <div>
                   <div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>Phone</div>
                   <div style={{display:"flex",gap:8,alignItems:"stretch"}}>
-                    <div style={{position:"relative",flexShrink:0,minWidth:0}}>
-                      <select
-                        value={emergencyCode}
-                        onChange={e=>update("emergency_code",e.target.value)}
-                        style={{height:"100%",border:"1.5px solid var(--sep)",borderRadius:12,background:"var(--input)",color:"var(--t1)",fontSize:14,fontWeight:600,fontFamily:"inherit",cursor:"pointer",padding:"12px 26px 12px 12px",outline:"none",appearance:"none",WebkitAppearance:"none",maxWidth:150}}>
-                        {DIAL_CODES.map(c => <option key={c.iso} value={c.dial}>{c.flag} {c.dial}</option>)}
-                      </select>
-                      <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:10,color:"var(--t4)",pointerEvents:"none"}}>▼</span>
-                    </div>
+                    <CustomSelect
+                      value={emergencyCode}
+                      onChange={v=>update("emergency_code",v)}
+                      options={DIAL_CODES.map(c => ({ value: c.dial, label: `${c.flag} ${c.dial}` }))}
+                      ariaLabel="Country code"
+                      style={{ width: "auto", flexShrink: 0 }}
+                      triggerStyle={{ height:"100%",background:"var(--input)",fontSize:14,fontWeight:600,padding:"12px 30px 12px 12px",maxWidth:150 }}/>
                     <input className="sheet-input" type="tel" inputMode="tel" placeholder="Phone number" value={data.emergency_phone||""} onChange={e=>update("emergency_phone",e.target.value.replace(/[^0-9]/g,""))} style={{fontSize:14,flex:1}}/>
                   </div>
                 </div>

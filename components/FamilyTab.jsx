@@ -128,9 +128,15 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                 const isSel = m.key === selectedKey;
                 const status = memberStatus(m);
                 return (
-                  <div key={m.key} onClick={() => setSelectedKey(m.key === selectedKey ? null : m.key)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", minWidth: 62, flexShrink: 0 }}>
+                  <div key={m.key} onClick={() => setSelectedKey(m.key === selectedKey ? null : m.key)}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSel}
+                    aria-label={m.kind === "self" ? "You" : m.name}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedKey(m.key === selectedKey ? null : m.key); } }}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", minWidth: 62, flexShrink: 0 }}>
                     <div style={{ width: 54, height: 54, borderRadius: "50%", overflow: "hidden", background: isSel ? config.theme.accent : "var(--ib1)", display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: isSel ? "white" : "var(--t1)", border: isSel ? `3px solid ${config.theme.accent}` : "3px solid var(--card)", boxShadow: isSel ? `0 2px 12px ${config.theme.accent}40` : "0 2px 8px rgba(0,0,0,.08)", transition: "all .2s" }}>
-                      {m.avatarUrl ? <img src={m.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
+                      {m.avatarUrl ? <img src={m.avatarUrl} alt={m.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(m)}
                     </div>
                     <span style={{ fontSize: 11, fontWeight: 600, color: isSel ? config.theme.accent : "var(--t2)", whiteSpace: "nowrap" }}>{m.kind === "self" ? "You" : m.name}</span>
                     {status.label && m.kind !== "self" && (
@@ -140,7 +146,12 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
                 );
               })}
               {/* Add member button */}
-              <div onClick={() => setShowAddMember(true)} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", minWidth: 62, flexShrink: 0 }}>
+              <div onClick={() => setShowAddMember(true)}
+                role="button"
+                tabIndex={0}
+                aria-label="Add family member"
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowAddMember(true); } }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", minWidth: 62, flexShrink: 0 }}>
                 <div style={{ width: 54, height: 54, borderRadius: "50%", background: "var(--card)", border: "2px dashed var(--sep)", display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
                   <Plus size={20} color="var(--teal)" strokeWidth={2.2} />
                 </div>
@@ -156,7 +167,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
               <div className="card" style={{ padding: 18, marginBottom: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: config.theme.accent, display: "grid", placeItems: "center", fontSize: 17, fontWeight: 800, color: "white", flexShrink: 0 }}>
-                    {selected.avatarUrl ? <img src={selected.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(selected)}
+                    {selected.avatarUrl ? <img src={selected.avatarUrl} alt={selected.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(selected)}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 17, fontWeight: 800, color: "var(--t1)" }}>{selected.name}</div>

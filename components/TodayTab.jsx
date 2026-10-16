@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { CSS } from "@/lib/constants";
-import { useLang } from "@/lib/i18n";
+import { useLang, dayKey } from "@/lib/i18n";
+import { toast } from "@/lib/toast";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
@@ -20,6 +21,13 @@ const VITAL_UNITS = {
   temperature: "°F", spo2: "%", cholesterol: "mg/dL", bmi: "kg/m²", hba1c: "%",
   water_intake: "L", peak_flow: "L/min",
 };
+
+function dailyTotalVitals(vitals, type) {
+  const todayStr = dayKey();
+  return (vitals || []).filter(v => v.type === type && dayKey(v.created_at) === todayStr)
+    .reduce((s, v) => s + (Number(v.value) || 0), 0);
+}
+
 function latestVitals(member, limit = 3) {
   const latest = {};
   (member.vitals || []).forEach(v => {
@@ -27,10 +35,15 @@ function latestVitals(member, limit = 3) {
   });
   return Object.values(latest).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, limit);
 }
-function vitalsLine(vitals) {
+function vitalsLine(vitals, allVitals, targets) {
   return vitals.map(v => {
     const label = VITAL_LABELS[v.type] || v.type;
     const unit = VITAL_UNITS[v.type] || v.unit || "";
+    if (v.type === "water_intake" && targets?.water_intake > 0) {
+      const today = dailyTotalVitals(allVitals, "water_intake");
+      const r = Math.round(today * 100) / 100;
+      return `${label} ${r}/${targets.water_intake}${unit ? " " + unit : ""}`;
+    }
     const val = v.type === "blood_pressure" && v.value_secondary != null ? `${v.value}/${v.value_secondary}` : `${v.value}`;
     return `${label} ${val}${unit ? " " + unit : ""}`;
   }).join(" · ");
@@ -280,7 +293,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
                 </div>
               </div>
               {selMissed.length > 0 && (
-                <a href={selPhone || undefined} onClick={(e) => { if (!selPhone) { e.preventDefault(); alert(`No phone number on file for ${selected.name}.`); } }}
+                <a href={selPhone || undefined} onClick={(e) => { if (!selPhone) { e.preventDefault(); toast(`No phone number on file for ${selected.name}.`); } }}
                   style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--card)", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,.2)", border: "0.5px solid var(--sep)" }}>
                   <Phone size={22} color="var(--red)" />
                 </a>
@@ -406,16 +419,40 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
             const self = household.find(m => m.kind === "self") || household[0] || {};
             const sum = latestVitals(self);
             const has = sum.length > 0;
+            let targets = {};
+            try { targets = JSON.parse(localStorage.getItem("mt_vital_targets") || "{}"); } catch {}
+            const waterTarget = Number(targets.water_intake) || 0;
+            const waterToday = waterTarget > 0 ? dailyTotalVitals(self.vitals, "water_intake") : 0;
+            const waterPct = waterTarget > 0 ? Math.min(100, Math.round((waterToday / waterTarget) * 100)) : 0;
             return (
               <div key={self.key || "self"} className="row" onClick={onGoVitals} style={{ cursor: "pointer" }}>
-                <div className="row-icon" style={{ background: has ? "var(--ib2)" : "var(--ib6)" }}>
-                  <HeartPulse size={19} color={has ? "var(--teal)" : "var(--t3)"} strokeWidth={2.2} />
+                <div className="row-icon" style={{ background: has || waterTarget > 0 ? "var(--ib2)" : "var(--ib6)" }}>
+                  <HeartPulse size={19} color={has || waterTarget > 0 ? "var(--teal)" : "var(--t3)"} strokeWidth={2.2} />
                 </div>
                 <div className="row-body">
                   <div className="row-title">Check your vitals</div>
-                  <div className="row-sub">{has ? vitalsLine(sum) : "No readings yet"}</div>
+                  <div className="row-sub">{has ? vitalsLine(sum, self.vitals, targets) : "No readings yet"}</div>
+                  {waterTarget > 0 && (
+                    <div style={{ marginTop: 8, maxWidth: 260 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--t3)", marginBottom: 4 }}>
+                        <span>Water today</span>
+                        <span style={{ fontWeight: 700, color: waterPct >= 100 ? "var(--green)" : "var(--t2)" }}>
+                          {Math.round(waterToday * 100) / 100} / {waterTarget} L
+                        </span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 3, background: "var(--sep)", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${waterPct}%`, height: "100%", borderRadius: 3,
+                          background: waterPct >= 100 ? "var(--green)" : "#0A84FF",
+                          transition: "width .3s ease",
+                        }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <ChevronRight size={18} color="var(--t4)" />
+                {waterTarget > 0
+                  ? <div style={{ flexShrink: 0 }}><ProgressRing pct={waterPct} size={44} stroke={4} /></div>
+                  : <ChevronRight size={18} color="var(--t4)" />}
               </div>
             );
           })() : (

@@ -15,7 +15,7 @@ export default function LandingPage({ onGetStarted }) {
 
   return (
     <div style={{
-      minHeight:"100vh",
+      minHeight:"100dvh",
       background:"linear-gradient(180deg,#EDF4FF 0%,#F7F8FC 42%,#F2F2F7 100%)",
       fontFamily:font,
       color:"#1C1C1E",

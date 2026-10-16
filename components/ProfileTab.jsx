@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CSS, Chevron } from "@/lib/constants";
+import CustomSelect from "@/components/CustomSelect";
 import { useLang } from "@/lib/i18n";
 import { toastError } from "@/lib/toast";
 import { COUNTRIES, getPricing } from "@/lib/data";
@@ -352,9 +353,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       <div className="section">
         <div className="section-header">{t("profile.country")}</div>
         <div style={{padding:"0 16px"}}>
-          <select className="sheet-input" style={{width:"100%",fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={editData.country} onChange={e=>setEditData(p=>({...p,country:e.target.value}))}>
-            {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
-          </select>
+          <CustomSelect value={editData.country} onChange={v=>setEditData(p=>({...p,country:v}))} options={COUNTRIES.map(c=>({value:c.code,label:c.name}))}/>
         </div>
       </div>
 
@@ -596,19 +595,19 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
                 <div className="row-icon" style={{background:"var(--ib1)"}}><Ico><Timer size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
                 <div className="row-body"><div className="row-title">{t("profile.reminderBeforeDose")}</div><div className="row-sub">{t("profile.getNotified")}</div></div>
                 <div style={{position:"relative",flexShrink:0}}>
-                  <select
+                  <CustomSelect
                     className="sheet-input"
-                    value={reminderLead}
-                    onChange={e => { setReminderLead(Number(e.target.value)); onSaveProfile({ reminder_lead: Number(e.target.value) }); }}
-                    style={{fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}}
-                  >
-                    <option value={0}>At time</option>
-                    <option value={15}>15 min</option>
-                    <option value={30}>30 min</option>
-                    <option value={60}>1 hour</option>
-                    <option value={120}>2 hours</option>
-                  </select>
-                  <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:10,color:"var(--t4)",pointerEvents:"none"}}>▼</span>
+                    value={String(reminderLead)}
+                    onChange={v => { setReminderLead(Number(v)); onSaveProfile({ reminder_lead: Number(v) }); }}
+                    options={[
+                      {value:"0",label:"At time"},
+                      {value:"15",label:"15 min"},
+                      {value:"30",label:"30 min"},
+                      {value:"60",label:"1 hour"},
+                      {value:"120",label:"2 hours"},
+                    ]}
+                    style={{width:"auto"}}
+                  />
                 </div>
               </div>
               <div className="row" style={{cursor:"pointer"}} onClick={() => { stopAlarmSound(); testAlarm(); }}>
@@ -649,9 +648,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div className="row-icon" style={{background:"var(--ib4)",marginTop:2}}><Ico><Globe size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
               <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">Country</div>
-                <select className="sheet-input" style={{marginTop:8,fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={country} onChange={e=>{const v=e.target.value; setEditCountryPick(false); onSaveProfile({country:v});}} autoFocus>
-            {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name}</option>)}
-                </select>
+                <CustomSelect style={{marginTop:8}} value={country} onChange={v=>{setEditCountryPick(false); onSaveProfile({country:v});}} options={COUNTRIES.map(c=>({value:c.code,label:c.name}))}/>
               </div>
               <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
                 <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditCountryPick(false)}>Cancel</button>
@@ -666,9 +663,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               <div className="row-icon" style={{background:"var(--ib2)",marginTop:2}}><Ico><Languages size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
               <div className="row-body" style={{flex:"1",minWidth:200}}>
                 <div className="row-title">{t("profile.language")}</div>
-                <select className="sheet-input" style={{marginTop:8,fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={lang} onChange={e=>{const v=e.target.value; setLang(v); setEditLang(false);}} autoFocus>
-                  {LANGUAGES.map(l=><option key={l.code} value={l.code}>{l.label}</option>)}
-                </select>
+                <CustomSelect style={{marginTop:8}} value={lang} onChange={v=>{setLang(v); setEditLang(false);}} options={LANGUAGES.map(l=>({value:l.code,label:l.label}))}/>
               </div>
               <div style={{display:"flex",gap:8,width:"100%",paddingLeft:"42px"}}>
                 <button className="btn btn-sm btn-ghost" style={{width:"auto",color:"var(--t3)"}} onClick={()=>setEditLang(false)}>{t("btn.cancel")}</button>
@@ -793,13 +788,12 @@ function PersonalDetailsModal({ details, onSave, onClose }) {
               <input className="sheet-input" type="number" inputMode="numeric" placeholder="e.g. 35" value={f.age || ""} onChange={e => set("age", e.target.value)}/>
             </FormControl>
             <FormControl label="Gender" className="!mb-0">
-              <select className="sheet-input" style={{fontSize:16,touchAction:"manipulation",WebkitAppearance:"none",appearance:"none",backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center",paddingRight:36}} value={f.gender || ""} onChange={e => set("gender", e.target.value)}>
-                <option value="">Select</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="prefer-not">Prefer not to say</option>
-              </select>
+              <CustomSelect value={f.gender || ""} onChange={v => set("gender", v)} options={[
+                {value:"male",label:"Male"},
+                {value:"female",label:"Female"},
+                {value:"non-binary",label:"Non-binary"},
+                {value:"prefer-not",label:"Prefer not to say"},
+              ]}/>
             </FormControl>
           </FormRow>
 

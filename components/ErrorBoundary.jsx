@@ -1,11 +1,14 @@
 "use client";
 
 import { Component } from "react";
+import * as Sentry from "@sentry/nextjs";
+
+const MAX_RETRIES = 2;
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retries: 0 };
   }
 
   static getDerivedStateFromError(error) {
@@ -13,19 +16,23 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error("ErrorBoundary caught:", error, info.componentStack);
+    console.error("ErrorBoundary caught:", error, info?.componentStack);
+    try {
+      Sentry.captureException(error, { extra: { componentStack: info?.componentStack } });
+    } catch {}
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState(s => ({ hasError: false, error: null, retries: s.retries + 1 }));
   };
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
+      const exhausted = this.state.retries >= MAX_RETRIES;
       return (
         <div style={{
-          minHeight: "100vh", display: "flex", flexDirection: "column",
+          minHeight: "100dvh", display: "flex", flexDirection: "column",
           alignItems: "center", justifyContent: "center", padding: 24,
           background: "var(--bg)", color: "var(--t1)", textAlign: "center",
         }}>
@@ -44,18 +51,33 @@ export default class ErrorBoundary extends Component {
             Something went wrong
           </div>
           <div style={{ fontSize: 14, color: "var(--t3)", lineHeight: 1.5, maxWidth: 280, marginBottom: 24 }}>
-            The app encountered an unexpected error. You can try again or restart the app.
+            {exhausted
+              ? "The app keeps crashing. Please restart it and report the issue if it persists."
+              : "The app encountered an unexpected error. You can try again or restart the app."}
           </div>
-          <button
-            onClick={this.handleRetry}
-            style={{
-              padding: "14px 28px", borderRadius: "var(--ios-radii)", border: "none",
-              background: "var(--teal)", color: "white", fontSize: 16, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            Try again
-          </button>
+          {exhausted ? (
+            <button
+              onClick={() => { try { window.location.reload(); } catch {} }}
+              style={{
+                padding: "14px 28px", borderRadius: "var(--ios-radii)", border: "none",
+                background: "var(--teal)", color: "white", fontSize: 16, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Restart app
+            </button>
+          ) : (
+            <button
+              onClick={this.handleRetry}
+              style={{
+                padding: "14px 28px", borderRadius: "var(--ios-radii)", border: "none",
+                background: "var(--teal)", color: "white", fontSize: 16, fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Try again
+            </button>
+          )}
         </div>
       );
     }

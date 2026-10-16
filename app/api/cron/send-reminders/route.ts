@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { logStart, logFinish, verifyCronAuth } from "@/lib/cron";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const EDGE_FN_URL = `${SUPABASE_URL}/functions/v1/send-reminders`;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 3000;
@@ -16,6 +15,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  // The edge function is reachable by anyone with the URL unless we gate it.
+  // Share the same CRON_SECRET used for the cron route itself.
+  const edgeSecret = process.env.CRON_SECRET || "";
+
   const runId = await logStart("send-reminders");
   let lastError = "";
 
@@ -23,7 +26,10 @@ export async function GET(req: Request) {
     try {
       const res = await fetch(EDGE_FN_URL, {
         method: "POST",
-        headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${edgeSecret}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ attempt }),
         cache: "no-store",
       });

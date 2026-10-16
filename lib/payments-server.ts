@@ -71,12 +71,23 @@ export function getFastSpringAuthHeader(config: { username: string; password: st
   return "Basic " + Buffer.from(`${config.username}:${config.password}`).toString("base64");
 }
 
+/**
+ * Verify a FastSpring webhook signature.
+ *
+ * FastSpring signs the raw body with HMAC-SHA256 and base64-encodes the digest
+ * into the `x-fs-signature` header (their header name, not `x-fastspring-signature`,
+ * and base64, not hex):
+ * https://developer.fastspring.com/reference/message-security
+ *
+ * Comparison is constant-time; any mismatch fails closed.
+ */
 export function verifyFastSpringSignature(rawBody: string, signatureHeader: string, secret: string) {
   if (!signatureHeader || !secret) return false;
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  const a = Buffer.from(signatureHeader, "hex");
-  const b = Buffer.from(expected, "hex");
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("base64");
+  const a = Buffer.from(signatureHeader);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 export function fastspringCountryStatus(country: string) {

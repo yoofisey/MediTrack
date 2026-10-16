@@ -88,7 +88,10 @@ export async function POST(req: Request) {
   const rawBody = await req.text();
 
   const fs = getFastSpringConfig();
-  const signature = req.headers.get("x-fastspring-signature") || "";
+  // FastSpring sends `x-fs-signature` (docs: header name may arrive in any case,
+  // which Request.headers.get handles). Do NOT also accept `x-fastspring-signature`
+  // — that was the wrong name and made verification untestable.
+  const signature = req.headers.get("x-fs-signature") || "";
   if (!verifyFastSpringSignature(rawBody, signature, fs.webhookSecret)) {
     return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });
   }

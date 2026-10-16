@@ -85,7 +85,7 @@ export function SideEffectLogSheet({ medId, medName, onClose }) {
 
   if (saved) {
     return (
-      <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={onClose}>
         <div className="sheet" style={{maxHeight:"60dvh"}} onClick={e => e.stopPropagation()}>
           <div style={{padding:32,textAlign:"center"}}>
             <div style={{display:"grid",placeItems:"center",marginBottom:12}}><CheckCircle2 size={48} strokeWidth={1.5}/></div>
@@ -98,7 +98,7 @@ export function SideEffectLogSheet({ medId, medName, onClose }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"85dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(85dvh - 40px)"}}>

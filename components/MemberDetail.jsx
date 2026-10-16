@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { CSS } from "@/lib/constants";
+import { useLang, formatDate } from "@/lib/i18n";
 import { activeMeds, missedDoses, weekDots, weekAdherence, streak, initials, expectedDosesToday, pushManagedMed } from "@/lib/household";
 import { ChevronLeft, Pill, Plus, Phone, HeartPulse } from "lucide-react";
 import MedLogButton from "@/components/MedLogButton";
+import CustomSelect from "@/components/CustomSelect";
 
 function MemberRing({ member, pct, size = 92, stroke = 6 }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
@@ -50,9 +52,7 @@ function ManagedMedForm({ member, onDone }) {
       <input className="sheet-input" placeholder="Medication name" value={f.name} onChange={e => setF(p => ({ ...p, name: e.target.value }))} style={{ marginBottom: 10 }} />
       <div className="sheet-row" style={{ marginBottom: 10 }}>
         <input className="sheet-input" type="number" inputMode="decimal" placeholder="Dosage (e.g. 2)" value={f.dosage_amount} onChange={e => setF(p => ({ ...p, dosage_amount: e.target.value }))} />
-        <select className="sheet-input" value={f.dosage_unit} onChange={e => setF(p => ({ ...p, dosage_unit: e.target.value }))}>
-          {["tablet(s)", "capsule(s)", "ml", "mg", "mcg", "drop(s)", "puff(s)"].map(u => <option key={u}>{u}</option>)}
-        </select>
+        <CustomSelect value={f.dosage_unit} onChange={v => setF(p => ({ ...p, dosage_unit: v }))} options={["tablet(s)", "capsule(s)", "ml", "mg", "mcg", "drop(s)", "puff(s)"].map(u => ({ value: u, label: u }))} />
       </div>
       <div className="sheet-row" style={{ marginBottom: 10 }}>
         <input className="sheet-input" type="number" inputMode="numeric" placeholder="Times/day" value={f.times_per_day} onChange={e => setF(p => ({ ...p, times_per_day: e.target.value }))} />
@@ -67,6 +67,7 @@ function ManagedMedForm({ member, onDone }) {
 }
 
 export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, onRefill, onSaveNote, onOpenVitals, isFamily, hasVitals, onChanged }) {
+  const { lang } = useLang();
   const [showAddMed, setShowAddMed] = useState(false);
   const [editNote, setEditNote] = useState(false);
   const [noteText, setNoteText] = useState(member.careNote || "");
@@ -151,7 +152,7 @@ export default function MemberDetail({ member, onBack, onMarkDose, onEditMed, on
                       <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", lineHeight: 1 }}>
                         {v.value}{v.value_secondary != null ? `/${v.value_secondary}` : ""} <span style={{ fontSize: 11, fontWeight: 400, color: "var(--t3)" }}>{v.unit}</span>
                       </div>
-                      <div style={{ fontSize: 10, color: "var(--t3)", marginTop: 3 }}>{v.created_at ? new Date(v.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</div>
+                      <div style={{ fontSize: 10, color: "var(--t3)", marginTop: 3 }}>{v.created_at ? formatDate(v.created_at, lang, { month: "short", day: "numeric" }) : ""}</div>
                     </div>
                   );
                 })}

@@ -8,6 +8,7 @@ import { useTier } from "@/components/TierContext";
 import { checkInteractions, InteractionBadge } from "@/components/InteractionChecker";
 import { pushManagedMed, updateManagedMed } from "@/lib/household";
 import { CURRENCIES } from "@/lib/constants";
+import CustomSelect from "./CustomSelect";
 import { useSwipe } from "@/lib/useSwipe";
 import { FormControl, FormRow } from "@/components/FormControls";
 
@@ -15,7 +16,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
   const { tier, config: limits, has } = useTier();
   const upLabel = getTierConfig(limits.upgradeTarget).label;
   const blank = { name:"", dosage_amount:"", dosage_unit:"tablet(s)", times_per_day:"1", dose_interval_hours:"8", course_duration_days:"", start_date:new Date().toISOString().split("T")[0], reminder_minutes:String(reminderLead||30), remind_at_dose:true, pills_per_package:"", refill_reminder_at:"", cost_per_package:"", cost_currency:"", notes:"" };
-  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes||30), remind_at_dose:med.remind_at_dose !== false, pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
+  const [f, setF] = useState(med ? { name:med.name, dosage_amount:String(med.dosage_amount), dosage_unit:med.dosage_unit, times_per_day:String(med.times_per_day||1), dose_interval_hours:String(med.dose_interval_hours), course_duration_days:String(med.course_duration_days), start_date:med.start_date, reminder_minutes:String(med.reminder_minutes ?? 30), remind_at_dose:med.remind_at_dose !== false, pills_per_package:String(med.pills_per_package||""), refill_reminder_at:String(med.refill_reminder_at||""), cost_per_package:String(med.cost_per_package||""), cost_currency:med.cost_currency||"", notes:med.notes||"" } : blank);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [capHit, setCapHit] = useState(false);
   const sheetRef = useRef(null);
   useEffect(() => { if (err) sheetRef.current?.scrollTo?.({ top: 0, behavior: "smooth" }); }, [err]);
@@ -86,7 +87,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
   const handleSwipe = useSwipe({ onSwipeDown: onClose });
 
   return (
-    <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="sheet" ref={sheetRef} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title">{med?"Edit Medication":"New Medication"}</div>
@@ -110,9 +111,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
           <FormControl label="Dosage">
             <FormRow>
               <input className="sheet-input" type="number" inputMode="decimal" enterKeyHint="next" min="0.1" step="0.1" placeholder="Amount (e.g. 2)" value={f.dosage_amount} onChange={e=>set("dosage_amount",e.target.value)}/>
-              <select className="sheet-input" value={f.dosage_unit} onChange={e=>set("dosage_unit",e.target.value)}>
-                {units.map(u=><option key={u}>{u}</option>)}
-              </select>
+              <CustomSelect value={f.dosage_unit} onChange={v=>set("dosage_unit",v)} options={units.map(u=>({value:u,label:u}))}/>
             </FormRow>
           </FormControl>
         </div>
@@ -140,13 +139,13 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
 
         <div className="sheet-section">
           <FormControl label="Remind me before each dose">
-            <select className="sheet-input" value={f.reminder_minutes} onChange={e=>set("reminder_minutes",e.target.value)}>
-              <option value="0">None</option>
-              <option value="15">15 minutes before</option>
-              <option value="30">30 minutes before</option>
-              <option value="60">1 hour before</option>
-              <option value="120">2 hours before</option>
-            </select>
+            <CustomSelect value={f.reminder_minutes} onChange={v=>set("reminder_minutes",v)} options={[
+              {value:"0",label:"None"},
+              {value:"15",label:"15 minutes before"},
+              {value:"30",label:"30 minutes before"},
+              {value:"60",label:"1 hour before"},
+              {value:"120",label:"2 hours before"},
+            ]}/>
           </FormControl>
           <label className="form-hint" style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, cursor:"pointer" }}>
             <input type="checkbox" style={{ width:18, height:18, accentColor:"var(--teal)" }} checked={f.remind_at_dose} onChange={e=>set("remind_at_dose", e.target.checked)} />
@@ -175,10 +174,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
                 <input className="sheet-input" type="number" inputMode="decimal" min="0" step="0.01" placeholder="e.g. 50" value={f.cost_per_package} onChange={e=>set("cost_per_package",e.target.value)}/>
               </FormControl>
               <FormControl label="Currency" className="!mb-0">
-                <select className="sheet-input" value={f.cost_currency} onChange={e=>set("cost_currency",e.target.value)}>
-                  <option value="">Select</option>
-                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-                </select>
+                <CustomSelect value={f.cost_currency} onChange={v=>set("cost_currency",v)} options={CURRENCIES.map(c=>({value:c.code,label:c.label}))}/>
               </FormControl>
             </FormRow>
             <div className="form-hint">Cost per dose is calculated automatically.</div>

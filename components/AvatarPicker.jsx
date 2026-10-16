@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { sb } from "@/lib/supabase";
 import { useLang } from "@/lib/i18n";
+import { toastError } from "@/lib/toast";
 import { AVATAR_CHOICES } from "@/lib/avatars";
 import { Camera, Check, Loader2 } from "lucide-react";
 
@@ -35,8 +36,8 @@ export default function AvatarPicker({ user, avatarKey = "Smile", avatarUrl = ""
       const { data: { publicUrl } } = sb.storage.from("avatars").getPublicUrl(path);
       onUploaded?.(publicUrl);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert(`Upload failed: ${err?.message || err}. Make sure the 'avatars' storage bucket exists and has INSERT policies for authenticated users.`);
+      console.error("Upload error:", err?.message || err);
+      toastError(t("profile.uploadFailed"));
     } finally {
       setUploading(false);
       if (e.target) e.target.value = "";
@@ -50,7 +51,7 @@ export default function AvatarPicker({ user, avatarKey = "Smile", avatarUrl = ""
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
         <div className="avatar-preview" style={{ background: avatarUrl ? "var(--ib2)" : `linear-gradient(135deg,${g1},${g2})` }}>
-          {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : <ActiveIcon size={34} color="white" strokeWidth={2}/>}
+          {avatarUrl ? <img src={avatarUrl} alt="Avatar preview" style={{ width: "100%", height: "100%", objectFit: "cover" }}/> : <ActiveIcon size={34} color="white" strokeWidth={2}/>}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <button className="btn btn-ghost btn-sm" style={{ width: "auto", padding: "7px 14px", fontSize: 13, display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-start" }} onClick={() => fileRef.current?.click()}>

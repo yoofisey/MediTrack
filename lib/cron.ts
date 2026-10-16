@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -71,9 +72,22 @@ export async function getRecentRuns(jobName: string, limit = 20) {
   return data || [];
 }
 
-/** Auth check for Vercel cron invocations. */
+/**
+ * Auth check for Vercel cron invocations.
+ *
+ * Fails closed: if CRON_SECRET is unset in the deployed environment, this
+ * returns false rather than letting anything through. A missing secret means
+ * we cannot tell caller from stranger, so we refuse instead of trusting.
+ */
 export function verifyCronAuth(req: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return true; // fail-open if no secret set (dev)
-  return req.headers.get("authorization") === `Bearer ${cronSecret}`;
+  if (!cronSecret) return false;
+  const provided = req.headers.get("authorization");
+  if (!provided) return false;
+  const expected = `Bearer ${cronSecret}`;
+  // Constant-time compare so a caller can't brute-force the secret byte by byte.
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }

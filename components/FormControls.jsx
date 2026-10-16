@@ -8,9 +8,7 @@ export function FormControl({ label, hint, error, children, className = "" }) {
   return (
     <div className={`form-group ${className}`}>
       {label && <label className="form-label" htmlFor={inputId}>{label}</label>}
-      {typeof children === "object" && children !== null
-        ? <div id={inputId}>{children}</div>
-        : <div id={inputId}>{children}</div>}
+      <div id={inputId}>{children}</div>
       {hint && !error && <div className="form-hint">{hint}</div>}
       {error && <div className="form-error">{error}</div>}
     </div>

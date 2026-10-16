@@ -56,12 +56,23 @@ export async function POST(req: Request) {
     ["community_comments", "user_id"], ["community_posts", "user_id"],
     ["user_badges", "user_id"], ["user_points", "user_id"], ["user_challenges", "user_id"],
     ["dose_logs", "user_id"], ["medications", "user_id"], ["vitals", "user_id"],
-    ["visits", "user_id"], ["family_members", "user_id"], ["push_subscriptions", "user_id"],
+    ["visits", "user_id"], ["push_subscriptions", "user_id"],
     ["vital_reminders", "user_id"], ["payment_references", "user_id"],
     ["profiles", "id"],
   ]) {
     const err = await deleteTable(sb, table, col, userId);
     if (err) errors.push(err);
+  }
+
+  // family_members has no user_id column — the user can appear as owner or as
+  // a linked member. Previously this call silently no-oped, leaking rows and
+  // breaking cascade deletes when the member account was deleted.
+  const { error: famErr } = await sb.from("family_members")
+    .delete()
+    .or(`owner_id.eq.${userId},member_user_id.eq.${userId}`);
+  if (famErr) {
+    console.error("delete family_members:", famErr.message);
+    errors.push(`family_members: ${famErr.message}`);
   }
 
   const { error: delErr } = await sb.auth.admin.deleteUser(userId);

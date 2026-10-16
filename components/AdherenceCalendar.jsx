@@ -2,9 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { localDayKey } from "@/lib/data";
+import { useLang, formatDate } from "@/lib/i18n";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function AdherenceCalendar({ logs, meds, tz }) {
+  const { lang } = useLang();
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -55,7 +57,7 @@ export default function AdherenceCalendar({ logs, meds, tz }) {
     return { cells, rows };
   }, [viewDate, logs, meds, today, tz]);
 
-  const monthLabel = viewDate.toLocaleDateString("en", { month: "long", year: "numeric" });
+  const monthLabel = formatDate(viewDate, lang, { month: "long", year: "numeric" });
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   function prevMonth() { setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1)); }

@@ -270,6 +270,11 @@ export default function CommunityTab({ user, profile, onBack }) {
               <div
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSel}
+                aria-label={cat.label}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setActiveCategory(cat.id); } }}
                 style={{
                   padding: "6px 14px",
                   borderRadius: 99,
@@ -296,6 +301,10 @@ export default function CommunityTab({ user, profile, onBack }) {
         {!showComposer ? (
           <div
             onClick={() => setShowComposer(true)}
+            role="button"
+            tabIndex={0}
+            aria-label="Share something with the community"
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowComposer(true); } }}
             className="card"
             style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
           >
@@ -343,6 +352,11 @@ export default function CommunityTab({ user, profile, onBack }) {
                   <div
                     key={cat.id}
                     onClick={() => setComposerCategory(cat.id)}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSel}
+                    aria-label={cat.label}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setComposerCategory(cat.id); } }}
                     style={{
                       padding: "4px 10px",
                       borderRadius: 99,

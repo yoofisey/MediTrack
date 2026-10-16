@@ -3,11 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { CSS } from "@/lib/constants";
 import { sb } from "@/lib/supabase";
+import { useLang } from "@/lib/i18n";
+import { toastError } from "@/lib/toast";
 import { COUNTRIES, getPricing } from "@/lib/data";
 import { useSwipe } from "@/lib/useSwipe";
 import { FormControl, FormRow } from "@/components/FormControls";
-import { getTierConfig } from "@/lib/tiers";
+import { getTierConfig, featureLabels } from "@/lib/tiers";
 import { getPaymentsConfig } from "@/lib/payments";
+import CustomSelect from "@/components/CustomSelect";
 import { CheckoutSheet, CheckoutFrame, CheckoutLoading, CheckoutSuccess } from "@/components/CheckoutSheet";
 import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
 
@@ -17,7 +20,7 @@ function Ico({ children, ...props }) {
 
 export function PrivacyModal({ onClose }) {
   return (
-    <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
@@ -53,7 +56,7 @@ export function PrivacyModal({ onClose }) {
 
 export function TermsModal({ onClose }) {
   return (
-    <div className="sheet-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
@@ -90,6 +93,7 @@ export function TermsModal({ onClose }) {
 }
 
 export function UpgradeModal({ country, userEmail, userId, currentPlan, initialPlan, onClose, onUpgrade }) {
+  const { t } = useLang();
   const upgradeTarget = getTierConfig(currentPlan || "free").upgradeTarget || "pro";
   const [selected, setSelected] = useState(
     initialPlan && ["pro", "family"].includes(initialPlan)
@@ -169,13 +173,14 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, initialP
       period: "/month",
       tagline: "Everything you need for full adherence",
       features: [
-        "Unlimited medications",
-        "Full history & analytics",
-        "Caregiver sharing",
-        "Refill reminders",
-        "Drug interaction checker",
-        "PDF adherence reports",
-        "Priority support",
+        "unlimitedMeds",
+        "fullHistory",
+        "vitals",
+        "reports",
+        "refillReminder",
+        "interactionCheck",
+        "sideEffects",
+        "healthJournal",
       ],
     },
     {
@@ -187,12 +192,13 @@ export function UpgradeModal({ country, userEmail, userId, currentPlan, initialP
       period: "/month",
       tagline: "One account for the whole household",
       features: [
-        "Up to 5 family profiles",
-        "Shared family dashboard",
-        "Per-member medication tracking",
-        "Per-member vitals & reports",
-        "Caregiver mode with alerts",
-        "Adherence PDF reports",
+        "upToFiveProfiles",
+        "familyDashboard",
+        "perMemberVitals",
+        "perMemberReports",
+        "managedProfiles",
+        "caregiverAlerts",
+        "reports",
       ],
     },
   ];
@@ -320,7 +326,7 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"95dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
@@ -378,7 +384,7 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
             {plan.features.map(f => (
               <div key={f} style={{fontSize:14,color:"var(--t1)",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{color:plan.color,fontWeight:700,flexShrink:0}}>—</span>
-                <span>{f}</span>
+                <span>{featureLabels(f, t)}</span>
               </div>
             ))}
           </div>
@@ -422,7 +428,7 @@ export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="sheet" style={{maxHeight:"80dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle"/>
         <div style={{padding:"0 20px 20px"}}>
@@ -541,7 +547,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
 
   if (mode === null) {
     return (
-      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="sheet" style={{ maxHeight: "70dvh" }} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" />
           <div style={{ padding: "0 20px 20px" }}>
@@ -552,7 +558,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--ib2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Mail size={20} color="var(--teal)" strokeWidth={2} /></div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>On the app</div>
-                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Invite by email — they need a MediTrack account</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Invite by email — they need an Adhera account</div>
                 </div>
               </button>
               <button onClick={() => setMode("managed")} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--ib1)", borderRadius: 14, border: "1px solid var(--sep)", cursor: "pointer", textAlign: "left" }}>
@@ -572,7 +578,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
 
   if (mode === "invite") {
     return (
-      <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="sheet" style={{ maxHeight: "70dvh" }} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" />
           <div style={{ padding: "0 20px 20px" }}>
@@ -592,7 +598,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
         <div className="sheet" style={{ maxHeight: "80dvh" }} onClick={e => e.stopPropagation()}>
           <div className="sheet-handle" />
           <div style={{ padding: "0 20px 20px" }}>
@@ -613,9 +619,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Phone (optional)</div>
             <div style={{ display: "flex", gap: 6 }}>
-              <select value={phoneCode} onChange={e => setPhoneCode(e.target.value)} style={{ width: 120, padding: "10px 8px", borderRadius: 12, border: "1px solid var(--sep)", background: "var(--card)", color: "var(--t1)", fontSize: 14, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
-                {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-              </select>
+              <CustomSelect value={phoneCode} onChange={v => setPhoneCode(v)} options={COUNTRY_CODES.map(c => ({ value: c.code, label: `${c.flag} ${c.code}` }))} ariaLabel="Country code" style={{ width: 120, flexShrink: 0 }} />
               <input className="sheet-input" type="tel" placeholder="e.g. 24 123 4567" value={phone} onChange={e => setPhone(e.target.value)} style={{ flex: 1 }} />
             </div>
           </div>
@@ -633,7 +637,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
 export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
   const handleSwipe = useSwipe({ onSwipeDown: onCancel });
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onCancel()}>
       <div className="sheet" style={{maxHeight:"50dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
@@ -662,12 +666,12 @@ export function LogDoseModal({ med, onConfirm, onCancel }) {
 
   function handleConfirm() {
     const selected = new Date(takenAt);
-    if (selected > now) { alert("Cannot log doses in the future."); return; }
+    if (selected > now) { toastError("Cannot log doses in the future."); return; }
     onConfirm(journal, takenAt);
   }
 
   return (
-    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onCancel()}>
       <div className="sheet" style={{maxHeight:"75dvh"}} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" {...handleSwipe}/>
         <div className="sheet-title" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico><Pill size={18} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>

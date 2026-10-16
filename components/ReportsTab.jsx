@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CSS, fmtTime, fmtDateLong, currencySymbol, escapeHtml } from "@/lib/constants";
-import { useLang } from "@/lib/i18n";
+import { useLang, formatDate } from "@/lib/i18n";
+import { toastSuccess } from "@/lib/toast";
 import { calcStreak, getVisits, getVisitTime, localDayKey } from "@/lib/data";
 import { useTier } from "@/components/TierContext";
 import AdherenceChart from "@/components/AdherenceChart";
@@ -18,7 +19,7 @@ function Ico({ children, ...props }) {
 }
 
 export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBack, memberName, tz }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [showHistory, setShowHistory] = useState(false);
   const [journalDate, setJournalDate] = useState(null);
   const [journalEntries, setJournalEntries] = useState(() => {
@@ -62,8 +63,23 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     return isMedActiveOnDate(m, cutoff) || isMedActiveOnDate(m, today);
   });
 
-  const adherence = daysTracked > 0 && activeMedsInRange.length > 0
-    ? Math.round((totalDoses / (daysTracked * activeMedsInRange.reduce((s,m) => s + (m.times_per_day || 1), 0))) * 100) : 0;
+  const rangeStart = cutoff || (meds.filter(m => m.active).length ? new Date(Math.min(...meds.filter(m => m.active).map(m => new Date(m.start_date).getTime()))) : now);
+
+  // Expected doses = sum over active meds of (days that med & report window
+  // overlap) × times_per_day. Using daysActive (not "days with a log") keeps
+  // missed days in the denominator so adherence can't be inflated by skipping.
+  const expectedDoses = meds.filter(m => m.active).reduce((acc, med) => {
+    const s = new Date(med.start_date);
+    const e = new Date(med.start_date); e.setDate(e.getDate() + (med.course_duration_days || 30));
+    const effStart = rangeStart > s ? rangeStart : s;
+    const effEnd = today < e ? today : e;
+    if (effEnd < effStart) return acc;
+    const daysActive = Math.floor((effEnd - effStart) / 86400000) + 1;
+    return acc + daysActive * (med.times_per_day || 1);
+  }, 0);
+
+  const adherence = expectedDoses > 0
+    ? Math.round((totalDoses / expectedDoses) * 100) : 0;
 
   function perMedAdherence() {
     return meds.filter(m => m.active).map(med => {
@@ -86,7 +102,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 
   function generateDoctorSummary() {
     const pm = perMedAdherence();
-    const dateStr = today.toLocaleDateString("en", { year:"numeric", month:"long", day:"numeric" });
+    const dateStr = formatDate(today, lang, { year:"numeric", month:"long", day:"numeric" });
     let txt = `ADHERA — Medication Adherence Report\n`;
     txt += `Date: ${dateStr}\n`;
     txt += `Plan: ${plan.charAt(0).toUpperCase()+plan.slice(1)}\n`;
@@ -125,7 +141,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 
   function fallbackCopy(text) {
     navigator.clipboard?.writeText(text).then(() => {
-      alert("Report copied to clipboard! Paste it into WhatsApp or email to send to your doctor.");
+      toastSuccess("Report copied to clipboard! Paste it into WhatsApp or email to send to your doctor.");
     }).catch(() => {
       const ta = document.createElement("textarea");
       ta.value = text;
@@ -133,7 +149,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       ta.select();
       document.execCommand("copy");
       document.body.removeChild(ta);
-      alert("Report copied to clipboard!");
+      toastSuccess("Report copied to clipboard!");
     });
   }
 
@@ -355,7 +371,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
         return s + (m.times_per_day || 1);
       }, 0);
       const pct = dailyExp > 0 ? Math.round((dayLogs.length / dailyExp) * 100) : 0;
-      weekDays.push({ label: d.toLocaleDateString("en",{weekday:"short"}), val: Math.min(pct,100) });
+      weekDays.push({ label: formatDate(d, lang, {weekday:"short"}), val: Math.min(pct,100) });
     }
 
     const chartCanvas1 = document.createElement("canvas");
@@ -380,8 +396,8 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       bpCanvas.width = 720;
       bpCanvas.height = 300;
       drawLineChart(bpCanvas, [
-        { label: "Systolic", data: bpLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value })) },
-        { label: "Diastolic", data: bpLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value_secondary || 0 })) },
+        { label: "Systolic", data: bpLogs.map(v => ({ label: formatDate(v.created_at, lang, {month:"short",day:"numeric"}), val: v.value })) },
+        { label: "Diastolic", data: bpLogs.map(v => ({ label: formatDate(v.created_at, lang, {month:"short",day:"numeric"}), val: v.value_secondary || 0 })) },
       ], "", ["#FF3B30", "#FF9500"]);
       chart3 = bpCanvas.toDataURL("image/png");
     }
@@ -390,7 +406,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       wtCanvas.width = 720;
       wtCanvas.height = 300;
       drawLineChart(wtCanvas, [
-        { label: "Weight", data: weightLogs.map(v => ({ label: new Date(v.created_at).toLocaleDateString("en",{month:"short",day:"numeric"}), val: v.value })) },
+        { label: "Weight", data: weightLogs.map(v => ({ label: formatDate(v.created_at, lang, {month:"short",day:"numeric"}), val: v.value })) },
       ], "", ["#007AFF"]);
       chart4 = wtCanvas.toDataURL("image/png");
     }
@@ -431,7 +447,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:clip;background:#f1f5f9;-webkit-font-smoothing:antialiased}
   img{max-width:100%;height:auto;display:block}
 
-  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:clip}
+  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100dvh;padding:24px 32px 48px;overflow-x:clip}
   @media(max-width:640px){.report-wrap{padding:16px 18px 32px}}
 
   .top-bar{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;margin-bottom:20px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;gap:8px}
@@ -510,7 +526,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     <div class="tagline">Comprehensive treatment summary generated by Adhera</div>
   </div>
   <div class="report-header-right">
-    <div class="date">${today.toLocaleDateString("en",{year:"numeric",month:"long",day:"numeric"})}</div>
+    <div class="date">${formatDate(today, lang, {year:"numeric",month:"long",day:"numeric"})}</div>
     <div class="period">All-time report</div>
   </div>
 </div>
@@ -708,7 +724,7 @@ ${has("reports") ? `
       doc.setFont("helvetica", "normal"); doc.setFontSize(10);
       doc.setTextColor(140, 140, 140);
       doc.text("Health Summary Report", ml, y); y += 3;
-      doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, ml, y);
+      doc.text(`Generated: ${formatDate(new Date(), lang, { year: "numeric", month: "long", day: "numeric" })}`, ml, y);
       y += 16;
 
       addSection("Medication Plan", () => {
@@ -821,7 +837,7 @@ ${has("reports") ? `
   @page{size:A4;margin:18mm 16mm}
   *,:after,:before{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;color:#0f172a;line-height:1.5;padding:0;max-width:100vw;overflow-x:clip;background:#f1f5f9;-webkit-font-smoothing:antialiased}
-  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100vh;padding:24px 32px 48px;overflow-x:clip}
+  .report-wrap{max-width:820px;margin:0 auto;background:#fff;min-height:100dvh;padding:24px 32px 48px;overflow-x:clip}
   @media(max-width:640px){.report-wrap{padding:16px 18px 32px}}
   .report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #f1f5f9}
   .report-header-left h1{font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.4px;margin-bottom:2px}
@@ -865,7 +881,7 @@ ${has("reports") ? `
     <div class="tagline">Basic summary generated by Adhera</div>
   </div>
   <div class="report-header-right">
-    <div class="date">${today.toLocaleDateString("en",{year:"numeric",month:"long",day:"numeric"})}</div>
+    <div class="date">${formatDate(today, lang, {year:"numeric",month:"long",day:"numeric"})}</div>
     <div class="period">Basic report</div>
   </div>
 </div>
@@ -973,14 +989,14 @@ ${pm.length > 0 ? `
                 <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",borderLeft:"4px solid #FF3B30"}}>
                   <div style={{fontSize:12,fontWeight:600,color:"var(--t3)",marginBottom:4}}>Blood Pressure</div>
                   <div style={{fontSize:22,fontWeight:700,color:"var(--t1)",lineHeight:1}}>{latestBp.value}/{latestBp.value_secondary || "?"} <span style={{fontSize:12,fontWeight:400,color:"var(--t3)"}}>mmHg</span></div>
-                  <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>{new Date(latestBp.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+                  <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>{formatDate(latestBp.created_at, lang, {month:"short",day:"numeric"})}</div>
                 </div>
               ) : null}
               {latestWt ? (
                 <div style={{background:"var(--card)",borderRadius:"var(--rl)",padding:14,boxShadow:"var(--card-shadow)",borderLeft:"4px solid #007AFF"}}>
                   <div style={{fontSize:12,fontWeight:600,color:"var(--t3)",marginBottom:4}}>Weight</div>
                   <div style={{fontSize:22,fontWeight:700,color:"var(--t1)",lineHeight:1}}>{latestWt.value} <span style={{fontSize:12,fontWeight:400,color:"var(--t3)"}}>kg</span></div>
-                  <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>{new Date(latestWt.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+                  <div style={{fontSize:11,color:"var(--t3)",marginTop:4}}>{formatDate(latestWt.created_at, lang, {month:"short",day:"numeric"})}</div>
                 </div>
               ) : null}
               {!latestBp && !latestWt ? (
@@ -1329,7 +1345,7 @@ ${pm.length > 0 ? `
        )}
 
       {pdfHtml && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 1200, background: "#f1f5f9", display: "flex", flexDirection: "column" }}>
+        <div role="dialog" aria-modal="true" aria-label="Report preview" style={{ position: "fixed", inset: 0, zIndex: 1200, background: "#f1f5f9", display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
             <div dangerouslySetInnerHTML={{ __html: pdfHtml }} />
           </div>
