@@ -19,4 +19,14 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
     </style>
+
+    <!-- Full screen dose alarm takeover (lock screen). Plain platform theme so
+         the alarm screen never depends on the appcompat widget stack. -->
+    <style name="AdheraAlarmTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@drawable/alarm_bg</item>
+        <item name="android:statusBarColor">#00000000</item>
+        <item name="android:navigationBarColor">#00000000</item>
+        <item name="android:colorAccent">#ff3b30</item>
+    </style>
 </resources>

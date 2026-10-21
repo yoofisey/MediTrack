@@ -9,7 +9,7 @@ import { useSwipe } from "@/lib/useSwipe";
 import { THEMES, calcStreak, initStockForMed, decrementStock, refillStock, syncVisits } from "@/lib/data";
 import { getTierConfig } from "@/lib/tiers";
 import { TierProvider } from "@/components/TierContext";
-import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, getNotifPerm, subscribeToPush, removePushSubscription, stopAlarmSound, clearAllTimers, clearTimerState, initCapacitorNotifs, isNativePlatform, setupForegroundListener } from "@/lib/notifications";
+import { scheduleDoseAlarms, scheduleVitalReminders, askNotifPerm, getNotifPerm, subscribeToPush, removePushSubscription, playAlarmSound, stopAlarmSound, clearAllTimers, clearTimerState, initCapacitorNotifs, isNativePlatform, setupForegroundListener, setupDoseAlarmListener, getPendingDoseLogs, clearPendingDoseLogs, cancelNativeDoseAlarms, consumePendingOpenAlarm } from "@/lib/notifications";
 import { initPushNotifications, removePushToken } from "@/lib/push";
 import { initUrlDeeplinks } from "@/lib/deeplinks";
 import { getCached, setCache, isOnline, queueDoseLog, flushQueue } from "@/lib/offline";
@@ -42,6 +42,8 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useInactivityLogout(onSignOut);
   const [meds, setMeds] = useState(() => getCached("meds") || []);
   const [logs, setLogs] = useState(() => getCached("logs") || []);
+  const logsRef = useRef(logs);
+  useEffect(() => { logsRef.current = logs; }, [logs]);
   const [loading, setLoading] = useState(true);
   useEffect(() => { const t = setTimeout(() => setLoading(false), 5000); return () => clearTimeout(t); }, []);
   const [profile, setProfile] = useState(initProfile);
@@ -507,7 +509,37 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
   useEffect(() => {
     function onAlarm(e) { setAlarmData(e.detail); }
     window.addEventListener("mt-alarm", onAlarm);
-    return () => window.removeEventListener("mt-alarm", onAlarm);
+    // Native full screen dose alarm (Android) - the payload already carries
+    // everything the alarm screen needs, so it can render before the meds load.
+    const cleanupNative = setupDoseAlarmListener((payload) => {
+      if (!payload?.medId) return;
+      // The dose may already be logged (e.g. logged on another device).
+      const doseMs = payload.doseTimeMs || 0;
+      const alreadyLogged = (logsRef.current || []).some(l =>
+        l.medication_id === payload.medId && new Date(l.taken_at).getTime() >= doseMs - 60000
+      );
+      if (alreadyLogged) { cancelNativeDoseAlarms(payload.medId); return; }
+      // The native alarm is silent while the app is open - the web layer rings.
+      playAlarmSound();
+      window.dispatchEvent(new CustomEvent("mt-alarm", {
+        detail: {
+          med: {
+            id: payload.medId,
+            name: payload.title || "Medication",
+            dosage_amount: payload.dosageAmount || "",
+            dosage_unit: payload.dosageUnit || "",
+            notes: payload.notes || "",
+          },
+          day: payload.day || "",
+          streak: payload.streak || 0,
+          isReminder: false,
+        },
+      }));
+    });
+    return () => {
+      window.removeEventListener("mt-alarm", onAlarm);
+      try { cleanupNative?.(); } catch {}
+    };
   }, []);
   useEffect(() => {
     const dismiss = (alert) => { setForegroundAlert(alert); };
@@ -550,6 +582,9 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       pendingAlarmRef.current = { medId, isReminder };
     }
     window.addEventListener("mt-open-alarm", onOpenAlarm);
+    // A notification tap can land before the app is ready - pick it up here.
+    const pending = consumePendingOpenAlarm();
+    if (pending) onOpenAlarm({ detail: pending });
     return () => window.removeEventListener("mt-open-alarm", onOpenAlarm);
   }, [meds, logs, profile]);
 
@@ -571,6 +606,49 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       },
     }));
   }, [loading, meds, logs, profile]);
+
+  // Cold start from a dose alarm notification (web service worker deep link).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search || "");
+      if (params.get("mt") !== "alarm") return;
+      const medId = params.get("medId");
+      if (!medId) return;
+      const isReminder = params.get("isReminder") === "1";
+      ["mt", "medId", "doseAt", "isReminder"].forEach(k => params.delete(k));
+      const qs = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash || ""}`);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("mt-open-alarm", { detail: { medId, isReminder } }));
+      }, 500);
+    } catch {}
+  }, []);
+
+  // Dose logged from the native lock screen alarm - sync it to the account.
+  useEffect(() => {
+    let cancelled = false;
+    async function syncPending() {
+      const pending = await getPendingDoseLogs();
+      if (!pending?.length || cancelled) return;
+      const handled = [];
+      for (const entry of pending) {
+        const med = meds.find(m => m.id === entry.medId);
+        if (!med) continue;
+        const takenAt = entry.takenAt ? new Date(entry.takenAt).toISOString() : new Date().toISOString();
+        await logDose(med, "", takenAt);
+        handled.push(entry.id);
+      }
+      if (handled.length) await clearPendingDoseLogs(handled);
+    }
+    syncPending().catch(() => {});
+    function onVisible() {
+      if (document.visibilityState === "visible") syncPending().catch(() => {});
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { cancelled = true; document.removeEventListener("visibilitychange", onVisible); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncing needs the current meds and logs
+  }, [meds, logs, user?.id]);
 
   useEffect(() => {
     function onOpenVisit(e) {
@@ -762,6 +840,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
       const queued = await queueDoseLog({ userId: user.id, medId: med.id, takenAt: takenAtISO, notes: journal });
       if (queued) toast("Saved offline — will sync when you reconnect.");
       else toastError("Couldn't save your dose. Please try again.");
+      cancelNativeDoseAlarms(med.id, new Date(takenAtISO).getTime());
       reload();
       return;
     }
@@ -778,6 +857,7 @@ export default function MainApp({ user, profile: initProfile, onSignOut }) {
         return;
       }
       decrementStock(med.id, 1);
+      cancelNativeDoseAlarms(med.id, new Date(takenAtISO).getTime());
       reload();
     } catch (e) {
       console.error("Log dose exception:", e?.message || e);

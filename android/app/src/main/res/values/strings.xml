@@ -4,4 +4,8 @@
     <string name="title_activity_main">Adhera</string>
     <string name="package_name">com.useadhera.app</string>
     <string name="custom_url_scheme">com.useadhera.app</string>
+    <string name="dose_alarm_badge">Dose due now</string>
+    <string name="dose_alarm_log">Log dose</string>
+    <string name="dose_alarm_snooze">Snooze 5 min</string>
+    <string name="dose_alarm_dismiss">Dismiss</string>
 </resources>

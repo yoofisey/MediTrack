@@ -52,6 +52,8 @@ function fireDose(item) {
     body: `Take ${item.dosageAmount} ${item.dosageUnit}${item.notes ? `\n\n${item.notes}` : ""}\nDay ${daysSince}/${item.courseDays}${item.streak > 0 ? `\n${item.streak} day streak` : ""}`,
     icon: "/icon.svg",
     tag: `mt-dose-${item.medId}-${item.doseAt}`,
+    data: { type: "dose", medId: item.medId, doseAt: item.doseAt, isReminder: false },
+    renotify: true,
     vibrate: [500, 200, 500, 200, 500],
     requireInteraction: true,
   });
@@ -63,8 +65,8 @@ function fireLead(item) {
     body: `${item.dosageAmount} ${item.dosageUnit} · Day ${daysSince}/${item.courseDays}`,
     icon: "/icon.svg",
     tag: `mt-rem-${item.medId}-${item.doseAt}`,
+    data: { type: "reminder", medId: item.medId, doseAt: item.doseAt, isReminder: true },
     vibrate: [300, 150, 300],
-    requireInteraction: true,
   });
 }
 

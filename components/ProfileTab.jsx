@@ -10,7 +10,7 @@ import { COUNTRIES, getPricing } from "@/lib/data";
 import { getTierConfig, featureLabels } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers, getNotifPerm, isNativePlatform } from "@/lib/notifications";
-import { canScheduleExactAlarms, openExactAlarmSettings, openAppSettings } from "@/lib/local-notifs";
+import { canScheduleExactAlarms, openExactAlarmSettings, openAppSettings, canUseFullScreenIntent, openFullScreenIntentSettings } from "@/lib/local-notifs";
 import { FormControl, FormRow } from "@/components/FormControls";
 import { sb } from "@/lib/supabase";
 import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
@@ -53,6 +53,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
   const [nowMs] = useState(() => Date.now());
   const [notifOn, setNotifOn] = useState(() => { try { return localStorage.getItem("mt_notif_on") === "1"; } catch { return false; } });
   const [exactAlarm, setExactAlarm] = useState(null);
+  const [fullScreenAlarm, setFullScreenAlarm] = useState(null);
   const [reminderLead, setReminderLead] = useState(profile?.reminder_lead || 30);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -87,6 +88,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     if (!isNativePlatform() || notifPerm !== "granted") return;
     let mounted = true;
     canScheduleExactAlarms().then(can => { if (mounted) setExactAlarm(can); }).catch(() => {});
+    canUseFullScreenIntent().then(r => { if (mounted) setFullScreenAlarm(r ? r.can : null); }).catch(() => {});
     return () => { mounted = false; };
   }, [notifPerm]);
   const [uploading, setUploading] = useState(false);
@@ -557,6 +559,14 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               title="On-time alarms"
               sub={exactAlarm === false ? "Exact alarms are off — reminders may arrive a few minutes late. Tap to fix." : exactAlarm === true ? "Exact alarms enabled — reminders arrive on time." : "Checking…"}
               onClick={exactAlarm === false ? () => openExactAlarmSettings() : undefined}
+            />
+          ) : null}
+          {fullScreenAlarm === false ? (
+            <Row
+              icon={<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)"
+              title="Full screen dose alarms"
+              sub="Android is blocking full screen alarms — allow them so a due dose takes over your screen."
+              onClick={() => openFullScreenIntentSettings()}
             />
           ) : null}
           <Row
