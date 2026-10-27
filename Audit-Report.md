@@ -1,4 +1,4 @@
-# Adhera (MediTrack) — Product/Code Audit Report
+# Adherly (MediTrack) — Product/Code Audit Report
 
 **Scope:** UX, accessibility, internationalization, error & edge-case handling, dead code, copy/naming consistency, and PWA/offline behavior.
 **Method:** Static source audit only — no files were modified. All findings verified against source with file:line references.
@@ -231,9 +231,9 @@ Audited by symbol-occurrence scan + grep confirmation (only the definition site 
 ```jsx
 Invite by email — they need a MediTrack account
 ```
-The rebrand to **Adhera** is complete everywhere else (`app/layout.tsx`, `public/manifest.json`, PDF reports `MainApp.jsx:374,412`, `PricingPage`), and `MediTrack` remains only in repo docs/scripts (`test-plan.md`, `store-listing.md`, `scripts/gen_progress_report.py`).
+The rebrand to **Adherly** is complete everywhere else (`app/layout.tsx`, `public/manifest.json`, PDF reports `MainApp.jsx:374,412`, `PricingPage`), and `MediTrack` remains only in repo docs/scripts (`test-plan.md`, `store-listing.md`, `scripts/gen_progress_report.py`).
 
-**Fix:** Replace with "Adhera account".
+**Fix:** Replace with "Adherly account".
 
 ### L5. `app/not-found.js` silently hard-redirects with no fallback UI
 **File:** `app/not-found.js:4-6`

@@ -93,7 +93,7 @@ def make_table(headers, rows, widths=None, header_fill="007AFF"):
 
 # ================= COVER =================
 p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-r = p.add_run("ADHERA (MediTrack)"); r.bold = True; r.font.size = Pt(28); r.font.color.rgb = ACCENT
+r = p.add_run("ADHERLY (MediTrack)"); r.bold = True; r.font.size = Pt(28); r.font.color.rgb = ACCENT
 p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 r = p.add_run("Project Progress Report"); r.font.size = Pt(18); r.font.color.rgb = DARK
 p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -123,7 +123,7 @@ doc.add_page_break()
 
 # ================= 1. EXEC SUMMARY =================
 doc.add_heading("1. Executive Summary", 1)
-para("Adhera (formerly MediTrack) is a mobile-first medication management and health-tracking platform for the West African market (Ghana, Nigeria, with South Africa and Kenya planned). It is built on Next.js (web/PWA), Capacitor (native iOS/Android shells that load the hosted web app), and Supabase (auth + Postgres with Row Level Security). Freemium billing runs through Paystack, with Paddle as the Merchant of Record for every other market.", space_after=4)
+para("Adherly (formerly MediTrack) is a mobile-first medication management and health-tracking platform for the West African market (Ghana, Nigeria, with South Africa and Kenya planned). It is built on Next.js (web/PWA), Capacitor (native iOS/Android shells that load the hosted web app), and Supabase (auth + Postgres with Row Level Security). Freemium billing runs through Paystack, with Paddle as the Merchant of Record for every other market.", space_after=4)
 para("The application reached feature-complete status and this project is now in release preparation. Completed this cycle: a full launch-readiness and security audit, server-side secret hygiene fix, production error monitoring (Sentry), branded native launcher icons, documented Codemagic signing/CI, country-aware Paystack billing (Ghana live; NG/ZA/KE activate via env), a new Paddle Merchant-of-Record checkout for international payments, and the Content-Security-Policy update required by the Paddle overlay. The production web build compiles cleanly, the Android release build succeeds, and Sentry + all five Paddle environment variables are now configured on Vercel Production. Remaining work is concentrated in external/account steps (store assets, Apple Developer membership, Play rollout, domain/RLS/push verification).", space_after=4)
 
 # ================= 2. OVERVIEW =================
@@ -142,7 +142,7 @@ make_table(
         ["Push", "Firebase Cloud Messaging (server-side) + Web Push VAPID"],
         ["CI/CD", "Codemagic (Android/iOS release), Vercel (web + cron)"],
         ["Error monitoring", "Sentry (@sentry/nextjs 10) - client/server/edge + tunnel"],
-        ["Branding", "Adhera; bundle id com.useadhera.app"],
+        ["Branding", "Adherly; bundle id com.useadhera.app"],
     ],
     widths=[1.6, 4.9],
 )
@@ -283,7 +283,7 @@ stage("Stage 2 - Store Visual Assets & Listing (external)",
 
 stage("Stage 3 - Android: CI Build & Internal Test (Codemagic)",
       "You",
-      "A Codemagic android-release build succeeds and the produced AAB/APK is verified signed with the Adhera key (SHA-256 81:85:E5:43:...:52) and installs on a test device.",
+      "A Codemagic android-release build succeeds and the produced AAB/APK is verified signed with the Adherly key (SHA-256 81:85:E5:43:...:52) and installs on a test device.",
       [
         "Populate the android_keystore group (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS=adhera, KEY_PASSWORD) and the google_services group in Codemagic.",
         "Push to main / trigger the android-release workflow; download the AAB from artifacts.",
@@ -371,6 +371,6 @@ para("")
 para("End of report.", italic=True, color=GREY)
 para(f"Generated automatically: {datetime.date(2026, 9, 8).strftime('%B %d, %Y')}", color=GREY, size=9)
 
-out = "Adhera_Progress_Report.docx"
+out = "Adherly_Progress_Report.docx"
 doc.save(out)
 print("Wrote", out)

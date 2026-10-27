@@ -6,6 +6,7 @@ import { useLang, dayKey } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { expectedDosesToday, focusMember, missedDoses, remainingDoses, totalExpectedToday, callHref, initials, weekAdherence, streak } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
+import { cancelVisitReminder } from "@/lib/notifications";
 import { getTierConfig } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import MedLogButton from "@/components/MedLogButton";
@@ -160,6 +161,7 @@ export default function TodayTab({ household, user, profile, plan, onGoMe, onGoM
   const upcomingVisits = getUpcomingVisits(60, user?.id);
   const [, setVisitsTick] = useState(0);
   function markVisit(id, status) {
+    cancelVisitReminder(id);
     markVisitStatus(id, status);
     setVisitsTick(x => x + 1);
   }

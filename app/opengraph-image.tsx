@@ -36,7 +36,7 @@ export default function OpengraphImage() {
           <div style={{ width: 14, height: 48, borderRadius: 8, background: "white", position: "absolute" }} />
         </div>
         <div style={{ color: "white", fontSize: 76, fontWeight: 800, letterSpacing: "-2px", lineHeight: 1 }}>
-          Adhera
+          Adherly
         </div>
         <div
           style={{

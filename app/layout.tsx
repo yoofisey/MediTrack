@@ -7,14 +7,14 @@ const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-int
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.useadhera.com"),
   title: {
-    default: "Adhera",
-    template: "%s | Adhera",
+    default: "Adherly",
+    template: "%s | Adherly",
   },
   description: "Your Personal Treatment Companion — Track medications, get smart alarm reminders, and stay on top of your health.",
-  applicationName: "Adhera",
-  keywords: ["medication tracker", "dose reminder", "health dashboard", "Adhera"],
-  authors: [{ name: "Adhera" }],
-  creator: "Adhera",
+  applicationName: "Adherly",
+  keywords: ["medication tracker", "dose reminder", "health dashboard", "Adherly"],
+  authors: [{ name: "Adherly" }],
+  creator: "Adherly",
   alternates: {
     canonical: "/",
   },
@@ -25,20 +25,20 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Adhera",
+    title: "Adherly",
     statusBarStyle: "default",
   },
   openGraph: {
-    title: "Adhera — Your Personal Treatment Companion",
+    title: "Adherly — Your Personal Treatment Companion",
     description: "Track medications, get smart alarm reminders, and stay on top of your health.",
     url: "https://www.useadhera.com",
-    siteName: "Adhera",
+    siteName: "Adherly",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Adhera — Your Personal Treatment Companion",
+    title: "Adherly — Your Personal Treatment Companion",
     description: "Track medications, get smart alarm reminders, and stay on top of your health.",
   },
 };
@@ -64,7 +64,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <meta name="apple-mobile-web-app-title" content="Adhera" />
+        <meta name="apple-mobile-web-app-title" content="Adherly" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

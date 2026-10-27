@@ -70,23 +70,48 @@ function fireLead(item) {
   });
 }
 
+function clockLabel(ts) {
+  try { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch { return ""; }
+}
+
+function fireMissed(item) {
+  const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
+  self.registration.showNotification(`Missed: ${item.name}`, {
+    body: `You missed your ${item.dosageAmount} ${item.dosageUnit} dose due at ${clockLabel(item.doseAt)}.\nDay ${daysSince}/${item.courseDays}\nTap to log it now.`,
+    icon: "/icon.svg",
+    tag: `mt-missed-${item.medId}-${item.doseAt}`,
+    data: { type: "missed", medId: item.medId, doseAt: item.doseAt },
+    vibrate: [300, 150, 300],
+  });
+}
+
 // Drop every in-memory timer, then arm fresh timers for any item whose dose
-// time is still in the future and persist the surviving schedule.
+// time (or missed-dose grace window) is still in the future and persist the
+// surviving schedule.
 async function armSchedule(items) {
   Object.keys(doseDB).forEach(k => { if (doseDB[k]?.timer) clearTimeout(doseDB[k].timer); });
   doseDB = {};
   const nowTs = Date.now();
-  const active = (items || []).filter(item => item.doseAt && item.doseAt - nowTs > 0);
+  const active = (items || []).filter(item => {
+    if (!item.doseAt) return false;
+    const grace = Number(item.missedGrace) || 0;
+    return item.doseAt - nowTs > 0 || (grace > 0 && item.doseAt + grace - nowTs > 0);
+  });
   active.forEach(item => {
     const timerId = `mt-${item.medId}-${item.doseAt}`;
     const delay = item.doseAt - nowTs;
     const alertAtDose = item.alertAtDose !== false;
-    if (alertAtDose) {
+    if (alertAtDose && delay > 0) {
       doseDB[timerId] = { timer: setTimeout(() => fireDose(item), delay), item };
     }
     const leadDelay = delay - (item.lead || 0) * 60000;
     if (item.lead > 0 && leadDelay > 0) {
       doseDB[`${timerId}-lead`] = { timer: setTimeout(() => fireLead(item), leadDelay), item };
+    }
+    const grace = Number(item.missedGrace) || 0;
+    const missedDelay = item.doseAt + grace - nowTs;
+    if (grace > 0 && missedDelay > 0) {
+      doseDB[`${timerId}-missed`] = { timer: setTimeout(() => fireMissed(item), missedDelay), item };
     }
   });
   await saveSchedule(active);
@@ -106,9 +131,19 @@ self.addEventListener("activate", e => e.waitUntil(
 
 function deepLinkFromTag(tag) {
   const t = String(tag || "");
+  if (t.startsWith("mt-missed-")) {
+    const m = t.match(/^mt-missed-(.+)-(\d+)$/);
+    if (m) return { type: "mt-open-alarm", data: { medId: m[1], doseAt: m[2] }, isReminder: false };
+    return null;
+  }
   if (t.startsWith("mt-dose-") || t.startsWith("mt-rem-")) {
     const m = t.match(/^mt-(?:dose|rem)-(.+)-(\d+)$/);
     if (m) return { type: "mt-open-alarm", data: { medId: m[1], doseAt: m[2] }, isReminder: t.startsWith("mt-rem-") };
+    return null;
+  }
+  if (t.startsWith("mt-visit-missed-")) {
+    const visitId = t.slice("mt-visit-missed-".length);
+    if (visitId) return { type: "mt-open-visit", data: { visitId } };
     return null;
   }
   if (t.startsWith("mt-visit-now-")) {
@@ -171,7 +206,7 @@ self.addEventListener("message", e => {
 
 self.addEventListener("push", e => {
   const d = e.data?.json() || {};
-  self.registration.showNotification(d.title || "Adhera", {
+  self.registration.showNotification(d.title || "Adherly", {
     body: d.body || "Time to take your medication",
     icon: "/icon.svg",
     vibrate: [500, 200, 500, 200, 500],

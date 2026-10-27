@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.useadhera.app',
-  appName: 'Adhera',
+  appName: 'Adherly',
   webDir: 'out',
   server: {
     url: process.env.CAPACITOR_SERVER_URL || 'https://www.useadhera.com',

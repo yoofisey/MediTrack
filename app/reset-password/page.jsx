@@ -129,7 +129,7 @@ export default function ResetPasswordPage() {
         <AuthLogo />
         <div className="auth-title">Reset failed</div>
         <div className="auth-sub">{sessionErr}</div>
-        <Link className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adhera</Link>
+        <Link className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adherly</Link>
       </div>
     </div>
   );
@@ -140,7 +140,7 @@ export default function ResetPasswordPage() {
         <AuthLogo />
         <div className="auth-title">Password updated</div>
         <div className="auth-sub">You can now sign in with your new password.</div>
-        <Link className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adhera</Link>
+        <Link className="auth-btn auth-btn-primary" href="/" style={{ textDecoration: "none", textAlign: "center" }}>Open Adherly</Link>
       </div>
     </div>
   );

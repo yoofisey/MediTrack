@@ -1,4 +1,4 @@
-export const metadata = { title: "Privacy Policy — Adhera" };
+export const metadata = { title: "Privacy Policy — Adherly" };
 
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         <div style={{marginBottom:32}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2563eb,#5856d6)",display:"grid",placeItems:"center",color:"white",fontWeight:800,fontSize:16}}>A</div>
-            <span style={{fontSize:18,fontWeight:700,color:"#0f172a"}}>Adhera</span>
+            <span style={{fontSize:18,fontWeight:700,color:"#0f172a"}}>Adherly</span>
           </div>
         </div>
 
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <p style={{fontSize:14,color:"#64748b",marginBottom:32}}>Effective date: August 20, 2026</p>
 
         <div style={{fontSize:15,color:"#334155",display:"flex",flexDirection:"column",gap:20}}>
-          <p>Adhera (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This policy explains how we collect, use, and safeguard your personal information when you use our medication tracking application.</p>
+          <p>Adherly (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This policy explains how we collect, use, and safeguard your personal information when you use our medication tracking application.</p>
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>1. Information We Collect</h2>
@@ -26,12 +26,12 @@ export default function PrivacyPage() {
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>2. Health Data</h2>
-            <p>Adhera processes health-related data including medication schedules, dose history, and adherence patterns. This data is classified as &quot;special category data&quot; under GDPR and is treated with the highest level of protection. We process this data solely to deliver the Adhera service to you.</p>
+            <p>Adherly processes health-related data including medication schedules, dose history, and adherence patterns. This data is classified as &quot;special category data&quot; under GDPR and is treated with the highest level of protection. We process this data solely to deliver the Adherly service to you.</p>
           </div>
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>3. How We Use Your Information</h2>
-            <p>Your data is used solely to deliver the Adhera service: tracking medications, sending reminders, generating adherence reports, and improving the app experience. We never sell your personal data.</p>
+            <p>Your data is used solely to deliver the Adherly service: tracking medications, sending reminders, generating adherence reports, and improving the app experience. We never sell your personal data.</p>
           </div>
 
           <div>
@@ -82,7 +82,7 @@ export default function PrivacyPage() {
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>10. Children&apos;s Privacy</h2>
-            <p>Adhera is not intended for users under 16 years of age. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, contact us immediately.</p>
+            <p>Adherly is not intended for users under 16 years of age. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, contact us immediately.</p>
           </div>
 
           <div>
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
         </div>
 
         <div style={{marginTop:40,paddingTop:20,borderTop:"1px solid #e2e8f0",textAlign:"center"}}>
-          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adhera</Link>
+          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adherly</Link>
         </div>
       </div>
     </div>

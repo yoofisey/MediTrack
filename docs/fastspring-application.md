@@ -21,7 +21,7 @@ review; health-adjacent SaaS is usually fine, but approval is not guaranteed.
 
 The form asks for a company/product description. Draft you can use:
 
-> **Adhera** is a mobile-first medication adherence and wellness companion app
+> **Adherly** is a mobile-first medication adherence and wellness companion app
 > (web app + published PWA, iOS/Android wrapper via Capacitor). It helps users track
 > medications, set refill reminders, share caregiving dashboards with family, detect
 > drug interactions, and export adherence PDF reports. It is **not** a medical
@@ -29,8 +29,8 @@ The form asks for a company/product description. Draft you can use:
 > no prescription fulfillment, no patient data brokering. Health content is purely
 > educational and voluntary.
 >
-> Business model: freemium SaaS. Core tracking is free; **Adhera Pro** and
-> **Adhera Family** are monthly subscriptions billed through FastSpring for all
+> Business model: freemium SaaS. Core tracking is free; **Adherly Pro** and
+> **Adherly Family** are monthly subscriptions billed through FastSpring for all
 > non-Africa markets. Payments are standard recurring subscriptions; no goods,
 > no cryptocurrency, no adult content, no pharmaceuticals, no gambling.
 >
@@ -41,8 +41,8 @@ The form asks for a company/product description. Draft you can use:
 ## Integration plan (after approval)
 
 1. **Store Builder**: create two **Subscription** products:
-   - `plan-pro` — monthly, $9.99 (Adhera Pro)
-   - `plan-family` — monthly, $17.99 (Adhera Family)
+   - `plan-pro` — monthly, $9.99 (Adherly Pro)
+   - `plan-family` — monthly, $17.99 (Adherly Family)
    - Enable FastSpring hosted checkout (redirect). Set a USD price list (multi-currency
      price lists optional, keyed by locale).
 2. **Webhooks** in Dashboard → Integrations (JWT/HMAC auth, secret you control):

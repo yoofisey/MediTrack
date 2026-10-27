@@ -40,7 +40,7 @@ const featureGraphicSvg = `
     <rect x="238" y="212" width="16" height="72" rx="8" fill="url(#glyph)"/>
     <rect x="210" y="240" width="72" height="16" rx="8" fill="url(#glyph)"/>
   </g>
-  <text x="380" y="238" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="96" font-weight="800" fill="white" letter-spacing="-1">Adhera</text>
+  <text x="380" y="238" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="96" font-weight="800" fill="white" letter-spacing="-1">Adherly</text>
   <text x="384" y="296" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="32" fill="white" fill-opacity=".9">Never miss a dose again.</text>
   <g font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="24" font-weight="600" fill="white">
     <rect x="384" y="336" width="230" height="44" rx="22" fill="white" fill-opacity=".14"/>

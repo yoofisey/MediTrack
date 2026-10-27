@@ -27,9 +27,9 @@ export default function LandingPage({ onGetStarted }) {
 
       <div style={{maxWidth:480,margin:"0 auto",padding:"72px 24px 44px",textAlign:"center"}}>
         <div style={{width:72,height:72,borderRadius:20,overflow:"hidden",margin:"0 auto 16px",boxShadow:"0 10px 36px rgba(0,122,255,.26),0 2px 8px rgba(0,0,0,.05)",animation:"fadeUp .6s ease both"}}>
-          <img src="/icon-512.png?v=3" alt="Adhera" width="72" height="72" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+          <img src="/icon-512.png?v=3" alt="Adherly" width="72" height="72" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
         </div>
-        <div style={{fontSize:21,fontWeight:700,color:"#1C1C1E",marginBottom:26,letterSpacing:"-.3px",animation:"fadeUp .6s .1s ease both"}}>Adhera</div>
+        <div style={{fontSize:21,fontWeight:700,color:"#1C1C1E",marginBottom:26,letterSpacing:"-.3px",animation:"fadeUp .6s .1s ease both"}}>Adherly</div>
 
         <h1 style={{fontSize:34,fontWeight:800,letterSpacing:"-.6px",marginBottom:8,lineHeight:1.1,animation:"fadeUp .6s .2s ease both"}}>
           Your Personal<br/>Treatment Companion
@@ -71,9 +71,9 @@ export default function LandingPage({ onGetStarted }) {
         </div>
 
         <div style={{background:"#FFFFFF",borderRadius:20,padding:22,boxShadow:"0 0 0 0.5px rgba(0,0,0,.02),0 1px 2px rgba(0,0,0,.02),0 4px 8px rgba(0,0,0,.03),0 12px 24px rgba(0,0,0,.04)",border:"0.5px solid rgba(0,0,0,.04)",marginBottom:44,animation:"fadeUp .6s .8s ease both"}}>
-          <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,letterSpacing:"-.3px"}}>About Adhera</h2>
+          <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,letterSpacing:"-.3px"}}>About Adherly</h2>
           <p style={{fontSize:14,color:"#3A3A3C",lineHeight:1.7,margin:0}}>
-            Adhera is a personal medication management app designed to help you stay on track with your treatment plan.
+            Adherly is a personal medication management app designed to help you stay on track with your treatment plan.
             Create your medication schedule, log each dose as you take it, and view your adherence over time.
             Get smart reminders, generate reports for your doctor, and manage medications for your whole family — all from one secure account.
           </p>
@@ -89,7 +89,7 @@ export default function LandingPage({ onGetStarted }) {
             <a href="/pricing" style={{color:"#8E8E93",textDecoration:"underline"}}>Pricing</a>
           </div>
           <div style={{fontSize:13,color:"#8E8E93",lineHeight:1.6}}>
-            <span style={{color:"#3A3A3C",fontWeight:600}}>Adhera</span> · support@useadhera.com
+            <span style={{color:"#3A3A3C",fontWeight:600}}>Adherly</span> · support@useadhera.com
             {" · "}
             © 2026
           </div>

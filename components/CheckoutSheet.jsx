@@ -275,7 +275,7 @@ export function CheckoutFrame({ url, visible = true, tone = "#2563eb", onLoaded,
         key={url}
         src={url}
         onLoad={onLoaded}
-        title="Adhera secure payment"
+        title="Adherly secure payment"
         referrerPolicy="no-referrer-when-downgrade"
         style={{ flex: 1, width: "100%", border: "none", background: "#fff" }}
       />
@@ -306,7 +306,7 @@ export function CheckoutSuccess({ plan, color, onDone }) {
         <Check size={40} strokeWidth={3} color="white" style={{ animation: "fadeIn .4s .25s ease both" }} />
       </div>
       <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: "-.3px", color: "var(--t1)", marginBottom: 8 }}>
-        Welcome to {plan?.name || "Adhera"}!
+        Welcome to {plan?.name || "Adherly"}!
       </div>
       <div style={{ fontSize: 14, color: "var(--t3)", maxWidth: 260, lineHeight: 1.5 }}>
         Your subscription is active. Enjoy full access right away.

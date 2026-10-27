@@ -120,7 +120,7 @@ async function main() {
   <circle cx="40" cy="470" r="210" fill="none" stroke="white" stroke-opacity=".07" stroke-width="2"/>
   <circle cx="1040" cy="470" r="120" fill="none" stroke="white" stroke-opacity=".06" stroke-width="2"/>
   <image xlink:href="data:image/png;base64,${tileB64}" x="104" y="146" width="208" height="208" clip-path="url(#tileClip)" preserveAspectRatio="xMidYMid slice"/>
-  <text x="380" y="238" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="96" font-weight="800" fill="white" letter-spacing="-1">Adhera</text>
+  <text x="380" y="238" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="96" font-weight="800" fill="white" letter-spacing="-1">Adherly</text>
   <text x="384" y="296" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="32" fill="white" fill-opacity=".9">Never miss a dose again.</text>
   <g font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-size="24" font-weight="600" fill="white">
     <rect x="384" y="336" width="230" height="44" rx="22" fill="white" fill-opacity=".14"/>

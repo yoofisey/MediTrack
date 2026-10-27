@@ -1,6 +1,6 @@
-# Adhera mobile CI/CD — Codemagic
+# Adherly mobile CI/CD — Codemagic
 #
-# Builds the Android AAB/APK and iOS IPA for the Adhera mobile app
+# Builds the Android AAB/APK and iOS IPA for the Adherly mobile app
 # (Capacitor 8, remote-hosted web app at https://www.useadhera.com).
 #
 # Note: the web app itself is deployed by Vercel's GitHub integration, so this

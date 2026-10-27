@@ -1,4 +1,4 @@
-export const metadata = { title: "Refund Policy — Adhera" };
+export const metadata = { title: "Refund Policy — Adherly" };
 
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ export default function RefundPolicyPage() {
         <div style={{marginBottom:32}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2563eb,#5856d6)",display:"grid",placeItems:"center",color:"white",fontWeight:800,fontSize:16}}>A</div>
-            <span style={{fontSize:18,fontWeight:700,color:"#0f172a"}}>Adhera</span>
+            <span style={{fontSize:18,fontWeight:700,color:"#0f172a"}}>Adherly</span>
           </div>
         </div>
 
@@ -17,11 +17,11 @@ export default function RefundPolicyPage() {
         <p style={{fontSize:14,color:"#64748b",marginBottom:32}}>Effective date: September 8, 2026</p>
 
         <div style={{fontSize:15,color:"#334155",display:"flex",flexDirection:"column",gap:20}}>
-          <p>Adhera (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) sells subscriptions to our medication tracking and health management application. This policy explains how refunds are handled. It applies to both our Paystack billing (Ghana, Nigeria, Kenya, South Africa) and our FastSpring billing (Merchant of Record) for every other country.</p>
+          <p>Adherly (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) sells subscriptions to our medication tracking and health management application. This policy explains how refunds are handled. It applies to both our Paystack billing (Ghana, Nigeria, Kenya, South Africa) and our FastSpring billing (Merchant of Record) for every other country.</p>
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>1. Subscriptions Are Not Auto-Refunded</h2>
-            <p>Adhera subscriptions are recurring (monthly). Because the service is delivered immediately and continuously, subscription fees are generally <strong>non-refundable</strong> once a billing period has started, except as described below or where consumer law requires otherwise.</p>
+            <p>Adherly subscriptions are recurring (monthly). Because the service is delivered immediately and continuously, subscription fees are generally <strong>non-refundable</strong> once a billing period has started, except as described below or where consumer law requires otherwise.</p>
           </div>
 
           <div>
@@ -58,7 +58,7 @@ export default function RefundPolicyPage() {
         <div style={{marginTop:40,paddingTop:20,borderTop:"1px solid #e2e8f0",textAlign:"center",display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
           <Link href="/privacy" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>Privacy Policy</Link>
           <Link href="/terms" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>Terms of Service</Link>
-          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adhera</Link>
+          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adherly</Link>
         </div>
       </div>
     </div>

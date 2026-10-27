@@ -1,4 +1,4 @@
-# Store Listing Metadata — Adhera (MediTrack)
+# Store Listing Metadata — Adherly (MediTrack)
 
 > Use this document when filling in Play Console and App Store Connect.
 
@@ -10,7 +10,7 @@
 Track medications, log doses, and build healthy adherence habits.
 
 ### Full Description (4000 chars max)
-Adhera helps you stay on top of your medication schedule with smart reminders, dose tracking, and health insights.
+Adherly helps you stay on top of your medication schedule with smart reminders, dose tracking, and health insights.
 
 **Key Features:**
 - Smart medication reminders that adapt to your schedule
@@ -54,7 +54,7 @@ medication tracker, pill reminder, health, adherence, medicine
 ## Apple App Store
 
 ### App Name
-Adhera
+Adherly
 
 ### Subtitle (30 chars max)
 Smart medication tracker

@@ -36,7 +36,7 @@ export default function NotFound() {
           textDecoration: "none",
         }}
       >
-        Back to Adhera
+        Back to Adherly
       </Link>
     </div>
   );

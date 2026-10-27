@@ -25,7 +25,7 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
     return () => timers.forEach(clearTimeout);
   }, [showDefault, showMessages]);
 
-  const titleLetters = "Adhera".split("");
+  const titleLetters = "Adherly".split("");
 
   return (
     <div className={`trans-screen${fadeOut ? " fade-out" : ""}`}>
@@ -46,7 +46,7 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
         <div className="trans-logo-wrap">
           <div className="trans-logo-glow" />
           <div className="trans-logo">
-            <img src="/icon-512.png?v=3" alt="Adhera" />
+            <img src="/icon-512.png?v=3" alt="Adherly" />
           </div>
         </div>
 

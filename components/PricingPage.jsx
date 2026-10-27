@@ -144,7 +144,7 @@ function PricingFooter({ enterprise, ready, country }) {
             )}
           </div>
         </div>
-        {ready && <a href="mailto:sales@useadhera.com?subject=Adhera%20Enterprise%20inquiry" style={{ background: "#0f172a", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 12, fontFamily: "inherit" }}>Contact sales</a>}
+        {ready && <a href="mailto:sales@useadhera.com?subject=Adherly%20Enterprise%20inquiry" style={{ background: "#0f172a", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 700, padding: "12px 20px", borderRadius: 12, fontFamily: "inherit" }}>Contact sales</a>}
       </div>
     </div>
   );

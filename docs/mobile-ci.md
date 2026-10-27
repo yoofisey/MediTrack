@@ -1,6 +1,6 @@
 # Mobile CI/CD setup guide
 
-Codemagic builds the Adhera mobile app. The web app itself is remote-hosted
+Codemagic builds the Adherly mobile app. The web app itself is remote-hosted
 (`https://www.useadhera.com`), so CI only packages a native shell that loads
 that URL. Nothing about the release pipeline depends on your local machine —
 everything runs on Codemagic's macOS VMs.
@@ -84,7 +84,7 @@ Prerequisites in the Apple Developer portal (one-time, $99/yr membership):
    Vercel's GitHub integration, not by Codemagic.)
 3. Trigger the `android-release` workflow. Download the AAB from the artifacts
    tab. Verify the APK installs on a device and that it is signed with the
-   Adhera key (SHA-256 `81:85:E5:43:...:52`).
+   Adherly key (SHA-256 `81:85:E5:43:...:52`).
 
 ## Uploading to the stores
 

@@ -13,7 +13,7 @@ import android.os.Build;
 import org.json.JSONObject;
 
 /**
- * Fires a dose alarm. When Adhera is in the foreground the alarm is handed to
+ * Fires a dose alarm. When Adherly is in the foreground the alarm is handed to
  * the web layer (full-screen in-app alarm); otherwise a high-importance
  * notification with a full-screen intent takes over the lock screen.
  */

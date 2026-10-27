@@ -92,8 +92,8 @@ export default function VisitSheet({ onClose, editingVisit, onSaved, initialView
             </div>
             <div style={{fontSize:13,fontWeight:600,color:"var(--t3)",textAlign:"center",marginBottom:12}}>Log how it went</div>
             <div style={{display:"flex",gap:8}}>
-              <button className="btn" style={{flex:1,background:"var(--green)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => { markVisitStatus(activeVisit.id, "attended"); onSaved?.(); }}><Check size={16} strokeWidth={3}/> Attended</button>
-              <button className="btn" style={{flex:1,background:"var(--red)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => { markVisitStatus(activeVisit.id, "missed"); onSaved?.(); }}><X size={16} strokeWidth={3}/> Missed</button>
+              <button className="btn" style={{flex:1,background:"var(--green)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => { cancelVisitReminder(activeVisit.id); markVisitStatus(activeVisit.id, "attended"); onSaved?.(); }}><Check size={16} strokeWidth={3}/> Attended</button>
+              <button className="btn" style={{flex:1,background:"var(--red)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={() => { cancelVisitReminder(activeVisit.id); markVisitStatus(activeVisit.id, "missed"); onSaved?.(); }}><X size={16} strokeWidth={3}/> Missed</button>
             </div>
             <div style={{textAlign:"center",marginTop:12}}>
               <button className="btn btn-sm" style={{background:"none",border:"none",color:"var(--t3)",fontSize:13,fontWeight:600}} onClick={() => setViewMode(false)}>Edit details</button>

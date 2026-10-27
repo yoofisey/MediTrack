@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Adhera</string>
-    <string name="title_activity_main">Adhera</string>
+    <string name="app_name">Adherly</string>
+    <string name="title_activity_main">Adherly</string>
     <string name="package_name">com.useadhera.app</string>
     <string name="custom_url_scheme">com.useadhera.app</string>
     <string name="dose_alarm_badge">Dose due now</string>

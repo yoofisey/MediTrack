@@ -163,7 +163,7 @@ export default function MedSheet({ med, userId, reminderLead, plan, medCount, on
                 <input className="sheet-input" type="number" inputMode="numeric" min="1" step="1" placeholder="e.g. 5" value={f.refill_reminder_at} onChange={e=>set("refill_reminder_at",e.target.value)}/>
               </FormControl>
             </FormRow>
-            <div className="form-hint">Adhera alerts you when stock is running low.</div>
+            <div className="form-hint">Adherly alerts you when stock is running low.</div>
           </FormControl>
         </div>
 

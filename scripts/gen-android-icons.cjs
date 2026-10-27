@@ -1,4 +1,4 @@
-// One-time generator for Adhera Android launcher icons (v3, source-derived).
+// One-time generator for Adherly Android launcher icons (v3, source-derived).
 // Derives all launcher icons from the proven web-app icon (public/icon.svg)
 // so the branded look is identical across surfaces.
 //

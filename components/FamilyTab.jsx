@@ -6,6 +6,7 @@ import { useLang } from "@/lib/i18n";
 import { useTier } from "@/components/TierContext";
 import { expectedDosesToday, activeMeds, missedDoses, weekAdherence, streak, initials, ringPct, memberStatus } from "@/lib/household";
 import { getUpcomingVisits, getVisitTime, markVisitStatus } from "@/lib/data";
+import { cancelVisitReminder } from "@/lib/notifications";
 import { Users, User, Pill, CalendarDays, HeartPulse, ChevronRight, Check, Lock, Phone, Activity, BarChart3, Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import { AddMemberModal } from "@/components/Modals";
 import { insertFamilyMember, insertManagedFamilyMember, fetchFamilyMembers } from "@/lib/db";
@@ -46,6 +47,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
   }, [allVisits, selected]);
 
   function markVisit(id, status) {
+    cancelVisitReminder(id);
     markVisitStatus(id, status);
     setVisitsTick(x => x + 1);
   }
@@ -58,7 +60,7 @@ export default function FamilyTab({ household, onMarkDose, onOpenVitals, onGoRep
       await fetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: email, senderName: user?.email || "Adhera Team" }),
+        body: JSON.stringify({ to: email, senderName: user?.email || "Adherly Team" }),
       });
     } catch (e) { console.error("invite email:", e); }
     onRefresh?.();

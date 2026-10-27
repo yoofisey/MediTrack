@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outPath = join(__dirname, "..", "Adhera_Project_Report.docx");
+const outPath = join(__dirname, "..", "Adherly_Project_Report.docx");
 
 const h1 = (text) => new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 360, after: 200 }, children: [new TextRun({ text, bold: true, size: 32, color: "007AFF" })] });
 const h2 = (text) => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 280, after: 160 }, children: [new TextRun({ text, bold: true, size: 26, color: "5856D6" })] });
@@ -29,7 +29,7 @@ const doc = new Document({
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 100 },
-        children: [new TextRun({ text: "Adhera", size: 64, bold: true, color: "007AFF" })],
+        children: [new TextRun({ text: "Adherly", size: 64, bold: true, color: "007AFF" })],
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -48,8 +48,8 @@ const doc = new Document({
       // 1. EXECUTIVE SUMMARY
       // ════════════════════════════════════
       h1("1. Executive Summary"),
-      para("Adhera is a modern, multilingual medication tracking application built with Next.js and Supabase. Designed for patients, caregivers, and healthcare providers, it combines a clean, accessible interface with robust backend services to help users stay on top of their medication schedules. The web app is deployed on Vercel at https://www.useadhera.com, and native Android/iOS shells are packaged with Capacitor and built continuously by Codemagic."),
-      para("As of September 2026, Adhera is in beta testing with most core and growth features operational: email OTP and Google OAuth authentication, medication management, dose tracking with push notifications, adherence analytics and PDF/CSV reports, doctor report sharing, vitals tracking, family/caregiver sharing, a community feed, gamification, a lock-screen Medical ID, biometric-style sign-in UX, and a 12-language interface. Billing runs through FastSpring (global subscriptions) with Paystack handling supported African markets. The codebase is lint-clean (0 ESLint errors), and the Android release pipeline produces a signed AAB/APK, on the way to store submission."),
+      para("Adherly is a modern, multilingual medication tracking application built with Next.js and Supabase. Designed for patients, caregivers, and healthcare providers, it combines a clean, accessible interface with robust backend services to help users stay on top of their medication schedules. The web app is deployed on Vercel at https://www.useadhera.com, and native Android/iOS shells are packaged with Capacitor and built continuously by Codemagic."),
+      para("As of September 2026, Adherly is in beta testing with most core and growth features operational: email OTP and Google OAuth authentication, medication management, dose tracking with push notifications, adherence analytics and PDF/CSV reports, doctor report sharing, vitals tracking, family/caregiver sharing, a community feed, gamification, a lock-screen Medical ID, biometric-style sign-in UX, and a 12-language interface. Billing runs through FastSpring (global subscriptions) with Paystack handling supported African markets. The codebase is lint-clean (0 ESLint errors), and the Android release pipeline produces a signed AAB/APK, on the way to store submission."),
 
       // ════════════════════════════════════
       // 2. PROJECT JOURNEY
@@ -146,10 +146,10 @@ const doc = new Document({
       // ════════════════════════════════════
       h1("4. Challenges Faced"),
       h2("4.1 iOS Push Notifications"),
-      para("iOS Safari restricts the Notification API to PWAs added to the home screen (iOS 16.4+); in regular Safari it reports \"unsupported\". Users are guided to install Adhera to the home screen; native iOS push via APNs/FCM is planned post-launch."),
+      para("iOS Safari restricts the Notification API to PWAs added to the home screen (iOS 16.4+); in regular Safari it reports \"unsupported\". Users are guided to install Adherly to the home screen; native iOS push via APNs/FCM is planned post-launch."),
 
       h2("4.2 Stale Native Cache After Rebrand"),
-      para("After switching to the Adhera logo, Android still showed the old icon and the first screen cached stale images. Root cause: the service worker served cache-first, and activating a renamed cache is what purges the old one. Fixed by bumping the cache to adhera-v3 and appending ?v=3 to logo URLs; verified from live network traces and purged caches."),
+      para("After switching to the Adherly logo, Android still showed the old icon and the first screen cached stale images. Root cause: the service worker served cache-first, and activating a renamed cache is what purges the old one. Fixed by bumping the cache to adhera-v3 and appending ?v=3 to logo URLs; verified from live network traces and purged caches."),
 
       h2("4.3 Capacitor CLI / CI Node Version"),
       para("Codemagic builds failed with \u201cCapacitor CLI requires NodeJS ≥22.0.0\u201d because the workflow pinned Node 20. Bumped codemagic.yaml to Node 22 (both workflows); Android release build now completes successfully."),
@@ -167,13 +167,13 @@ const doc = new Document({
       // 5. REGULATORY COMPLIANCE
       // ════════════════════════════════════
       h1("5. Regulatory Compliance"),
-      para("As Adhera targets US and EU markets, healthcare-data compliance is a core concern. The framework below reflects Adhera's current and planned features."),
+      para("As Adherly targets US and EU markets, healthcare-data compliance is a core concern. The framework below reflects Adherly's current and planned features."),
 
       h2("5.1 Current Classification: General Wellness App"),
-      para("Adhera tracks medication schedules, sends reminders, and generates adherence reports. It does NOT diagnose, recommend treatments, or replace medical advice — classifying it as a \"general wellness\" app, exempt from medical-device regulation (FDA in the US, MDR in the EU). This classification must be preserved unless clinical decision-support features are added."),
+      para("Adherly tracks medication schedules, sends reminders, and generates adherence reports. It does NOT diagnose, recommend treatments, or replace medical advice — classifying it as a \"general wellness\" app, exempt from medical-device regulation (FDA in the US, MDR in the EU). This classification must be preserved unless clinical decision-support features are added."),
 
       h2("5.2 US: HIPAA"),
-      bullet("Applicability: HIPAA applies when Protected Health Information (PHI) is stored or transmitted. Adhera stores medication names, dosages, and adherence data — health data."),
+      bullet("Applicability: HIPAA applies when Protected Health Information (PHI) is stored or transmitted. Adherly stores medication names, dosages, and adherence data — health data."),
       bullet("Current status: A standalone patient-facing app without provider integration is not strictly HIPAA-triggering, but all health data is treated as sensitive."),
       bullet("When it becomes mandatory: vitals sharing with providers, doctor dashboards, or provider data exchange."),
       bullet("Action items (when triggered): BAA with Supabase, audit logging, encryption at rest and in transit."),

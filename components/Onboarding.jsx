@@ -76,7 +76,7 @@ export default function Onboarding({ user, profile: initProfile, onDone }) {
 
     <div key="1" className="ob-body">
       <div className="ob-emoji"><Target size={56} strokeWidth={1.5}/></div>
-      <div className="ob-title">How are you using Adhera?</div>
+      <div className="ob-title">How are you using Adherly?</div>
       <div className="ob-sub">We&apos;ll personalise your experience based on your needs.</div>
       <div className="ob-options">
         {conditions.map(c => (

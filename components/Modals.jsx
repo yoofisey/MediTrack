@@ -27,13 +27,13 @@ export function PrivacyModal({ onClose }) {
           <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Privacy Policy</div>
           <div style={{fontSize:14,color:"var(--t2)",lineHeight:1.7,display:"flex",flexDirection:"column",gap:14}}>
             <p><strong>Effective date:</strong> July 1, 2026</p>
-            <p>Adhera (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This policy explains how we collect, use, and safeguard your personal information when you use our medication tracking application.</p>
+            <p>Adherly (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This policy explains how we collect, use, and safeguard your personal information when you use our medication tracking application.</p>
             <p><strong>1. Information We Collect</strong></p>
             <p>We collect information you provide directly: name, email address, medication names, dosages, schedules, dose logs, health conditions, and health goals. We also collect usage data such as app interactions and notification preferences.</p>
             <p><strong>2. Health Data</strong></p>
-            <p>Adhera processes health-related data including medication schedules, dose history, and adherence patterns. This data is classified as &quot;special category data&quot; under GDPR and is treated with the highest level of protection. We process this data solely to deliver the Adhera service to you.</p>
+            <p>Adherly processes health-related data including medication schedules, dose history, and adherence patterns. This data is classified as &quot;special category data&quot; under GDPR and is treated with the highest level of protection. We process this data solely to deliver the Adherly service to you.</p>
             <p><strong>3. How We Use Your Information</strong></p>
-            <p>Your data is used solely to deliver the Adhera service: tracking medications, sending reminders, generating adherence reports, and improving the app experience. We never sell your personal data.</p>
+            <p>Your data is used solely to deliver the Adherly service: tracking medications, sending reminders, generating adherence reports, and improving the app experience. We never sell your personal data.</p>
             <p><strong>4. Data Storage & Security</strong></p>
             <p>Your data is stored securely on Supabase servers with encryption at rest (AES-256) and in transit (TLS). We implement industry-standard security measures including HTTPS, encrypted database connections, and strict access controls.</p>
             <p><strong>5. Data Retention</strong></p>
@@ -63,19 +63,19 @@ export function TermsModal({ onClose }) {
           <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Terms of Service</div>
           <div style={{fontSize:14,color:"var(--t2)",lineHeight:1.7,display:"flex",flexDirection:"column",gap:14}}>
             <p><strong>Effective date:</strong> July 1, 2026</p>
-            <p>By using Adhera (&quot;the App&quot;), you agree to the following terms and conditions.</p>
+            <p>By using Adherly (&quot;the App&quot;), you agree to the following terms and conditions.</p>
             <p><strong>1. Service Description</strong></p>
-            <p>Adhera provides medication tracking, dose reminders, adherence analytics, and related health management tools. The App is a informational tool only and does not provide medical advice.</p>
+            <p>Adherly provides medication tracking, dose reminders, adherence analytics, and related health management tools. The App is a informational tool only and does not provide medical advice.</p>
             <p><strong>2. User Responsibilities</strong></p>
             <p>You are responsible for the accuracy of the medication information you enter. Always consult your healthcare provider before making changes to your medication regimen. Never rely solely on app reminders for critical health decisions.</p>
             <p><strong>3. Medical Disclaimer</strong></p>
-            <p>Adhera is not a medical device and does not diagnose, treat, cure, or prevent any disease. The App does not replace professional medical advice, diagnosis, or treatment. If you have a medical emergency, call your doctor or emergency services immediately.</p>
+            <p>Adherly is not a medical device and does not diagnose, treat, cure, or prevent any disease. The App does not replace professional medical advice, diagnosis, or treatment. If you have a medical emergency, call your doctor or emergency services immediately.</p>
             <p><strong>4. Account & Data</strong></p>
             <p>You are responsible for maintaining the confidentiality of your account credentials. You own your data; we grant you no license to use the App&apos;s design or branding.</p>
             <p><strong>5. Acceptable Use</strong></p>
             <p>You agree not to misuse the App, including attempting unauthorized access, distributing malware, or using the service for any illegal purpose.</p>
             <p><strong>6. Limitation of Liability</strong></p>
-            <p>Adhera and its developers shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including but not limited to missed doses, incorrect medication information, or health outcomes.</p>
+            <p>Adherly and its developers shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including but not limited to missed doses, incorrect medication information, or health outcomes.</p>
             <p><strong>7. Subscription & Payments</strong></p>
             <p>Premium features require a paid subscription. Prices are displayed in local currency and may change with notice. Cancellation takes effect at the end of the current billing period. Refunds are handled per our refund policy.</p>
             <p><strong>8. Termination</strong></p>
@@ -332,7 +332,7 @@ const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", 
         <div style={{padding:"0 20px 8px",textAlign:"center"}}>
           <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
           <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>
-            {currentPlan === "pro" ? "Upgrade to Family" : "Upgrade Adhera"}
+            {currentPlan === "pro" ? "Upgrade to Family" : "Upgrade Adherly"}
           </div>
           <div style={{fontSize:14,color:"var(--t3)"}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
@@ -558,7 +558,7 @@ export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--ib2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Mail size={20} color="var(--teal)" strokeWidth={2} /></div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>On the app</div>
-                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Invite by email — they need an Adhera account</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Invite by email — they need an Adherly account</div>
                 </div>
               </button>
               <button onClick={() => setMode("managed")} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--ib1)", borderRadius: 14, border: "1px solid var(--sep)", cursor: "pointer", textAlign: "left" }}>

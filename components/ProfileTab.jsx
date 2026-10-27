@@ -10,7 +10,7 @@ import { COUNTRIES, getPricing } from "@/lib/data";
 import { getTierConfig, featureLabels } from "@/lib/tiers";
 import { useTier } from "@/components/TierContext";
 import { testAlarm, stopAlarmSound, askNotifPerm, clearAllTimers, getNotifPerm, isNativePlatform } from "@/lib/notifications";
-import { canScheduleExactAlarms, openExactAlarmSettings, openAppSettings, canUseFullScreenIntent, openFullScreenIntentSettings } from "@/lib/local-notifs";
+import { canScheduleExactAlarms, openExactAlarmSettings, openAppSettings, canUseFullScreenIntent, openFullScreenIntentSettings, isAndroidApp } from "@/lib/local-notifs";
 import { FormControl, FormRow } from "@/components/FormControls";
 import { sb } from "@/lib/supabase";
 import { fetchFamilyMembers, insertFamilyMember, removeFamilyMember } from "@/lib/db";
@@ -197,7 +197,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
       await fetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ to: email, senderName: user?.email || "Adhera Team" }),
+        body: JSON.stringify({ to: email, senderName: user?.email || "Adherly Team" }),
       });
     } catch (e) { console.error("invite email:", e); }
     const { data } = await fetchFamilyMembers(user.id);
@@ -568,6 +568,12 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
               sub="Android is blocking full screen alarms — allow them so a due dose takes over your screen."
               onClick={() => openFullScreenIntentSettings()}
             />
+          ) : isAndroidApp() && fullScreenAlarm === null ? (
+            <Row
+              icon={<Ico><Bell size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib1)"
+              title="Dose alarms"
+              sub="This app version can't show full screen alarms yet — reinstall the latest Adherly build. Dose notifications still arrive."
+            />
           ) : null}
           <Row
             icon={<Ico><Clock size={18} strokeWidth={2} color="var(--t1)"/></Ico>} bg="var(--ib5)"
@@ -690,7 +696,7 @@ export default function ProfileTab({ user, profile, onSignOut, onSaveProfile, me
     <div className="section" style={{marginBottom:16}}>
       <div className="section-header">{t("profile.about")}</div>
         <div className="list">
-          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adhera</div><div className="row-sub">Version {appVersion}</div></div></div>
+          <div className="row" style={{cursor:"default"}}><div className="row-body"><div className="row-title">Adherly</div><div className="row-sub">Version {appVersion}</div></div></div>
           <div className="row" onClick={()=>setShowPrivacy(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Privacy Policy</div></div><Chevron/></div>
           <div className="row" onClick={()=>setShowTerms(true)} style={{cursor:"pointer"}}><div className="row-body"><div className="row-title">Terms of Service</div></div><Chevron/></div>
         </div>

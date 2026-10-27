@@ -1,4 +1,4 @@
-# Test Plan — Adhera (MediTrack)
+# Test Plan — Adherly (MediTrack)
 
 > Manual testing pass for Android + iOS before store submission.
 

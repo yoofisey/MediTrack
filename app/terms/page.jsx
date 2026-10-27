@@ -1,4 +1,4 @@
-export const metadata = { title: "Terms of Service — Adhera" };
+export const metadata = { title: "Terms of Service — Adherly" };
 
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ export default function TermsPage() {
         <div style={{marginBottom:32}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
             <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#2563eb,#5856d6)",display:"grid",placeItems:"center",color:"white",fontWeight:800,fontSize:16}}>A</div>
-            <span style={{fontSize:18,fontWeight:700,color:"#0f172a"}}>Adhera</span>
+            <span style={{fontSize:18,fontWeight:700,color:"#0f172a"}}>Adherly</span>
           </div>
         </div>
 
@@ -17,11 +17,11 @@ export default function TermsPage() {
         <p style={{fontSize:14,color:"#64748b",marginBottom:32}}>Effective date: September 8, 2026</p>
 
         <div style={{fontSize:15,color:"#334155",display:"flex",flexDirection:"column",gap:20}}>
-          <p>By using Adhera (&quot;the App&quot;), you agree to the following terms and conditions. Please read them carefully.</p>
+          <p>By using Adherly (&quot;the App&quot;), you agree to the following terms and conditions. Please read them carefully.</p>
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>1. Service Description</h2>
-            <p>Adhera provides medication tracking, dose reminders, adherence analytics, family/caregiver management, and related health management tools. The App is an informational and organizational tool only and does not provide medical advice.</p>
+            <p>Adherly provides medication tracking, dose reminders, adherence analytics, family/caregiver management, and related health management tools. The App is an informational and organizational tool only and does not provide medical advice.</p>
           </div>
 
           <div>
@@ -31,7 +31,7 @@ export default function TermsPage() {
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>3. Medical Disclaimer</h2>
-            <p>Adhera is not a medical device and does not diagnose, treat, cure, or prevent any disease. The App does not replace professional medical advice, diagnosis, or treatment. If you have a medical emergency, call your doctor or emergency services immediately.</p>
+            <p>Adherly is not a medical device and does not diagnose, treat, cure, or prevent any disease. The App does not replace professional medical advice, diagnosis, or treatment. If you have a medical emergency, call your doctor or emergency services immediately.</p>
           </div>
 
           <div>
@@ -51,7 +51,7 @@ export default function TermsPage() {
 
           <div>
             <h2 style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#0f172a"}}>7. Limitation of Liability</h2>
-            <p>Adhera and its developers shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including but not limited to missed doses, incorrect medication information, or health outcomes. To the fullest extent permitted by law, our total liability is limited to the amount you paid for the App in the preceding twelve months.</p>
+            <p>Adherly and its developers shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including but not limited to missed doses, incorrect medication information, or health outcomes. To the fullest extent permitted by law, our total liability is limited to the amount you paid for the App in the preceding twelve months.</p>
           </div>
 
           <div>
@@ -73,7 +73,7 @@ export default function TermsPage() {
         <div style={{marginTop:40,paddingTop:20,borderTop:"1px solid #e2e8f0",textAlign:"center",display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
           <Link href="/privacy" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>Privacy Policy</Link>
           <Link href="/refund-policy" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>Refund Policy</Link>
-          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adhera</Link>
+          <Link href="/" style={{fontSize:14,color:"#2563eb",fontWeight:600,textDecoration:"none"}}>← Back to Adherly</Link>
         </div>
       </div>
     </div>
