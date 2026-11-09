@@ -172,7 +172,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 
     if (hasLabel) {
       ctx.fillStyle = "#0F172A";
-      ctx.font = "600 15px Inter, system-ui, sans-serif";
+      ctx.font = "600 15px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(label, w/2, 24);
     }
@@ -203,7 +203,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
         ctx.stroke();
       }
       ctx.fillStyle = "#94A3B8";
-      ctx.font = "10px Inter, system-ui, sans-serif";
+      ctx.font = "10px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
       ctx.textAlign = "right";
       ctx.fillText(pct + "%", pad.l - 8, gy + 3.5);
     });
@@ -223,7 +223,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       ctx.fill();
 
       const pctText = d.val + "%";
-      ctx.font = "700 11px Inter, system-ui, sans-serif";
+      ctx.font = "700 11px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
       const tw = ctx.measureText(pctText).width + 14;
       const th = 20;
       const tx = x + barW/2;
@@ -238,7 +238,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
       ctx.fillText(pctText, tx, ty + 5);
 
       ctx.fillStyle = "#475569";
-      ctx.font = `${labelFontSize}px Inter, system-ui, sans-serif`;
+      ctx.font = `${labelFontSize}px 'Plus Jakarta Sans', Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.save();
       if (count > 6) {
@@ -270,7 +270,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
 
     if (hasLabel) {
       ctx.fillStyle = "#0F172A";
-      ctx.font = "600 15px Inter, system-ui, sans-serif";
+      ctx.font = "600 15px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(label, w/2, 24);
     }
@@ -303,7 +303,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
         ctx.stroke();
       }
       ctx.fillStyle = "#94A3B8";
-      ctx.font = "10px Inter, system-ui, sans-serif";
+      ctx.font = "10px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
       ctx.textAlign = "right";
       ctx.fillText(Math.round(val).toString(), pad.l - 8, gy + 3.5);
     }
@@ -337,7 +337,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
         const lx = pad.l + (count > 1 ? gap * (s.data.length - 1) : cw / 2);
         const ly = pad.t + ch - ((last.val - minVal) / range) * ch;
         ctx.fillStyle = color;
-        ctx.font = "600 10px Inter, system-ui, sans-serif";
+        ctx.font = "600 10px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
         ctx.textAlign = "left";
         ctx.fillText(`${s.label}: ${last.val}`, lx + 6, ly + 4);
       }
@@ -346,7 +346,7 @@ export default function ReportsTab({ logs, meds, vitals, plan, onNavigate, onBac
     if (count > 1) {
       const step = Math.max(1, Math.floor(count / 8));
       ctx.fillStyle = "#475569";
-      ctx.font = "10px Inter, system-ui, sans-serif";
+      ctx.font = "10px 'Plus Jakarta Sans', Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
       series[0].data.forEach((d, i) => {
         if (i % step === 0 || i === count - 1) {

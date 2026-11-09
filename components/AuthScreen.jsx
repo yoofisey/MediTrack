@@ -193,15 +193,15 @@ export default function AuthScreen({ onAuth }) {
   if (view === "welcome") return (
     <div className="auth-screen" style={{justifyContent:"flex-end",padding:0}}>
       <style>{CSS}</style>
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"64px 32px 24px",position:"relative",zIndex:1}}>
-        <div style={{width:104,height:104,borderRadius:30,overflow:"hidden",marginBottom:26,boxShadow:"0 12px 48px rgba(0,122,255,.28),0 2px 8px rgba(0,0,0,.06)",animation:"logoPop 1s cubic-bezier(.175,.885,.32,1.275) both"}}>
-          <img src="/icon-512.png?v=3" alt="Adherly" width="104" height="104" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"64px 32px 28px",position:"relative",zIndex:1}}>
+        <div style={{width:110,height:110,borderRadius:32,overflow:"hidden",marginBottom:28,boxShadow:"0 18px 60px rgba(0,122,255,.32),0 4px 14px rgba(30,60,120,.08),inset 0 1px 0 rgba(255,255,255,.4)",animation:"logoPop 1s cubic-bezier(.175,.885,.32,1.275) both"}}>
+          <img src="/icon-512.png?v=3" alt="Adherly" width="110" height="110" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
         </div>
-        <div style={{fontSize:34,fontWeight:800,letterSpacing:"-.6px",textAlign:"center",lineHeight:1.1,marginBottom:10,color:"var(--t1)",animation:"fadeUp .6s .15s cubic-bezier(.22,1,.36,1) both"}}>Adherly</div>
-        <div style={{fontSize:17,fontWeight:500,color:"var(--t3)",textAlign:"center",lineHeight:1.55,maxWidth:300,marginBottom:32,animation:"fadeUp .65s .3s cubic-bezier(.22,1,.36,1) both"}}>
-          Your personal medication tracker
+        <div style={{fontSize:38,fontWeight:800,letterSpacing:"-.7px",textAlign:"center",lineHeight:1.05,marginBottom:12,color:"var(--t1)",animation:"fadeUp .65s .16s cubic-bezier(.22,1,.36,1) both"}}>Adherly</div>
+        <div style={{fontSize:17,fontWeight:500,color:"var(--t2)",textAlign:"center",lineHeight:1.6,maxWidth:320,marginBottom:36,animation:"fadeUp .7s .28s cubic-bezier(.22,1,.36,1) both"}}>
+          Your personal treatment companion
         </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",animation:"fadeUp .6s .4s cubic-bezier(.22,1,.36,1) both"}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",animation:"fadeUp .7s .4s cubic-bezier(.22,1,.36,1) both"}}>
           {[
             {icon:<CheckCircle2 size={14} color="var(--teal)"/>,label:"Dose tracking"},
             {icon:<Bell size={14} color="var(--teal)"/>,label:"Smart reminders"},
@@ -216,8 +216,8 @@ export default function AuthScreen({ onAuth }) {
         </div>
       </div>
       <div className="auth-welcome-card">
-        <div style={{fontSize:24,fontWeight:700,marginBottom:4,color:"var(--t1)",letterSpacing:"-.3px"}}>Get started</div>
-        <div style={{fontSize:15,color:"var(--t3)",marginBottom:22,lineHeight:1.4}}>Join thousands managing their health with Adherly</div>
+        <div style={{fontSize:26,fontWeight:800,marginBottom:6,color:"var(--t1)",letterSpacing:"-.4px"}}>Get started</div>
+        <div style={{fontSize:15,color:"var(--t2)",marginBottom:24,lineHeight:1.5,fontWeight:500}}>Join thousands managing their health with Adherly</div>
         <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl} style={{marginBottom:12}}>
           {obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}
         </button>
@@ -284,8 +284,8 @@ export default function AuthScreen({ onAuth }) {
             <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email"/>
             <div className="pw-wrap" style={{display:"flex"}}>
               <input className="auth-input" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"transparent"}} type={pwShow?"text":"password"} placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="current-password"/>
-              <button type="button" onClick={()=>setPwShow(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center"}}
-                onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t4)"}>
+              <button type="button" onClick={()=>setPwShow(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center"}}
+                onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t3)"}>
                 {pwShow ?
                   <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> :
                   <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
@@ -295,7 +295,7 @@ export default function AuthScreen({ onAuth }) {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -8, marginBottom: 2 }}>
             <button type="button" onClick={() => { setView("forgot"); setErr(""); setForgotDone(false); setObl(""); }}
-              style={{ background: "none", border: "none", padding: 0, color: "var(--t3)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              style={{ background: "none", border: "none", padding: 0, color: "var(--t2)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               Forgot password?
             </button>
           </div>
@@ -334,7 +334,7 @@ export default function AuthScreen({ onAuth }) {
             <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
             <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} pwColors={pwColors} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
             <div style={{position:"relative"}}>
-              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",zIndex:1,display:"inline-flex",color:"var(--t3)"}}><Globe size={18}/></div>
+              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",zIndex:1,display:"inline-flex",color:"var(--t2)"}}><Globe size={18}/></div>
               <CustomSelect className="auth-select" triggerStyle={{paddingLeft:40, backgroundImage:"none"}} value={country} onChange={v=>setCountry(v)} options={COUNTRIES.map(c=>({value:c.code,label:c.name}))}/>
             </div>
           </div>
@@ -342,7 +342,7 @@ export default function AuthScreen({ onAuth }) {
             {busy ? "Processing..." : "Create free account"}
           </button>
         </form>
-        <div style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:"var(--t3)",marginTop:14,lineHeight:1.5,textAlign:"left"}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:"var(--t2)",marginTop:14,lineHeight:1.5,textAlign:"left"}}>
           <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
             style={{marginTop:2,width:16,height:16,flexShrink:0,accentColor:"var(--teal)",cursor:"pointer"}} />
           <span>I agree to the <a href="/privacy" target="_blank" style={{color:"var(--teal)",textDecoration:"underline"}}>Privacy Policy</a> and Terms of Service. I understand my health data is processed to deliver the service.</span>
@@ -364,8 +364,8 @@ function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, pwColors, RE_HA
     <>
       <div className="pw-wrap" style={{display:"flex"}}>
         <input className="auth-input" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"transparent"}} type={pwVis?"text":"password"} placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
-        <button type="button" onClick={()=>setPwVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center"}}
-          onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t4)"}>
+        <button type="button" onClick={()=>setPwVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center"}}
+          onMouseEnter={e=>e.currentTarget.style.color="var(--t1)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t3)"}>
           {pwVis ?
             <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             :
@@ -388,7 +388,7 @@ function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, pwColors, RE_HA
               { label:"Number", ok:Boolean(RE_HAS_DIGIT.test(pw)) },
               { label:"Symbol", ok:Boolean(RE_HAS_SYMBOL.test(pw)) },
             ].map(r=>(
-              <div key={r.label} className="auth-pw-check" style={{color:r.ok?"#34C759":"var(--t4)"}}>
+              <div key={r.label} className="auth-pw-check" style={{color:r.ok?"#248A3D":"var(--t3)"}}>
                 <span style={{fontWeight:700,display:"inline-flex"}}>{r.ok ? <Check size={12}/> : <Circle size={12}/>}</span>
                 <span>{r.label}</span>
               </div>
@@ -398,8 +398,8 @@ function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, pwColors, RE_HA
       )}
       <div className="pw-wrap" style={{display:"flex"}}>
         <input className="auth-input" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"transparent"}} type={cfVis?"text":"password"} placeholder="Confirm password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
-        <button type="button" onClick={()=>setCfVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:confirmPw.length>0&&pw===confirmPw?"#34C759":"var(--t4)",display:"flex",alignItems:"center",justifyContent:"center"}}
-          onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=.7}>
+        <button type="button" onClick={()=>setCfVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:confirmPw.length>0&&pw===confirmPw?"#34C759":"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center"}}
+          onMouseEnter={e=>e.currentTarget.style.color=confirmPw.length>0&&pw===confirmPw?"#248A3D":"var(--t1)"} onMouseLeave={e=>e.currentTarget.style.color=confirmPw.length>0&&pw===confirmPw?"#34C759":"var(--t3)"}>
           {cfVis ?
             <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             :

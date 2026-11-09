@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #F2F2F7;
+  --background: #F5F6FA;
   --foreground: #1C1C1E;
-  --app-font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  --app-font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
 }
 
 @theme inline {

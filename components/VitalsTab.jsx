@@ -106,23 +106,24 @@ function TargetProgress({ current, target, unit, color }) {
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   const met = target > 0 && current >= target;
   const remaining = Math.max(0, Math.round((target - current) * 100) / 100);
+  const fill = met ? "#30D158" : color;
 
   return (
     <div style={{marginBottom:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
-        <span style={{fontSize:12,color:"var(--t3)"}}>{t("vitals.dailyProgress")}</span>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:7}}>
+        <span style={{fontSize:12,color:"var(--t3)",fontWeight:600}}>{t("vitals.dailyProgress")}</span>
         <span style={{fontSize:12,fontWeight:700,color:met ? "#30D158" : "var(--t2)"}}>
           {formatNum(current)} / {formatNum(target)} {unit}
         </span>
       </div>
-      <div style={{height:8,borderRadius:4,background:"var(--hover)",overflow:"hidden"}}>
+      <div style={{height:8,borderRadius:99,background:"var(--hover)",overflow:"hidden",boxShadow:"inset 0 1px 2px rgba(0,0,0,.03)"}}>
         <div style={{
-          width:`${pct}%`,height:"100%",borderRadius:4,
-          background:met ? "#30D158" : color,
-          transition:"width .3s ease",
+          width:`${pct}%`,height:"100%",borderRadius:99,
+          background:`linear-gradient(90deg,${fill},${fill}dd)`,
+          transition:"width .45s cubic-bezier(.22,1,.36,1)",
         }}/>
       </div>
-      <div style={{fontSize:11,color:met ? "#30D158" : "var(--t3)",marginTop:4,fontWeight:met ? 600 : 400}}>
+      <div style={{fontSize:11,color:met ? "#30D158" : "var(--t3)",marginTop:5,fontWeight:met ? 700 : 500}}>
         {met ? t("vitals.targetMet") : `${formatNum(remaining)} ${unit} ${t("vitals.toGo")}`}
       </div>
     </div>
