@@ -1,0 +1,114 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { getPaystackSecret } from "@/lib/payments-server";
+import crypto from "crypto";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+function getAdminClient() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+}
+
+export async function POST(req: Request) {
+  const sb = getAdminClient();
+  if (!sb) {
+    return NextResponse.json({ ok: false, error: "Supabase not configured" }, { status: 500 });
+  }
+
+  const body = await req.text();
+
+  let event;
+  try {
+    event = JSON.parse(body);
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const metadata = event.data?.metadata || {};
+  const secret = getPaystackSecret(metadata.country);
+
+  if (!secret) {
+    return NextResponse.json({ ok: false, error: "Paystack secret not configured" }, { status: 500 });
+  }
+
+  const signature = req.headers.get("x-paystack-signature") || "";
+  const expected = crypto.createHmac("sha512", secret).update(body).digest("hex");
+  const sigBuf = Buffer.from(signature, "hex");
+  const expBuf = Buffer.from(expected, "hex");
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });
+  }
+
+  if (event.event !== "charge.success") {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+  const plan = metadata.plan;
+  const email = event.data?.customer?.email || "";
+  const reference = event.data?.reference || "";
+
+  if (!plan || !["pro", "family"].includes(plan)) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  if (!email) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  try {
+    const { data: profile, error: profileErr } = await sb
+      .from("profiles")
+      .select("id, plan")
+      .eq("email", email)
+      .single();
+
+    if (profileErr || !profile) {
+      console.error("Paystack webhook: profile not found for", email);
+      return NextResponse.json({ ok: true, skipped: true });
+    }
+
+    try {
+      const { data: existingRef } = await sb
+        .from("payment_references")
+        .select("id")
+        .eq("user_id", profile.id)
+        .eq("reference", reference)
+        .maybeSingle();
+      if (!existingRef) {
+        await sb
+          .from("payment_references")
+          .insert({ user_id: profile.id, reference, plan, paid_at: new Date().toISOString() });
+      }
+    } catch (refErr) {
+      // Non-fatal: the plan update below is the source of truth. A missing
+      // payment_references table/constraint must not drop the webhook.
+      console.error("Paystack webhook: reference record not written", refErr);
+    }
+
+    if (profile.plan === plan) {
+      return NextResponse.json({ ok: true, already_active: true });
+    }
+
+    const { error: updateErr } = await sb
+      .from("profiles")
+      .update({ plan, paid_at: new Date().toISOString() })
+      .eq("id", profile.id);
+
+    if (updateErr) {
+      console.error("Paystack webhook: update failed", updateErr);
+      return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });
+    }
+
+    console.log(`Paystack webhook: tier upgraded to ${plan} for ${email} (ref: ${reference})`);
+  } catch (e) {
+    console.error("Paystack webhook error:", e);
+    return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function GET(req: Request) {
+  return NextResponse.json({ ok: true, message: "Paystack webhook endpoint" });
+}

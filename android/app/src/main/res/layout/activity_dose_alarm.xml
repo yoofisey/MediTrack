@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/alarm_bg"
+    android:paddingStart="32dp"
+    android:paddingEnd="32dp"
+    android:paddingTop="48dp"
+    android:paddingBottom="48dp">
+
+    <TextView
+        android:id="@+id/alarm_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/dose_alarm_badge"
+        android:textColor="#ff3b30"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.16"
+        android:background="@drawable/alarm_badge_bg"
+        android:paddingLeft="18dp"
+        android:paddingRight="18dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp" />
+
+    <TextView
+        android:id="@+id/alarm_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:gravity="center"
+        android:textColor="#ffffff"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/alarm_dosage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:textColor="#99ffffff"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/alarm_notes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:gravity="center"
+        android:textColor="#66ffffff"
+        android:textSize="15sp"
+        android:maxLines="4"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/alarm_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:textColor="#4dffffff"
+        android:textSize="14sp" />
+
+    <Button
+        android:id="@+id/alarm_log"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="40dp"
+        android:backgroundTint="#34c759"
+        android:text="@string/dose_alarm_log"
+        android:textAllCaps="false"
+        android:textColor="#ffffff"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/alarm_snooze"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="#1fffffff"
+        android:text="@string/dose_alarm_snooze"
+        android:textAllCaps="false"
+        android:textColor="#99ffffff"
+        android:textSize="15sp" />
+
+    <Button
+        android:id="@+id/alarm_dismiss"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="4dp"
+        android:background="@android:color/transparent"
+        android:text="@string/dose_alarm_dismiss"
+        android:textAllCaps="false"
+        android:textColor="#66ffffff"
+        android:textSize="15sp" />
+
+</LinearLayout>

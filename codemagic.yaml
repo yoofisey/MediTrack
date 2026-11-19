@@ -1,0 +1,100 @@
+# Adherly mobile CI/CD — Codemagic
+#
+# Builds the Android AAB/APK and iOS IPA for the Adherly mobile app
+# (Capacitor 8, remote-hosted web app at https://www.useadhera.com).
+#
+# Note: the web app itself is deployed by Vercel's GitHub integration, so this
+# file only builds the native shells. Codemagic secret groups required (create
+# them with these exact names in Codemagic UI: App settings > Environment
+# variables > Global/Application):
+#   android_keystore  -> KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+#   google_services   -> GOOGLE_SERVICES_JSON  (contents of android/app/google-services.json)
+#   appstore_connect  -> APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_ID,
+#                        APP_STORE_CONNECT_ISSUER_ID
+#
+# See docs/mobile-ci.md for how to generate every secret and first-run steps.
+
+workflows:
+  android-release:
+    name: Android Release (AAB + APK)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      java: 21
+      node: 22
+      groups:
+        - android_keystore
+        - google_services
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci --no-audit --no-fund
+      - name: Prepare Capacitor web directory
+        script: |
+          mkdir -p out
+          echo "<!doctype html><html><head><meta charset=utf-8></head><body></body></html>" > out/index.html
+      - name: Sync Capacitor Android project
+        script: npx cap sync android
+      - name: Restore google-services.json (FCM)
+        script: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+      - name: Decode release keystore
+        script: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
+          printf 'storeFile=keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+      - name: Build release bundle + APK
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease assembleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/mapping/release/mapping.txt
+    # Publishing (uncomment after connecting the Google Play service account, see docs/mobile-ci.md):
+    #   google_play:
+    #     credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    #     track: internal
+    #     submit_as: draft
+
+  ios-release:
+    name: iOS Release (IPA)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    triggering:
+      events:
+        - tag
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.useadhera.app
+      node: 22
+      groups:
+        - appstore_connect
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci --no-audit --no-fund
+      - name: Prepare Capacitor web directory
+        script: |
+          mkdir -p out
+          echo "<!doctype html><html><head><meta charset=utf-8></head><body></body></html>" > out/index.html
+      - name: Sync Capacitor iOS project
+        script: npx cap sync ios
+      - name: Build IPA (App Store)
+        script: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --archive-method app-store
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/**/*.dSYMs.zip
+    # Publishing (uncomment after connecting App Store Connect, see docs/mobile-ci.md):
+    #   app_store_connect:
+    #     auth: integration
+    #     submit_to_testflight: true

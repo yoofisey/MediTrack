@@ -1,0 +1,52 @@
+{
+  "name": "adhera",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "gen:store-assets": "node scripts/gen-icons.mjs",
+    "test": "node --no-warnings --import ./tests/setup.mjs --test tests/*.test.mjs",
+    "mobile:sync": "npx cap sync",
+    "mobile:open:android": "npx cap open android",
+    "mobile:open:ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/local-notifications": "^8.2.1",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@sentry/nextjs": "^10.73.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "@zxing/library": "^0.23.0",
+    "countries-list": "^3.3.0",
+    "jose": "^6.2.5",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.27.0",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "resend": "^6.17.2",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@dodopayments/opencode-plugin": "^0.5.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "docx": "^9.7.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "playwright-core": "^1.62.1",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

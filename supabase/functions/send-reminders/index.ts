@@ -1,0 +1,802 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7";
+import { SignJWT } from "npm:jose@5.9.6";
+import { getCountry } from "npm:countries-and-timezones@3.10.0";
+
+const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY") || "";
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "";
+const VAPID_SUBJECT = "mailto:support@adhera.app";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") || "";
+
+// Shared secret must match the one configured on the Vercel cron route
+// (and in Vercel's CRON_SECRET). Fails closed: if it isn't set here, the
+// function refuses requests rather than trusting them.
+const FUNCTION_SECRET = Deno.env.get("CRON_SECRET") || "";
+
+function authorized(req: Request): boolean {
+  const expected = `Bearer ${FUNCTION_SECRET}`;
+  const provided = req.headers.get("authorization") || "";
+  if (!FUNCTION_SECRET || provided.length !== expected.length) return false;
+  const a = new TextEncoder().encode(provided);
+  const b = new TextEncoder().encode(expected);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+// countries-and-timezones orders multi-zone countries by tzdb key order,
+// so pin the main zone for the ones where that order is unhelpful.
+const COUNTRY_TZ_OVERRIDE: Record<string, string> = {
+  US: "America/New_York",
+  CA: "America/Toronto",
+  AU: "Australia/Sydney",
+  MX: "America/Mexico_City",
+  BR: "America/Sao_Paulo",
+  ES: "Europe/Madrid",
+  RU: "Europe/Moscow",
+};
+
+function countryTimezone(country: string | null | undefined): string {
+  if (!country) return "";
+  const code = country.toUpperCase();
+  const override = COUNTRY_TZ_OVERRIDE[code];
+  if (override) return override;
+  try {
+    const c = getCountry(code);
+    if (c?.timezones?.length) return c.timezones[0];
+  } catch {}
+  return "";
+}
+
+function userTimezone(tz: string | null | undefined, country: string | null | undefined): string {
+  return tz && tz.trim() ? tz : (countryTimezone(country) || "UTC");
+}
+
+function getLocalTodayStr(timezone: string): string {
+  try {
+    return new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+  } catch { return new Date().toISOString().split("T")[0]; }
+}
+
+function getLocalHour(timezone: string): number {
+  try { return parseInt(new Date().toLocaleString("en-US", { timeZone: timezone, hour: "numeric", hour12: false }), 10); }
+  catch { return new Date().getHours(); }
+}
+
+// Convert a wall-clock "YYYY-MM-DD" + "HH:MM" (interpreted in `timezone`)
+// into epoch milliseconds. Approximation is fine for ±10 min windows.
+function zonedTimeToEpoch(dateStr: string, timeStr: string, timezone: string): number {
+  const naive = new Date(dateStr + "T" + (timeStr || "09:00") + ":00Z").getTime();
+  try {
+    const asStr = new Date(naive).toLocaleString("en-CA", {
+      timeZone: timezone, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    });
+    const m = asStr.match(/^(\d{4})-(\d{2})-(\d{2}), (\d{2}):(\d{2})/);
+    if (!m) return naive;
+    const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    return naive - (wall - naive);
+  } catch { return naive; }
+}
+
+// Next occurrence of the given local wall-clock hour (e.g. 8 or 20) in `timezone`.
+function nextLocalWallTime(hour: number, timezone: string): number {
+  const now = new Date();
+  const todayStr = getLocalTodayStr(timezone);
+  const guess = zonedTimeToEpoch(todayStr, `${String(hour).padStart(2, "0")}:00`, timezone);
+  return guess > now.getTime() ? guess : guess + 86400000;
+}
+
+async function pemToCryptoKey(pem: string): Promise<CryptoKey> {
+  const b64 = pem
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey("pkcs8", der, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+}
+
+async function getFCMAccessToken(): Promise<{ token?: string; error?: string }> {
+  const raw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "";
+  if (!raw) return { error: "env FIREBASE_SERVICE_ACCOUNT_JSON not set" };
+  try {
+    let key: any = null;
+    try { key = JSON.parse(raw); } catch {}
+    if (!key) {
+      try { key = JSON.parse(atob(raw)); } catch {}
+    }
+    if (!key) return { error: "cannot parse secret (raw JSON or base64)" };
+    const { client_email, private_key } = key;
+    if (!client_email || !private_key) return { error: "missing client_email/private_key" };
+    const now = Math.floor(Date.now() / 1000);
+    const signingKey = await pemToCryptoKey(private_key);
+    const jwt = await new SignJWT({
+      iss: client_email,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+    })
+      .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+      .sign(signingKey);
+
+    const tokRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }),
+    });
+    const tokJson = await tokRes.json();
+    if (!tokRes.ok || !tokJson.access_token) {
+      return { error: `token exchange failed ${tokRes.status}: ${JSON.stringify(tokJson).slice(0, 300)}` };
+    }
+    return { token: tokJson.access_token };
+  } catch (e) {
+    return { error: `mint failed: ${String(e)}` };
+  }
+}
+
+async function sendFCMPush(token: string, title: string, body: string, tag: string, data: Record<string, string> = {}): Promise<{ ok: boolean; statusCode?: number; detail?: string }> {
+  if (!FCM_PROJECT_ID) return { ok: false, detail: "FCM_PROJECT_ID not set" };
+  const auth = await getFCMAccessToken();
+  if (!auth.token) return { ok: false, detail: auth.error || "no access token" };
+  try {
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token,
+          notification: { title, body },
+          data: { tag, ...data },
+          android: {
+            priority: "high",
+            ttl: "86400s",
+            notification: {
+              channel_id: "adhera-doses",
+              sound: "default",
+              icon: "ic_launcher",
+              visibility: "public",
+            },
+          },
+          apns: {
+            payload: {
+              aps: {
+                "mutable-content": 1,
+                sound: "default",
+                badge: 1,
+                "content-available": 1,
+              },
+            },
+          },
+        },
+      }),
+    });
+    const txt = await res.text();
+    console.log(`FCM send ${res.status}: ${txt.slice(0, 300)}`);
+    if (!res.ok) return { ok: false, statusCode: res.status, detail: txt.slice(0, 300) };
+    return { ok: true, statusCode: res.status };
+  } catch (e) {
+    console.log("FCM send error", String(e));
+    return { ok: false, detail: String(e) };
+  }
+}
+
+async function sendPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string): Promise<{ ok: boolean; type: string; statusCode?: number; detail?: string }> {
+  if (sub.endpoint?.startsWith("fcm:")) {
+    const { title, body, tag, ...rest } = JSON.parse(payload);
+    const r = await sendFCMPush(sub.endpoint.slice(4), title, body, tag, rest);
+    return { ok: r.ok, type: "fcm", statusCode: r.statusCode, detail: r.detail };
+  }
+  try {
+    await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, { TTL: 86400 });
+    return { ok: true, type: "web" };
+  } catch (e: any) {
+    return { ok: false, type: "web", statusCode: e?.statusCode, detail: String(e) };
+  }
+}
+
+async function claimTag(supabase: any, tag: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from("notification_dedup")
+      .insert({ tag }, { ignoreDuplicates: true })
+      .select("tag");
+    return Array.isArray(data) && data.length > 0;
+  } catch {
+    // Fail closed: if we can't record the dedup, don't send (avoids spamming
+    // the same notification on every retry when the dedup table is down).
+    console.error(`dedup claim failed for ${tag}`);
+    return false;
+  }
+}
+
+function activeOnDay(m: any, day: Date): boolean {
+  const s = new Date(m.start_date), e = new Date(m.start_date);
+  e.setDate(e.getDate() + m.course_duration_days);
+  return s <= day && e >= day && m.active;
+}
+
+// Mirrors lib/data.js calcStreak (all active meds fully logged each day).
+function calcStreakAll(medLogs: any[], meds: any[], timezone: string): number {
+  if (!medLogs.length || !meds.length) return 0;
+  let streak = 0;
+  const now = new Date();
+  const tz = timezone || "UTC";
+  for (let d = 0; d <= 180; d++) {
+    const day = new Date(now);
+    day.setDate(now.getDate() - d);
+    const ds = day.toLocaleDateString("en-CA", { timeZone: tz });
+    const active = meds.filter(m => activeOnDay(m, day));
+    if (!active.length) { if (d === 0) continue; break; }
+    const full = active.every((m: any) => {
+      const need = m.times_per_day || 1;
+      return medLogs.filter((l: any) => l.medication_id === m.id && l.taken_at.startsWith(ds)).length >= need;
+    });
+    if (full) streak++;
+    else if (d > 0) break;
+  }
+  return streak;
+}
+
+// Like calcStreakAll but counts consecutive fully-logged days ending on endDate.
+function streakEndingAtAll(endDate: Date, medLogs: any[], meds: any[], timezone: string): number {
+  if (!medLogs.length || !meds.length) return 0;
+  let streak = 0;
+  const tz = timezone || "UTC";
+  for (let d = 0; d <= 180; d++) {
+    const day = new Date(endDate.getTime());
+    day.setDate(day.getDate() - d);
+    const ds = day.toLocaleDateString("en-CA", { timeZone: tz });
+    const active = meds.filter(m => activeOnDay(m, day));
+    if (!active.length) break;
+    const full = active.every((m: any) => {
+      const need = m.times_per_day || 1;
+      return medLogs.filter((l: any) => l.medication_id === m.id && l.taken_at.startsWith(ds)).length >= need;
+    });
+    if (full) streak++;
+    else break;
+  }
+  return streak;
+}
+
+const DAILY_MSGS = [
+  { min: 0,   title: "Good morning!", body: "Start your day right — take your medication and log how you feel." },
+  { min: 3,   title: "3-Day Streak!", body: "You've completed 3 days in a row! You're building momentum." },
+  { min: 7,   title: "One Week Strong!", body: "7 consecutive days! Consistency is key to better health." },
+  { min: 14,  title: "Two-Week Streak!", body: "14 days on track! Your routine is becoming a habit." },
+  { min: 30,  title: "30-Day Club!", body: "A full month of adherence! This is incredible dedication." },
+  { min: 60,  title: "60 Days Strong!", body: "Two months of unwavering commitment. You're a champion!" },
+  { min: 90,  title: "90-Day Warrior!", body: "Quarter-year streak! Most people dream of this consistency." },
+  { min: 180, title: "Half-Year Legend!", body: "180 days of perfect adherence. Absolutely legendary!" },
+];
+
+serve(async (req) => {
+  if (!authorized(req)) {
+    return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 });
+  }
+  try {
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("mode");
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    const { data: meds, error: medErr } = await supabase
+      .from("medications")
+      .select("*")
+      .eq("active", true);
+
+    if (medErr) {
+      return new Response(JSON.stringify({ ok: false, error: `medications query failed: ${medErr.message}` }), { status: 200 });
+    }
+
+    const [visitsRes, vitalRemindersRes, personalRes] = await Promise.all([
+      supabase.from("visits").select("*"),
+      supabase.from("vital_reminders").select("*"),
+      supabase.from("personal_details").select("user_id, dob").not("dob", "is", null),
+    ]);
+
+    if (visitsRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `visits query failed: ${visitsRes.error.message}` }), { status: 200 });
+    }
+    if (vitalRemindersRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `vital_reminders query failed: ${vitalRemindersRes.error.message}` }), { status: 200 });
+    }
+    if (personalRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `personal_details query failed: ${personalRes.error.message}` }), { status: 200 });
+    }
+
+    const visits = (visitsRes.data || []).filter((v: any) => {
+      if (v.status === "attended" || v.status === "missed") return false;
+      return v.reminder_minutes && v.reminder_minutes > 0;
+    });
+    const vitalReminders = (vitalRemindersRes.data || []).filter((r: any) => r.interval_id && r.interval_id !== "off");
+    const personalDetails = (personalRes.data || []).filter((p: any) => p.dob && String(p.dob).trim() !== "");
+
+    const medUserIds = (meds || []).map((m: any) => m.user_id);
+    const visitUserIds = visits.map((v: any) => v.user_id);
+    const vitalUserIds = vitalReminders.map((r: any) => r.user_id);
+    const birthdayUserIds = personalDetails.map((p: any) => p.user_id);
+    const userIds = [...new Set([...medUserIds, ...visitUserIds, ...vitalUserIds, ...birthdayUserIds])];
+
+    if (!userIds.length) {
+      return new Response(JSON.stringify({ ok: true, msg: "No users", sent: 0 }), { status: 200 });
+    }
+
+    const [profilesRes, logsRes, subsRes] = await Promise.all([
+      supabase.from("profiles").select("id, timezone, country, wake_time, reminder_lead, last_checkin_date, full_name").in("id", userIds),
+      supabase.from("dose_logs").select("medication_id, taken_at, user_id").in("user_id", userIds).gte("taken_at", new Date(Date.now() - 86400000 * 180).toISOString()),
+      supabase.from("push_subscriptions").select("user_id, endpoint, p256dh, auth").in("user_id", userIds),
+    ]);
+
+    if (subsRes.error) {
+      return new Response(JSON.stringify({ ok: false, error: `push_subscriptions query failed: ${subsRes.error.message}` }), { status: 200 });
+    }
+
+    const profiles = profilesRes.data || [];
+    const allLogs = logsRes.data || [];
+    const subs = subsRes.data || [];
+
+    const profileTz = new Map<string, string>();
+    const profileCountry = new Map<string, string>();
+    const profileCheckinDate = new Map<string, string>();
+    profiles.forEach((p: any) => {
+      profileTz.set(p.id, p.timezone || "");
+      profileCountry.set(p.id, p.country || "");
+      if (p.last_checkin_date) profileCheckinDate.set(p.id, p.last_checkin_date);
+    });
+
+    const tzFor = (userId: string): string => userTimezone(profileTz.get(userId), profileCountry.get(userId));
+
+    if (!subs.length) {
+      return new Response(JSON.stringify({ ok: true, msg: "No subscriptions", sent: 0 }), { status: 200 });
+    }
+
+    const subMap = new Map<string, any[]>();
+    subs.forEach((s: any) => {
+      if (!subMap.has(s.user_id)) subMap.set(s.user_id, []);
+      subMap.get(s.user_id)!.push({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth });
+    });
+
+    let sent = 0;
+    const results: any[] = [];
+    const now = new Date();
+    const nowMs = Date.now();
+
+    const medList = meds || [];
+
+    for (const med of medList) {
+      const tz = tzFor(med.user_id);
+      const prof = profiles.find(p => p.id === med.user_id);
+      // Per-med lead wins over the profile default — matching the client.
+      const leadMin =
+        med.reminder_minutes != null && med.reminder_minutes !== ""
+          ? Number(med.reminder_minutes)
+          : (prof?.reminder_lead ?? 30);
+      const medLogs = allLogs.filter((l: any) => l.user_id === med.user_id && l.medication_id === med.id);
+
+      const end = new Date(med.start_date);
+      end.setDate(end.getDate() + med.course_duration_days);
+      if (end < now) continue;
+
+      const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
+      const lastLog = medLogs.sort((a: any, b: any) => b.taken_at.localeCompare(a.taken_at))[0];
+      if (!lastLog) continue;
+
+      const nextMs = new Date(lastLog.taken_at).getTime() + intervalMs;
+      if (medLogs.some((l: any) => new Date(l.taken_at).getTime() >= nextMs)) continue;
+
+      const diff = nextMs - nowMs;
+      const reminderDiff = diff - leadMin * 60000;
+
+      const isDoseTime = diff > -600000 && diff < 600000;
+      const isReminderTime = leadMin > 0 && reminderDiff > -600000 && reminderDiff < 600000;
+      if (!isDoseTime && !isReminderTime) continue;
+
+      const streak = calcStreakAll(allLogs.filter((l: any) => l.user_id === med.user_id), medList.filter((m: any) => m.user_id === med.user_id), tz);
+      const dayNum = Math.max(1, Math.floor((now.getTime() - new Date(med.start_date).getTime()) / 86400000) + 1);
+      const day = `Day ${dayNum}/${med.course_duration_days}`;
+      const doseInfo = `${med.dosage_amount} ${med.dosage_unit}`;
+
+      let title: string, body: string, tag: string;
+      if (isReminderTime) {
+        title = `Reminder: ${med.name}`;
+        body = `${doseInfo} · ${day}${streak > 0 ? `\nStreak: ${streak} days` : ""}`;
+        tag = `mt-rem-${med.id}-${nextMs}`;
+      } else {
+        if (med.remind_at_dose === false) continue;
+        title = `${med.name}`;
+        body = `Take ${doseInfo}${med.notes ? `\n\n${med.notes}` : ""}\n${day}${streak > 0 ? `\n${streak} day streak` : ""}`;
+        tag = `mt-dose-${med.id}-${nextMs}`;
+      }
+      if (!(await claimTag(supabase, tag))) continue;
+
+      const payload = JSON.stringify({ title, body, tag });
+      const userSubs = subMap.get(med.user_id) || [];
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    // Hospital visit reminders
+    for (const visit of visits) {
+      const visitMs = zonedTimeToEpoch(visit.date, visit.time || "09:00", tzFor(visit.user_id));
+      const reminderMs = visitMs - (visit.reminder_minutes || 0) * 60000;
+      const reminderDiff = reminderMs - nowMs;
+
+      if (reminderDiff > -600000 && reminderDiff < 600000) {
+        const tag = `mt-visit-${visit.id}-${reminderMs}`;
+        if (await claimTag(supabase, tag)) {
+          const title = `Visit: ${visit.reason || "Doctor appointment"}`;
+          const body = `${visit.facility || visit.doctor || ""} at ${visit.time || "09:00"}${visit.notes ? "\n" + visit.notes : ""}`;
+          const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
+          const userSubs = subMap.get(visit.user_id) || [];
+
+          for (const sub of userSubs) {
+            const r = await sendPush(sub, payload);
+            results.push(r);
+            if (r.ok) sent++;
+            else if (r.statusCode === 404 || r.statusCode === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            }
+          }
+        }
+      }
+
+      // Appointment-is-now push — fires at the visit time itself (only when a
+      // separate earlier reminder exists, so "At time" reminders don't duplicate).
+      if ((visit.reminder_minutes || 0) > 0) {
+        const visitNowDiff = visitMs - nowMs;
+        if (visitNowDiff > -600000 && visitNowDiff < 600000) {
+          const tag = `mt-visit-now-${visit.id}-${visitMs}`;
+          if (await claimTag(supabase, tag)) {
+            const when = visit.time || "09:00";
+            const place = visit.facility ? ` at ${visit.facility}` : visit.doctor ? ` with ${visit.doctor}` : "";
+            const title = "Appointment now";
+            const body = `${visit.reason || "Your scheduled visit"}${place} is starting now (${when}). Tap to log it as attended after your visit.`;
+            const payload = JSON.stringify({ title, body, tag, visitId: visit.id });
+            const userSubs = subMap.get(visit.user_id) || [];
+
+            for (const sub of userSubs) {
+              const r = await sendPush(sub, payload);
+              results.push(r);
+              if (r.ok) sent++;
+              else if (r.statusCode === 404 || r.statusCode === 410) {
+                await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Vital check reminders
+    const VITAL_INTERVALS: Record<string, number> = {
+      "4h": 4, "6h": 6, "8h": 8, "12h": 12, "24h": 24, "morning_evening": 12,
+    };
+    const VITAL_LABELS: Record<string, string> = {
+      blood_pressure: "Blood Pressure",
+      glucose: "Blood Sugar",
+      weight: "Weight",
+      heart_rate: "Heart Rate",
+      temperature: "Temperature",
+      spo2: "Oxygen Level",
+      cholesterol: "Total Cholesterol",
+      bmi: "BMI",
+      hba1c: "HbA1c",
+      water_intake: "Water Intake",
+      peak_flow: "Peak Flow",
+    };
+
+    const { data: allVitals } = await supabase
+      .from("vitals")
+      .select("user_id, type, created_at")
+      .in("user_id", userIds)
+      .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+
+    const lastVitalMap = new Map<string, string>();
+    (allVitals || []).forEach((v: any) => {
+      const key = `${v.user_id}|${v.type}`;
+      const cur = lastVitalMap.get(key);
+      if (!cur || v.created_at > cur) lastVitalMap.set(key, v.created_at);
+    });
+
+    for (const reminder of vitalReminders) {
+      const tz = tzFor(reminder.user_id);
+      const intervalHours = VITAL_INTERVALS[reminder.interval_id];
+      if (!intervalHours) continue;
+      const label = VITAL_LABELS[reminder.type];
+      if (!label) continue;
+
+      const last = lastVitalMap.get(`${reminder.user_id}|${reminder.type}`);
+      let scheduledMs: number;
+      if (last) {
+        scheduledMs = new Date(last).getTime() + intervalHours * 3600000;
+      } else if (reminder.interval_id === "morning_evening") {
+        scheduledMs = nextLocalWallTime(8, tz);
+        if (scheduledMs - nowMs > 12 * 3600000) scheduledMs = nextLocalWallTime(20, tz);
+      } else {
+        scheduledMs = nextLocalWallTime(8, tz);
+      }
+
+      const diff = scheduledMs - nowMs;
+      if (diff > 600000 || diff < -600000) continue;
+
+      const tag = `mt-vital-${reminder.user_id}-${reminder.type}-${scheduledMs}`;
+      if (!(await claimTag(supabase, tag))) continue;
+
+      const title = `Time to check your ${label}`;
+      const body = `Your ${label} is due. Regular monitoring helps you stay on top of your health. Tap to log now.`;
+      const payload = JSON.stringify({ title, body, tag, vitalType: reminder.type });
+      const userSubs = subMap.get(reminder.user_id) || [];
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    // Evening check-in reminder (7-9 PM local)
+    for (const userId of userIds) {
+      const tz = tzFor(userId);
+      const todayStr = getLocalTodayStr(tz);
+      const localHour = getLocalHour(tz);
+      if (localHour < 19 || localHour > 21) continue;
+      const lastCheckin = profileCheckinDate.get(userId);
+      if (lastCheckin === todayStr) continue;
+      const userSubs = subMap.get(userId);
+      if (!userSubs?.length) continue;
+      const userMeds = medList.filter((m: any) => m.user_id === userId);
+      const streak = userMeds.length ? calcStreakAll(allLogs.filter((l: any) => l.user_id === userId), userMeds, tz) : 0;
+      const tag = `mt-checkin-${userId}-${todayStr}`;
+      if (!(await claimTag(supabase, tag))) continue;
+      const payload = JSON.stringify({
+        title: "How was your day?",
+        body: `Take a moment to log how you're feeling today.${streak > 0 ? `\nCurrent streak: ${streak} days` : ""}\nTap to check in.`,
+        tag,
+      });
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+      }
+    }
+
+    // Streak milestone encouragements (morning, 7-10 AM local)
+    for (const userId of userIds) {
+      const tz = tzFor(userId);
+      const localHour = getLocalHour(tz);
+      if (localHour < 7 || localHour > 10) continue;
+      const userLogs = allLogs.filter((l: any) => l.user_id === userId);
+      const userSubs = subMap.get(userId);
+      if (!userSubs?.length) continue;
+      const userMeds = medList.filter((m: any) => m.user_id === userId);
+      if (!userMeds.length) continue;
+      const streak = calcStreakAll(userLogs, userMeds, tz);
+      const todayStr = getLocalTodayStr(tz);
+      const tag = `mt-daily-${userId}-${todayStr}`;
+      if (!(await claimTag(supabase, tag))) continue;
+      let msg = [...DAILY_MSGS].reverse().find(m => streak >= m.min) || DAILY_MSGS[0];
+      if (msg.min > 0) {
+        const celebrated = await claimTag(supabase, `mt-milestone-${userId}-${msg.min}`);
+        if (!celebrated) msg = DAILY_MSGS[0];
+      }
+      const payload = JSON.stringify({ title: msg.title, body: `${msg.body}\nCurrent streak: ${streak} days`, tag });
+
+      if (msg.min > 0) {
+        // Server owns native milestone pushes. The web app celebrates milestones
+        // locally (lib/notifications.js checkMilestones), so web subs keep getting
+        // the plain daily greeting to avoid double celebration on the same device.
+        type Sub = { endpoint: string; p256dh: string; auth: string };
+        const nativeSubs = userSubs.filter((s: Sub) => s.endpoint?.startsWith("fcm:"));
+        const webSubs = userSubs.filter((s: Sub) => !s.endpoint?.startsWith("fcm:"));
+        const gmPayload = JSON.stringify({ title: DAILY_MSGS[0].title, body: `${DAILY_MSGS[0].body}\nCurrent streak: ${streak} days`, tag });
+        const deliver = async (subs: Sub[], p: string) => {
+          for (const sub of subs) {
+            const r = await sendPush(sub, p);
+            results.push(r);
+            if (r.ok) sent++;
+            else if (r.statusCode === 404 || r.statusCode === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            }
+          }
+        };
+        await deliver(nativeSubs, payload);
+        await deliver(webSubs, gmPayload);
+        continue;
+      }
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    // Missed-streak motivation (day after a streak breaks)
+    const STREAK_BREAK_MIN = 3;
+    for (const userId of userIds) {
+      const tz = tzFor(userId);
+      const userSubs = subMap.get(userId);
+      if (!userSubs?.length) continue;
+      const userMeds = medList.filter((m: any) => m.user_id === userId);
+      if (!userMeds.length) continue;
+      const userLogs = allLogs.filter((l: any) => l.user_id === userId);
+      const dayHasLog = (ds: string) => userLogs.some((l: any) => l.taken_at.startsWith(ds));
+      const yesterday = new Date(now.getTime() - 86400000);
+      const dayBefore = new Date(now.getTime() - 2 * 86400000);
+      const yesterdayStr = yesterday.toLocaleDateString("en-CA", { timeZone: tz });
+      const dayBeforeStr = dayBefore.toLocaleDateString("en-CA", { timeZone: tz });
+      if (dayHasLog(yesterdayStr)) continue;
+      if (!dayHasLog(dayBeforeStr)) continue;
+      if (dayHasLog(getLocalTodayStr(tz))) continue;
+      const streakEnded = streakEndingAtAll(dayBefore, userLogs, userMeds, tz);
+      if (streakEnded < STREAK_BREAK_MIN) continue;
+      const localHour = getLocalHour(tz);
+      if (localHour < 7 || localHour > 21) continue;
+      const tag = `mt-streakbreak-${userId}-${dayBeforeStr}`;
+      if (!(await claimTag(supabase, tag))) continue;
+      const payload = JSON.stringify({
+        title: "Let's get back on track",
+        body: `You kept a ${streakEnded}-day streak going. Missing a day happens — today is a fresh start. Take your medication and rebuild it one day at a time.`,
+        tag,
+      });
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) sent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    // Caregiver missed-dose alerts (Family tier)
+    const { data: familyLinks } = await supabase
+      .from("family_members")
+      .select("id, owner_id, member_user_id, member_name, member_email")
+      .eq("status", "active")
+      .not("member_user_id", "is", null);
+
+    if (familyLinks?.length) {
+      const ownerIds = [...new Set(familyLinks.map((l: any) => l.owner_id))];
+      const ownerPlansRes = await supabase
+        .from("profiles")
+        .select("id, plan")
+        .in("id", ownerIds);
+      const ownerPlanMap = new Map<string, string>((ownerPlansRes.data || []).map((p: any) => [p.id, p.plan]));
+      const ownerSubsRes = await supabase
+        .from("push_subscriptions")
+        .select("user_id, endpoint, p256dh, auth")
+        .in("user_id", ownerIds);
+      const ownerSubMap = new Map<string, any[]>();
+      (ownerSubsRes.data || []).forEach((s: any) => {
+        if (!ownerSubMap.has(s.user_id)) ownerSubMap.set(s.user_id, []);
+        ownerSubMap.get(s.user_id)!.push({ endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth });
+      });
+
+      for (const link of familyLinks) {
+        if (ownerPlanMap.get(link.owner_id) !== "family") continue;
+        const memberMeds = medList.filter((m: any) => m.user_id === link.member_user_id);
+        if (!memberMeds.length) continue;
+        const ownerSubs = ownerSubMap.get(link.owner_id) || [];
+        if (!ownerSubs.length) continue;
+
+        const tz = tzFor(link.member_user_id);
+        const memberProf = profiles.find((p: any) => p.id === link.member_user_id);
+        const todayStr = getLocalTodayStr(tz);
+
+        const missed: { name: string; time: string }[] = [];
+        for (const med of memberMeds) {
+          const end = new Date(med.start_date);
+          end.setDate(end.getDate() + med.course_duration_days);
+          if (end < now || new Date(med.start_date) > now) continue;
+
+          const medLogs = allLogs.filter((l: any) =>
+            l.user_id === med.user_id && l.medication_id === med.id);
+          const lastLog = medLogs.sort((a: any, b: any) => b.taken_at.localeCompare(a.taken_at))[0];
+          if (!lastLog) continue;
+
+          const intervalMs = (med.dose_interval_hours || 24 / (med.times_per_day || 1)) * 3600000;
+          const nextMs = new Date(lastLog.taken_at).getTime() + intervalMs;
+          if (nowMs - nextMs <= 30 * 60000) continue;
+
+          let time = "";
+          try {
+            time = new Date(nextMs).toLocaleString("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false });
+          } catch {}
+          missed.push({ name: med.name, time });
+        }
+
+        if (!missed.length) continue;
+
+        const memberName = link.member_name || memberProf?.full_name || link.member_email || "your family member";
+        const listStr = missed.slice(0, 3).map(m => m.time ? `${m.name} at ${m.time}` : m.name).join(", ");
+        const title = `Missed dose: ${memberName}`;
+        const body = `${missed.length} dose${missed.length > 1 ? "s" : ""} missed — ${listStr}. Remind them to take it.`;
+        const tag = `mt-family-${link.id}-${todayStr}`;
+        if (!(await claimTag(supabase, tag))) continue;
+        const payload = JSON.stringify({ title, body, tag });
+
+        for (const sub of ownerSubs) {
+          const r = await sendPush(sub, payload);
+          results.push(r);
+          if (r.ok) sent++;
+          else if (r.statusCode === 404 || r.statusCode === 410) {
+            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+          }
+        }
+      }
+    }
+
+    // Birthday greetings (matches the saved DOB's month/day against the user's
+    // local date; deduped per user per day so the daily cron only sends once)
+    let birthdaySent = 0;
+    for (const pd of personalDetails) {
+      const dobMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(pd.dob).trim());
+      if (!dobMatch) continue;
+
+      const tz = tzFor(pd.user_id);
+      const todayStr = getLocalTodayStr(tz);
+      if (todayStr.slice(5) !== `${dobMatch[2]}-${dobMatch[3]}`) continue;
+
+      const userSubs = subMap.get(pd.user_id);
+      if (!userSubs?.length) continue;
+
+      const tag = `mt-bday-${pd.user_id}-${todayStr}`;
+      if (!(await claimTag(supabase, tag))) continue;
+
+      const prof = profiles.find((p: any) => p.id === pd.user_id);
+      const firstName = prof?.full_name ? String(prof.full_name).trim().split(/\s+/)[0] : "";
+      const namePart = firstName ? `, ${firstName}` : "";
+      const payload = JSON.stringify({
+        title: `Happy Birthday${namePart}!`,
+        body: `Wishing you a wonderful day full of health and happiness. Take your medication and keep taking care of yourself!`,
+        tag,
+      });
+
+      for (const sub of userSubs) {
+        const r = await sendPush(sub, payload);
+        results.push(r);
+        if (r.ok) birthdaySent++;
+        else if (r.statusCode === 404 || r.statusCode === 410) {
+          await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        }
+      }
+    }
+
+    try {
+      await supabase
+        .from("notification_dedup")
+        .delete()
+        .lt("sent_at", new Date(Date.now() - 7 * 86400000).toISOString());
+    } catch {}
+
+    return new Response(JSON.stringify({ ok: true, sent, birthday: birthdaySent, native: results.filter(r => r.type === "fcm" && r.ok).length, results }), { status: 200 });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
+  }
+});

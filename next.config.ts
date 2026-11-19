@@ -1,0 +1,56 @@
+import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
+
+const isDevelopment = process.env.NODE_ENV === "development";
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://js.paystack.co https://checkout.paystack.com`,
+  "style-src 'self' 'unsafe-inline' https://checkout.paystack.com",
+  "img-src 'self' https://*.supabase.co https://*.paystack.com https://*.paystack.co data: blob:",
+  "connect-src 'self' https://*.supabase.co https://api.paystack.co https://checkout.paystack.com https://standard.paystack.co https://*.pusher.com wss://*.pusher.com",
+  "frame-src https://paystack.co https://checkout.paystack.com https://standard.paystack.co",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
+  allowedDevOrigins: ["10.0.2.2"],
+  headers: async () => [
+    {
+      source: "/(.*)",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "DENY" },
+        { key: "X-XSS-Protection", value: "1; mode=block" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+        { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+        { key: "Content-Security-Policy", value: contentSecurityPolicy },
+      ],
+    },
+    {
+      source: "/((?!_next/static|_next/image|favicon.ico|icon|manifest\\.json|robots\\.txt|sitemap\\.xml|sw\\.js).*)",
+      headers: [
+        { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, proxy-revalidate" },
+        { key: "Pragma", value: "no-cache" },
+        { key: "Expires", value: "0" },
+      ],
+    },
+    {
+      source: "/api/(.*)",
+      headers: [
+        { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
+      ],
+    },
+  ],
+};
+
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  tunnelRoute: "/sentry-tunnel",
+  silent: !process.env.CI,
+});

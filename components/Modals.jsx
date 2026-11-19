@@ -1,0 +1,703 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { CSS } from "@/lib/constants";
+import { sb } from "@/lib/supabase";
+import { useLang } from "@/lib/i18n";
+import { toastError } from "@/lib/toast";
+import { COUNTRIES, getPricing } from "@/lib/data";
+import { useSwipe } from "@/lib/useSwipe";
+import { FormControl, FormRow } from "@/components/FormControls";
+import { getTierConfig, featureLabels } from "@/lib/tiers";
+import { getPaymentsConfig } from "@/lib/payments";
+import CustomSelect from "@/components/CustomSelect";
+import { CheckoutSheet, CheckoutFrame, CheckoutLoading, CheckoutSuccess } from "@/components/CheckoutSheet";
+import { Crown, Users, Sparkles, Trash2, Pill, Globe, Check, User, UserPlus, Mail } from "lucide-react";
+
+function Ico({ children, ...props }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }} {...props}>{children}</span>;
+}
+
+export function PrivacyModal({ onClose }) {
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Privacy Policy</div>
+          <div style={{fontSize:14,color:"var(--t2)",lineHeight:1.7,display:"flex",flexDirection:"column",gap:14}}>
+            <p><strong>Effective date:</strong> July 1, 2026</p>
+            <p>Adherly (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This policy explains how we collect, use, and safeguard your personal information when you use our medication tracking application.</p>
+            <p><strong>1. Information We Collect</strong></p>
+            <p>We collect information you provide directly: name, email address, medication names, dosages, schedules, dose logs, health conditions, and health goals. We also collect usage data such as app interactions and notification preferences.</p>
+            <p><strong>2. Health Data</strong></p>
+            <p>Adherly processes health-related data including medication schedules, dose history, and adherence patterns. This data is classified as &quot;special category data&quot; under GDPR and is treated with the highest level of protection. We process this data solely to deliver the Adherly service to you.</p>
+            <p><strong>3. How We Use Your Information</strong></p>
+            <p>Your data is used solely to deliver the Adherly service: tracking medications, sending reminders, generating adherence reports, and improving the app experience. We never sell your personal data.</p>
+            <p><strong>4. Data Storage & Security</strong></p>
+            <p>Your data is stored securely on Supabase servers with encryption at rest (AES-256) and in transit (TLS). We implement industry-standard security measures including HTTPS, encrypted database connections, and strict access controls.</p>
+            <p><strong>5. Data Retention</strong></p>
+            <p>We retain your data for as long as your account is active. You may request deletion of your data at any time by deleting your account within the app&apos;s Privacy & Data settings.</p>
+            <p><strong>6. Your Rights</strong></p>
+            <p>You have the right to: access your data, export your data (JSON or CSV), correct your data, delete your account and all associated data. You can exercise these rights directly through the app&apos;s Profile → Privacy & Data settings.</p>
+            <p><strong>7. Third-Party Services</strong></p>
+            <p>We use Supabase for authentication and database hosting. We use Paystack for payment processing. Push notifications may use your browser&apos;s notification API. No other third parties have access to your personal medication data.</p>
+            <p><strong>8. Changes to This Policy</strong></p>
+            <p>We may update this policy from time to time. Significant changes will be notified via email or in-app notice.</p>
+            <p><strong>9. Contact</strong></p>
+            <p>For privacy-related inquiries, contact us at privacy@adhera.app.</p>
+          </div>
+          <button className="btn btn-primary" style={{marginTop:20}} onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function TermsModal({ onClose }) {
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="sheet" style={{maxHeight:"90dvh"}} onClick={e=>e.stopPropagation()}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px 20px",overflowY:"auto",maxHeight:"calc(90dvh - 40px)"}}>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Terms of Service</div>
+          <div style={{fontSize:14,color:"var(--t2)",lineHeight:1.7,display:"flex",flexDirection:"column",gap:14}}>
+            <p><strong>Effective date:</strong> July 1, 2026</p>
+            <p>By using Adherly (&quot;the App&quot;), you agree to the following terms and conditions.</p>
+            <p><strong>1. Service Description</strong></p>
+            <p>Adherly provides medication tracking, dose reminders, adherence analytics, and related health management tools. The App is a informational tool only and does not provide medical advice.</p>
+            <p><strong>2. User Responsibilities</strong></p>
+            <p>You are responsible for the accuracy of the medication information you enter. Always consult your healthcare provider before making changes to your medication regimen. Never rely solely on app reminders for critical health decisions.</p>
+            <p><strong>3. Medical Disclaimer</strong></p>
+            <p>Adherly is not a medical device and does not diagnose, treat, cure, or prevent any disease. The App does not replace professional medical advice, diagnosis, or treatment. If you have a medical emergency, call your doctor or emergency services immediately.</p>
+            <p><strong>4. Account & Data</strong></p>
+            <p>You are responsible for maintaining the confidentiality of your account credentials. You own your data; we grant you no license to use the App&apos;s design or branding.</p>
+            <p><strong>5. Acceptable Use</strong></p>
+            <p>You agree not to misuse the App, including attempting unauthorized access, distributing malware, or using the service for any illegal purpose.</p>
+            <p><strong>6. Limitation of Liability</strong></p>
+            <p>Adherly and its developers shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App, including but not limited to missed doses, incorrect medication information, or health outcomes.</p>
+            <p><strong>7. Subscription & Payments</strong></p>
+            <p>Premium features require a paid subscription. Prices are displayed in local currency and may change with notice. Cancellation takes effect at the end of the current billing period. Refunds are handled per our refund policy.</p>
+            <p><strong>8. Termination</strong></p>
+            <p>We reserve the right to suspend or terminate accounts that violate these terms or engage in abusive behavior. You may delete your account at any time.</p>
+            <p><strong>9. Governing Law</strong></p>
+            <p>These terms are governed by the laws of Ghana. Any disputes shall be resolved through binding arbitration.</p>
+            <p><strong>10. Contact</strong></p>
+            <p>For questions about these terms, contact us at legal@adhera.app.</p>
+          </div>
+          <button className="btn btn-primary" style={{marginTop:20}} onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function UpgradeModal({ country, userEmail, userId, currentPlan, initialPlan, onClose, onUpgrade }) {
+  const { t } = useLang();
+  const upgradeTarget = getTierConfig(currentPlan || "free").upgradeTarget || "pro";
+  const [selected, setSelected] = useState(
+    initialPlan && ["pro", "family"].includes(initialPlan)
+      ? initialPlan
+      : currentPlan === "pro" || currentPlan === "family" ? (currentPlan === "pro" ? "family" : "family") : upgradeTarget
+  );
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [phase, setPhase] = useState("pick"); // pick → launch → popup → done
+  const [auth, setAuth] = useState(null); // { url, ref } for the in-app Paystack frame
+  const iframeReadyRef = useRef(false);
+  const handleSwipe = useSwipe({ onSwipeDown: onClose });
+
+  function closePaystack() {
+    setAuth(null);
+    iframeReadyRef.current = false;
+    try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+    try { sessionStorage.removeItem("adhera_fastspring"); } catch {}
+    document.querySelectorAll('[class*="paystack"]').forEach(el => el.remove());
+    document.querySelectorAll('iframe[src*="paystack"]').forEach(el => el.remove());
+    document.querySelectorAll('.paystack-iframe-modal, .paystack-overlay, .paystack-backdrop').forEach(el => el.remove());
+    setPhase("pick");
+    setBusy(false);
+  }
+
+  useEffect(() => {
+    if (phase === "launch" && auth) {
+      const id = setTimeout(() => { iframeReadyRef.current = true; setPhase("popup"); }, 9000);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [phase, auth]);
+
+  useEffect(() => {
+    if (phase !== "popup" || !auth?.ref) return;
+    let alive = true;
+    const id = setInterval(async () => {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
+      try {
+        const res = await fetch("/api/paystack/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ reference: auth.ref, country }),
+        });
+        if (!alive) return;
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          clearInterval(id);
+          try { sessionStorage.removeItem("adhera_pending_plan"); } catch {}
+          setPhase("done");
+        }
+      } catch {}
+    }, 7000);
+    return () => { alive = false; clearInterval(id); };
+  }, [phase, auth?.ref, country]);
+
+  useEffect(() => {
+    if (phase === "popup" || phase === "verify") {
+      function onKey(e) { if (e.key === "Escape") closePaystack(); }
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }
+    return undefined;
+  }, [phase]);
+  const { pricing } = getPricing(country || "GH");
+  const selCountry = COUNTRIES.find(c => c.code === (country || "GH")) || COUNTRIES[0];
+  const pay = getPaymentsConfig(country || "GH");
+
+  const plans = [
+    {
+      id: "pro",
+      name: getTierConfig("pro").label,
+      icon: <Crown size={22} strokeWidth={2.2} color={getTierConfig("pro").theme.accent}/>,
+      color: getTierConfig("pro").theme.accent,
+      price: pricing.pro.label,
+      period: "/month",
+      tagline: "Everything you need for full adherence",
+      features: [
+        "unlimitedMeds",
+        "fullHistory",
+        "vitals",
+        "reports",
+        "refillReminder",
+        "interactionCheck",
+        "sideEffects",
+        "healthJournal",
+      ],
+    },
+    {
+      id: "family",
+      name: getTierConfig("family").label,
+      icon: <Users size={22} strokeWidth={2.2} color={getTierConfig("family").theme.accent}/>,
+      color: getTierConfig("family").theme.accent,
+      price: pricing.family.label,
+      period: "/month",
+      tagline: "One account for the whole household",
+      features: [
+        "upToFiveProfiles",
+        "familyDashboard",
+        "perMemberVitals",
+        "perMemberReports",
+        "managedProfiles",
+        "caregiverAlerts",
+        "reports",
+      ],
+    },
+  ];
+
+  const plan = plans.find(p => p.id === selected);
+
+  async function handlePayment() {
+    setBusy(true);
+    setErr("");
+
+    if (!pay.ready) {
+      setErr(pay.reason);
+      setBusy(false);
+      return;
+    }
+
+    try {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
+      const initRes = await fetch("/api/paystack/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: selected, country }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok || !initData.ok || !initData.access_code || !initData.reference) {
+        setErr(initData.error || "Failed to start payment. Please try again.");
+        setBusy(false);
+        return;
+      }
+
+      try { sessionStorage.setItem("adhera_pending_plan", selected); } catch {}
+      iframeReadyRef.current = false;
+      setAuth({ url: initData.authorization_url, ref: initData.reference });
+      setPhase("launch");
+    } catch (e) {
+      setErr(e.message || "Payment failed. Please try again.");
+      setBusy(false);
+      setPhase("checkout");
+    }
+  }
+
+  async function handleFastSpringPayment() {
+    setBusy(true);
+    setErr("");
+
+    if (!pay.ready) {
+      setErr(pay.reason);
+      setBusy(false);
+      return;
+    }
+
+    try {
+      let token = "";
+      try { const s = await sb.auth.getSession(); token = s?.data?.session?.access_token || ""; } catch {}
+      const initRes = await fetch("/api/fastspring/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: selected, country }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok || !initData.ok || !initData.url || !initData.reference) {
+        setErr(initData.error || "Failed to start payment. Please try again.");
+        setBusy(false);
+        setPhase("checkout");
+        return;
+      }
+      try { sessionStorage.setItem("adhera_fastspring", JSON.stringify({ plan: selected, country })); } catch {}
+      setPhase("launch");
+      window.location.assign(initData.url);
+    } catch (e) {
+      setErr(e.message || "Payment failed. Please try again.");
+      setBusy(false);
+      setPhase("checkout");
+    }
+  }
+
+const VERIFY_STEPS = ["Verifying your payment", "Confirming your subscription", "Unlocking your plan"];
+
+  const gatewayName = pay.gateway === "fastspring" ? "FastSpring" : "Paystack";
+
+  if (phase === "checkout") {
+    return (
+      <CheckoutSheet
+        plan={{ name: plan.name, tagline: plan.tagline }}
+        billing={{ amountLabel: plan.price }}
+        countryName={selCountry.name}
+        email={userEmail || "Your account email"}
+        gatewayLabel={gatewayName}
+        busy={busy}
+        err={err}
+        canPay={pay.ready}
+        ctaLabel={`Subscribe · ${plan.price}/month`}
+        onPay={pay.gateway === "fastspring" ? handleFastSpringPayment : handlePayment}
+        onClose={() => setPhase("pick")}
+      />
+    );
+  }
+
+  if (phase === "launch" || phase === "popup") {
+    const ready = phase === "popup";
+    return (
+      <>
+        <div style={ready ? { display: "none" } : undefined}>
+          <CheckoutLoading plan={plan} color={plan.color} onCancel={closePaystack} />
+        </div>
+        {auth && (
+          <CheckoutFrame
+            url={auth.url}
+            visible={ready}
+            onLoaded={() => { if (iframeReadyRef.current) return; iframeReadyRef.current = true; setPhase("popup"); }}
+            onClose={closePaystack}
+          />
+        )}
+      </>
+    );
+  }
+
+  if (phase === "verify") {
+    return <CheckoutLoading plan={plan} color={plan.color} steps={VERIFY_STEPS} onCancel={closePaystack} />;
+  }
+
+  if (phase === "done") {
+    return <CheckoutSuccess plan={plan} color={plan.color} onDone={() => { if (typeof onUpgrade === "function") onUpgrade(selected); }} />;
+  }
+
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" style={{maxHeight:"95dvh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle" {...handleSwipe}/>
+        <div style={{padding:"0 20px 8px",textAlign:"center"}}>
+          <div style={{marginBottom:8,display:"flex",justifyContent:"center"}}><Ico><Sparkles size={26} strokeWidth={2} color="var(--orange)"/></Ico></div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>
+            {currentPlan === "pro" ? "Upgrade to Family" : "Upgrade Adherly"}
+          </div>
+          <div style={{fontSize:14,color:"var(--t3)"}}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:4}}>
+              {currentPlan === "pro" && <span style={{background:"var(--teal)",color:"white",fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:99,letterSpacing:".3px"}}>PRO</span>}
+              <Globe size={13}/> {selCountry.name} · {gatewayName} <Check size={11} strokeWidth={3}/>
+            </span>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:8,padding:"12px 16px"}}>
+          {plans.map(p => (
+            <div
+              key={p.id}
+              onClick={() => setSelected(p.id)}
+              className={selected===p.id ? "glass-card" : ""}
+              style={{
+                flex:1, borderRadius:14, padding:"12px 8px", cursor:"pointer", textAlign:"center",
+                border:`2px solid ${selected===p.id ? p.color : "var(--sep)"}`,
+                background: selected===p.id ? "var(--glass)" : "var(--card)",
+                backdropFilter: "blur(16px) saturate(1.4)",
+                WebkitBackdropFilter: "blur(16px) saturate(1.4)",
+                transition:"all .2s cubic-bezier(.25,.1,.25,1)",
+                position:"relative",
+                boxShadow: selected===p.id ? `0 4px 20px rgba(0,0,0,.06),0 0 0 0.5px rgba(0,0,0,.02) inset,0 0 16px ${p.color}15` : "0 2px 8px rgba(0,0,0,.04)",
+              }}
+            >
+              {p.id === currentPlan && (
+                <div style={{
+                  position:"absolute", top:-8, left:"50%", transform:"translateX(-50%)",
+                  background:p.color, color:"white", fontSize:9, fontWeight:700,
+                  padding:"2px 8px", borderRadius:99, letterSpacing:".3px", whiteSpace:"nowrap",
+                  boxShadow:"0 1px 4px rgba(0,0,0,.15)",
+                }}>CURRENT</div>
+              )}
+              <div style={{marginBottom:2,display:"flex",justifyContent:"center"}}>{p.icon}</div>
+              <div style={{fontWeight:700,fontSize:13,color:selected===p.id?p.color:"var(--t1)"}}>{p.name}</div>
+              <div style={{fontSize:15,fontWeight:800,color:selected===p.id?p.color:"var(--t2)",marginTop:2}}>
+                {p.price}
+              </div>
+              <div style={{fontSize:10,color:"var(--t3)"}}>{p.period}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{padding:"8px 20px 16px"}}>
+          {err && <div className="err-msg" style={{marginBottom:8}}>{err}</div>}
+          <div style={{fontSize:14,color:"var(--t3)",marginBottom:10}}>{plan.tagline}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {plan.features.map(f => (
+              <div key={f} style={{fontSize:14,color:"var(--t1)",display:"flex",alignItems:"center",gap:8}}>
+                <span style={{color:plan.color,fontWeight:700,flexShrink:0}}>—</span>
+                <span>{featureLabels(f, t)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{padding:"8px 16px",borderTop:"1px solid var(--sep)"}}>
+          <button
+            className="btn"
+            disabled={!pay.ready || selected === currentPlan}
+            style={{
+              width:"100%", marginBottom:10,
+              background: plan.color, color:"white",
+              fontSize:16, fontWeight:700, opacity: (!pay.ready || selected === currentPlan) ? 0.5 : 1,
+            }}
+            onClick={() => setPhase("checkout")}
+          >
+            {selected === currentPlan ? `You're on ${plan.name}` : currentPlan === "pro" ? `Upgrade to ${plan.name} · ${plan.price}/month` : `Unlock ${plan.name} · ${plan.price}/month`}
+          </button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            Maybe later
+          </button>
+          <div style={{fontSize:10,color:"var(--t3)",textAlign:"center",marginTop:8,lineHeight:1.4}}>
+            {pay.ready ? `Secure payment via ${gatewayName}. Cancel anytime.` : `Payments coming soon in ${selCountry.name} — free tier stays free.`}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function FamilyInviteModal({ members, onInvite, onRemove, onClose }) {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+
+  function handleSend() {
+    if (!email.trim()) return;
+    onInvite(email.trim());
+    setEmail("");
+    setSent(true);
+    setTimeout(() => setSent(false), 2000);
+  }
+
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" style={{maxHeight:"80dvh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle"/>
+        <div style={{padding:"0 20px 20px"}}>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:16}}>Family members</div>
+
+          {members.length > 0 && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:600,color:"var(--t2)",marginBottom:8}}>Invited members</div>
+              <div className="list">
+                {members.map((m, i) => (
+                  <div key={m.id || i} className="row" style={{cursor:"default"}}>
+                    <div className="row-icon" style={{background:"var(--ib4)"}}><Ico><User size={18} strokeWidth={2} color="var(--t1)"/></Ico></div>
+                    <div className="row-body">
+                      <div className="row-title">{m.member_email || m.email}</div>
+                      <div className="row-sub">{m.status === "pending" ? "Invitation sent — they'll accept when they sign in" : "Active"}</div>
+                    </div>
+                    <button className="btn btn-sm" style={{background:"var(--ib6)",color:"var(--red)",border:"none"}} onClick={() => onRemove(m.id || i)}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{fontSize:14,fontWeight:600,color:"var(--t2)",marginBottom:8}}>Invite new member</div>
+          <div style={{display:"flex",gap:8}}>
+            <input className="sheet-input" type="email" placeholder="family@example.com" value={email} onChange={e => setEmail(e.target.value)}
+              style={{flex:1}} onKeyDown={e => e.key === "Enter" && handleSend()}/>
+            <button className="btn btn-primary btn-sm" style={{width:"auto"}} onClick={handleSend} disabled={!email.trim()}>
+              {sent ? <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Check size={14}/> Sent!</span> : "Send invite"}
+            </button>
+          </div>
+          <div style={{fontSize:12,color:"var(--t3)",marginTop:8}}>They&apos;ll receive an email to join your family group.</div>
+
+          <button className="btn btn-ghost" style={{marginTop:16,width:"100%"}} onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const RELATIONSHIP_OPTIONS = ["Spouse", "Parent", "Child", "Sibling", "Grandparent", "Friend", "Caregiver", "Other"];
+
+const COUNTRY_CODES = [
+  { code: "+233", flag: "🇬🇭", name: "Ghana" },
+  { code: "+234", flag: "🇳🇬", name: "Nigeria" },
+  { code: "+254", flag: "🇰🇪", name: "Kenya" },
+  { code: "+256", flag: "🇺🇬", name: "Uganda" },
+  { code: "+255", flag: "🇹🇿", name: "Tanzania" },
+  { code: "+27", flag: "🇿🇦", name: "South Africa" },
+  { code: "+260", flag: "🇿🇲", name: "Zambia" },
+  { code: "+263", flag: "🇿🇼", name: "Zimbabwe" },
+  { code: "+250", flag: "🇷🇼", name: "Rwanda" },
+  { code: "+257", flag: "🇧🇮", name: "Burundi" },
+  { code: "+251", flag: "🇪🇹", name: "Ethiopia" },
+  { code: "+212", flag: "🇲🇦", name: "Morocco" },
+  { code: "+216", flag: "🇹🇳", name: "Tunisia" },
+  { code: "+20", flag: "🇪🇬", name: "Egypt" },
+  { code: "+971", flag: "🇦🇪", name: "UAE" },
+  { code: "+966", flag: "🇸🇦", name: "Saudi Arabia" },
+  { code: "+44", flag: "🇬🇧", name: "UK" },
+  { code: "+1", flag: "🇺🇸", name: "USA" },
+  { code: "+91", flag: "🇮🇳", name: "India" },
+  { code: "+49", flag: "🇩🇪", name: "Germany" },
+  { code: "+33", flag: "🇫🇷", name: "France" },
+  { code: "+39", flag: "🇮🇹", name: "Italy" },
+  { code: "+86", flag: "🇨🇳", name: "China" },
+  { code: "+81", flag: "🇯🇵", name: "Japan" },
+  { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire" },
+  { code: "+228", flag: "🇹🇬", name: "Togo" },
+  { code: "+229", flag: "🇧🇯", name: "Benin" },
+  { code: "+227", flag: "🇳🇪", name: "Niger" },
+  { code: "+226", flag: "🇧🇫", name: "Burkina Faso" },
+  { code: "+221", flag: "🇸🇳", name: "Senegal" },
+  { code: "+223", flag: "🇲🇱", name: "Mali" },
+  { code: "+245", flag: "🇬🇼", name: "Guinea-Bissau" },
+  { code: "+224", flag: "🇬🇳", name: "Guinea" },
+  { code: "+242", flag: "🇨🇬", name: "Congo" },
+  { code: "+243", flag: "🇨🇩", name: "DR Congo" },
+  { code: "+236", flag: "🇨🇫", name: "Central African Rep." },
+  { code: "+235", flag: "🇹🇩", name: "Chad" },
+  { code: "+237", flag: "🇨🇲", name: "Cameroon" },
+  { code: "+240", flag: "🇬🇶", name: "Equatorial Guinea" },
+  { code: "+241", flag: "🇬🇦", name: "Gabon" },
+  { code: "+262", flag: "🇷🇪", name: "Réunion" },
+  { code: "+269", flag: "🇰🇲", name: "Comoros" },
+  { code: "+261", flag: "🇲🇬", name: "Madagascar" },
+  { code: "+230", flag: "🇲🇺", name: "Mauritius" },
+  { code: "+248", flag: "🇸🇨", name: "Seychelles" },
+];
+
+export function AddMemberModal({ onInviteEmail, onAddManaged, onClose }) {
+  const [mode, setMode] = useState(null);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [phoneCode, setPhoneCode] = useState("+233");
+  const [phone, setPhone] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  function handleInvite() {
+    if (!email.trim()) return;
+    onInviteEmail(email.trim());
+    setEmail("");
+    setSaved(true);
+    setTimeout(() => { setSaved(false); setMode(null); }, 1200);
+  }
+
+  function handleAddManaged() {
+    if (!name.trim()) return;
+    const fullPhone = phone.trim() ? `${phoneCode}${phone.trim()}` : undefined;
+    onAddManaged({ member_name: name.trim(), relationship, phone: fullPhone });
+    setName(""); setRelationship(""); setPhone(""); setPhoneCode("+233");
+    setSaved(true);
+    setTimeout(() => { setSaved(false); setMode(null); }, 1200);
+  }
+
+  if (mode === null) {
+    return (
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="sheet" style={{ maxHeight: "70dvh" }} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Add family member</div>
+            <div style={{ fontSize: 13, color: "var(--t3)", marginBottom: 20 }}>How would you like to add this person?</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button onClick={() => setMode("invite")} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--ib1)", borderRadius: 14, border: "1px solid var(--sep)", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--ib2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Mail size={20} color="var(--teal)" strokeWidth={2} /></div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>On the app</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Invite by email — they need an Adherly account</div>
+                </div>
+              </button>
+              <button onClick={() => setMode("managed")} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--ib1)", borderRadius: 14, border: "1px solid var(--sep)", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--ib4)", display: "grid", placeItems: "center", flexShrink: 0 }}><UserPlus size={20} color="var(--teal)" strokeWidth={2} /></div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--t1)" }}>Not on the app</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)" }}>Track meds & vitals for someone without an account</div>
+                </div>
+              </button>
+            </div>
+            <button className="btn btn-ghost" style={{ marginTop: 16, width: "100%" }} onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "invite") {
+    return (
+      <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="sheet" style={{ maxHeight: "70dvh" }} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Invite by email</div>
+            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 16 }}>They&apos;ll receive an email to join your family group.</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input className="sheet-input" type="email" placeholder="family@example.com" value={email} onChange={e => setEmail(e.target.value)} style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && handleInvite()} />
+              <button className="btn btn-primary btn-sm" style={{ width: "auto" }} onClick={handleInvite} disabled={!email.trim()}>
+                {saved ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Check size={14} /> Sent!</span> : "Invite"}
+              </button>
+            </div>
+            <button className="btn btn-ghost" style={{ marginTop: 12, width: "100%" }} onClick={() => setMode(null)}>← Back</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="sheet" style={{ maxHeight: "80dvh" }} onClick={e => e.stopPropagation()}>
+          <div className="sheet-handle" />
+          <div style={{ padding: "0 20px 20px" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Add member manually</div>
+          <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 16 }}>You&apos;ll track their medications & vitals on their behalf.</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Name *</div>
+            <input className="sheet-input" placeholder="e.g. Mom, Dad, Grandma…" value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Relationship</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {RELATIONSHIP_OPTIONS.map(r => (
+                <button key={r} onClick={() => setRelationship(r)} style={{ padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 600, border: "1px solid var(--sep)", background: relationship === r ? "var(--teal)" : "var(--card)", color: relationship === r ? "white" : "var(--t2)", cursor: "pointer", transition: "all .15s" }}>{r}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--t2)", marginBottom: 4 }}>Phone (optional)</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <CustomSelect value={phoneCode} onChange={v => setPhoneCode(v)} options={COUNTRY_CODES.map(c => ({ value: c.code, label: `${c.flag} ${c.code}` }))} ariaLabel="Country code" style={{ width: 120, flexShrink: 0 }} />
+              <input className="sheet-input" type="tel" placeholder="e.g. 24 123 4567" value={phone} onChange={e => setPhone(e.target.value)} style={{ flex: 1 }} />
+            </div>
+          </div>
+          {saved && <div style={{ fontSize: 13, color: "var(--green)", fontWeight: 600, marginBottom: 8 }}>✓ Member added</div>}
+          <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleAddManaged} disabled={!name.trim()}>
+            {saved ? "✓ Added" : "Add member"}
+          </button>
+          <button className="btn btn-ghost" style={{ marginTop: 8, width: "100%" }} onClick={() => setMode(null)}>← Back</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DeleteConfirmModal({ medName, onConfirm, onCancel }) {
+  const handleSwipe = useSwipe({ onSwipeDown: onCancel });
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div className="sheet" style={{maxHeight:"50dvh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle" {...handleSwipe}/>
+        <div style={{padding:"20px 20px calc(16px + var(--safe-bottom))",textAlign:"center"}}>
+          <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ico><Trash2 size={44} strokeWidth={1.8} color="var(--red)"/></Ico></div>
+          <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>Delete medication?</div>
+          <div style={{fontSize:15,color:"var(--t3)",lineHeight:1.5,marginBottom:20}}>
+            This removes <strong style={{color:"var(--t1)"}}>{medName}</strong> from your list. Its dose history is kept in your records.
+          </div>
+          <div className="sheet-actions">
+            <button className="btn btn-red" onClick={onConfirm}>Delete</button>
+            <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LogDoseModal({ med, onConfirm, onCancel }) {
+  const [journal, setJournal] = useState("");
+  const now = new Date();
+  const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [takenAt, setTakenAt] = useState(localISO);
+  const todayStr = now.toISOString().split("T")[0];
+  const handleSwipe = useSwipe({ onSwipeDown: onCancel });
+
+  function handleConfirm() {
+    const selected = new Date(takenAt);
+    if (selected > now) { toastError("Cannot log doses in the future."); return; }
+    onConfirm(journal, takenAt);
+  }
+
+  return (
+    <div className="sheet-overlay" role="dialog" aria-modal="true" onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div className="sheet" style={{maxHeight:"75dvh"}} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle" {...handleSwipe}/>
+        <div className="sheet-title" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico><Pill size={18} strokeWidth={2.2} color="var(--t1)"/></Ico> Log dose</div>
+        <div style={{padding:"8px 20px calc(16px + var(--safe-bottom))"}}>
+          <div style={{fontSize:15,color:"var(--t3)",marginBottom:16,textAlign:"center"}}>
+            {med.name} · {med.dosage_amount} {med.dosage_unit}
+          </div>
+
+          <FormControl label="Date & time taken">
+            <input className="sheet-input" type="datetime-local" value={takenAt}
+              max={`${todayStr}T23:59`}
+              onChange={e => setTakenAt(e.target.value)}/>
+          </FormControl>
+
+          <FormControl label="Journal (optional)">
+            <textarea className="sheet-input" rows={3}
+              placeholder="How are you feeling? Any side effects?"
+              value={journal} onChange={e => setJournal(e.target.value)}/>
+          </FormControl>
+
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={handleConfirm}>Log dose</button>
+            <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

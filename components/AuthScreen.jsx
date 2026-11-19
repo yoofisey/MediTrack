@@ -1,0 +1,412 @@
+"use client";
+
+import { useState, useEffect, useRef, useMemo } from "react";
+import { sb } from "@/lib/supabase";
+import { CSS, GIcon, AuthLogo, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL, RE_EMAIL, RE_HTML_TAG, RE_DIGITS } from "@/lib/constants";
+import { COUNTRIES } from "@/lib/data";
+import { isDisposableEmail, checkSignupRate, recordSignupAttempt, checkOtpAttempts, recordOtpAttempt, resetOtpAttempts } from "@/lib/antispam";
+import SentOtpView from "./SentOtpView";
+import CustomSelect from "./CustomSelect";
+import { CheckCircle2, Bell, Flame, BarChart3, Check, Circle, Globe } from "lucide-react";
+
+export default function AuthScreen({ onAuth }) {
+  const [view, setView]     = useState("welcome");
+  const [email, setEmail]   = useState("");
+  const [pw, setPw]         = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [name, setName]     = useState("");
+  const [country, setCountry] = useState("GH");
+  const [otp, setOtp]       = useState("");
+  const [busy, setBusy]     = useState(false);
+  const [obl, setObl]       = useState("");
+  const [err, setErr]       = useState("");
+  const [sent, setSent]     = useState(false);
+  const [pwStore, setPwStore] = useState("");
+  const [pwShow, setPwShow] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [forgotDone, setForgotDone] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const oauthBusyRef = useRef(false);
+
+  const otpAttempts = useMemo(() => {
+    const def = { allowed: true, remaining: 5, waitMin: 0 };
+    return sent && email ? (checkOtpAttempts(email) || def) : def;
+  }, [sent, email]);
+
+  function goWelcome() { setView("welcome"); setErr(""); setObl(""); setSent(false); setOtp(""); }
+  function goSignIn() { setView("signin"); setErr(""); setObl(""); setSent(false); setOtp(""); }
+  function goSignUp() { setView("signup"); setErr(""); setObl(""); setSent(false); setOtp(""); }
+  function startCooldown(sec = 60) { setCooldown(sec); const t = setInterval(() => { setCooldown(p => { if (p <= 1) { clearInterval(t); return 0; } return p - 1; }); }, 1000); }
+
+  useEffect(() => {
+    const onShow = () => setObl("");
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
+
+  function handleOtpChange(e) { setOtp(e.target.value.replace(RE_DIGITS,"").slice(0,6)); }
+
+  useEffect(() => {
+    const stored = (() => { try { return localStorage.getItem("mt_at"); } catch { return null; } })();
+    if (!stored) return;
+    sb.auth.getUser().then(({ data }) => {
+      if (data?.user) onAuth(data.user, false);
+    }).catch(() => {});
+  }, []);
+
+  async function oauth(provider) {
+    if (oauthBusyRef.current) return;
+    oauthBusyRef.current = true;
+    setErr(""); setObl(provider);
+    try {
+      const { data, error } = await sb.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin, skipBrowserRedirect: true },
+      });
+      if (error) throw new Error(error.message);
+      const authUrl = data?.url;
+      if (!authUrl) throw new Error("OAuth failed. Please try again.");
+      window.location.assign(authUrl);
+    } catch (e) {
+      setErr(String(e?.message || "") || "OAuth failed. Please try again.");
+      setObl("");
+    } finally {
+      setTimeout(() => { setObl(""); oauthBusyRef.current = false; }, 1200);
+    }
+  }
+
+  async function handleSignIn(e) {
+    e.preventDefault(); setBusy(true); setErr("");
+    if (!RE_EMAIL.test(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) throw new Error(error?.message || "Login failed.");
+      if (!data?.user) throw new Error("Login failed.");
+      onAuth(data.user, false);
+    } catch (e) {
+      setErr(String(e?.message || "") || "Something went wrong.");
+    } finally { setBusy(false); }
+  }
+
+  async function handleForgot(e) {
+    e.preventDefault(); setBusy(true); setErr("");
+    if (!RE_EMAIL.test(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: "https://www.useadhera.com/reset-password" });
+      if (error) throw error;
+      setForgotDone(true);
+    } catch (e2) {
+      setErr(String(e2?.message || "") || "Something went wrong. Please try again.");
+    } finally { setBusy(false); }
+  }
+
+  function sanitizeHtml(str) { return str.replace(RE_HTML_TAG,""); }
+
+  function pwScore(p) {
+    let s = 0;
+    if (p.length >= 8) s++;
+    if (p.length >= 12) s++;
+    if (RE_HAS_LOWER.test(p) && RE_HAS_UPPER.test(p)) s++;
+    if (RE_HAS_DIGIT.test(p)) s++;
+    if (RE_HAS_SYMBOL.test(p)) s++;
+    return s;
+  }
+
+  function isValidEmail(e) { return RE_EMAIL.test(e); }
+
+  async function handleSignUp(e) {
+    e.preventDefault(); setBusy(true); setErr("");
+    if (honeypot) { setBusy(false); return; }
+    const cleanName = sanitizeHtml(name).trim();
+    if (!cleanName) { setErr("Please enter your name."); setBusy(false); return; }
+    if (!isValidEmail(email)) { setErr("Please enter a valid email address."); setBusy(false); return; }
+    if (isDisposableEmail(email)) { setErr("Please use a permanent email address."); setBusy(false); return; }
+    const rateCheck = checkSignupRate(email);
+    if (!rateCheck.allowed) { setErr(`Too many sign-up attempts. Try again in ${rateCheck.waitMin} minutes.`); setBusy(false); return; }
+    if (pw.length < 8) { setErr("Password must be at least 8 characters."); setBusy(false); return; }
+    if (pw !== confirmPw) { setErr("Passwords do not match."); setBusy(false); return; }
+    if (pwScore(pw) < 3) { setErr("Password is too weak — use a mix of upper/lowercase, numbers, and symbols."); setBusy(false); return; }
+    if (!consent) { setErr("Please agree to the Terms of Service and Privacy Policy."); setBusy(false); return; }
+    recordSignupAttempt(email);
+    try {
+      const { data: existingAcct } = await sb.from("profiles").select("id").eq("email", email).maybeSingle();
+      if (existingAcct) { setErr("This email is already registered — please sign in instead."); setBusy(false); return; }
+      const deviceTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { return ""; } })();
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true, data: { full_name: cleanName, country, plan: "free", timezone: deviceTz } },
+      });
+      if (error) throw error;
+      setPwStore(pw);
+      startCooldown(60);
+      setSent(true);
+    } catch (e) {
+      const m = String(e?.message || "");
+      if (m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") || m.includes("sending magic link")) {
+        setErr("Email service not configured. Please try again later.");
+      } else {
+        setErr(m || "Something went wrong. Please try again.");
+      }
+    } finally { setBusy(false); }
+  }
+
+  async function handleResendOtp() {
+    if (cooldown>0) return;
+    setErr("");
+    const { error } = await sb.auth.signInWithOtp({ email });
+    if (error) {
+      const m = String(error.message || "");
+      setErr(m.includes("SMTP") || m.includes("rate") || m.includes("timeout") || m.includes("unavailable") ? "Email service not configured. Please try again later." : "Failed to resend - " + m);
+    } else {
+      startCooldown(60);
+      setErr("Code resent - check your inbox.");
+    }
+  }
+
+  async function handleOtpVerify(e) {
+    e.preventDefault();
+    if (otp.length < 6) { setErr("Enter the 6-digit code from your email."); return; }
+    const otpCheck = checkOtpAttempts(email);
+    if (!otpCheck.allowed) { setErr(`Too many failed attempts. Try again in ${otpCheck.waitMin} minutes.`); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data: vData, error: vErr } = await sb.auth.verifyOtp({ email, token: otp, type: "email" });
+      if (vErr) throw vErr;
+      if (!vData?.user) throw new Error("Verification failed.");
+      resetOtpAttempts(email);
+      const { data: existing } = await sb.from("profiles").select("id").eq("id", vData.user.id);
+      if (existing?.length > 0) {
+        await sb.auth.signOut();
+        throw new Error("This email is already registered — please sign in instead.");
+      }
+      await sb.auth.updateUser({ password: pwStore });
+      onAuth(vData.user, true);
+    } catch (e) {
+      recordOtpAttempt(email);
+      setErr(String(e?.message || "") || "Invalid or expired code.");
+    } finally { setBusy(false); }
+  }
+
+  const pwColors = ["var(--sep)","#FF453A","#FF9500","#FFD60A","#34C759","#34C759"];
+
+  if (view === "welcome") return (
+    <div className="auth-screen" style={{justifyContent:"flex-end",padding:0}}>
+      <style>{CSS}</style>
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"64px 32px 28px",position:"relative",zIndex:1}}>
+        <div style={{width:110,height:110,borderRadius:32,overflow:"hidden",marginBottom:28,boxShadow:"0 18px 60px rgba(0,122,255,.32),0 4px 14px rgba(30,60,120,.08),inset 0 1px 0 rgba(255,255,255,.4)",animation:"logoPop 1s cubic-bezier(.175,.885,.32,1.275) both"}}>
+          <img src="/icon-512.png?v=3" alt="Adherly" width="110" height="110" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+        </div>
+        <div style={{fontSize:38,fontWeight:800,letterSpacing:"-.7px",textAlign:"center",lineHeight:1.05,marginBottom:12,color:"var(--t1)",animation:"fadeUp .65s .16s cubic-bezier(.22,1,.36,1) both"}}>Adherly</div>
+        <div style={{fontSize:17,fontWeight:500,color:"var(--t2)",textAlign:"center",lineHeight:1.6,maxWidth:320,marginBottom:36,animation:"fadeUp .7s .28s cubic-bezier(.22,1,.36,1) both"}}>
+          Your personal treatment companion
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",animation:"fadeUp .7s .4s cubic-bezier(.22,1,.36,1) both"}}>
+          {[
+            {icon:<CheckCircle2 size={14} color="var(--teal)"/>,label:"Dose tracking"},
+            {icon:<Bell size={14} color="var(--teal)"/>,label:"Smart reminders"},
+            {icon:<Flame size={14} color="var(--orange)"/>,label:"Streak rewards"},
+            {icon:<BarChart3 size={14} color="var(--purple)"/>,label:"Adherence reports"},
+          ].map(f=>(
+            <div key={f.label} className="auth-feature-pill">
+              <span style={{display:"inline-flex"}}>{f.icon}</span>
+              <span>{f.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="auth-welcome-card">
+        <div style={{fontSize:26,fontWeight:800,marginBottom:6,color:"var(--t1)",letterSpacing:"-.4px"}}>Get started</div>
+        <div style={{fontSize:15,color:"var(--t2)",marginBottom:24,lineHeight:1.5,fontWeight:500}}>Join thousands managing their health with Adherly</div>
+        <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl} style={{marginBottom:12}}>
+          {obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}
+        </button>
+        <div className="divider">or</div>
+         <button className="auth-btn auth-btn-primary" style={{marginBottom:12}} onClick={goSignUp}>Create free account</button>
+         <button className="auth-btn auth-btn-ghost" style={{width:"100%"}} onClick={goSignIn}>Sign in to existing account</button>
+      </div>
+    </div>
+  );
+
+  if (sent) return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card" key="sent">
+        <SentOtpView
+          email={email} otp={otp} onOtpChange={handleOtpChange}
+          onOtpVerify={handleOtpVerify} onResend={handleResendOtp}
+          onBack={() => { goWelcome(); }}
+          busy={busy} cooldown={cooldown} err={err}
+          otpAttempts={otpAttempts}
+        />
+      </div>
+    </div>
+  );
+
+  if (view === "forgot") return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card" key="forgot">
+        <AuthLogo/>
+        <div className="auth-title">{forgotDone ? "Check your inbox" : "Reset password"}</div>
+        <div className="auth-sub">
+          {forgotDone
+            ? "If that email is registered, we sent a reset link. It expires in 30 minutes."
+            : "Enter your email and we'll send you a reset link."}
+        </div>
+        {err && <div className="err-msg">{err}</div>}
+        {!forgotDone && (
+          <form onSubmit={handleForgot}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+              <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value.trim())} required autoComplete="email" />
+            </div>
+            <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>{busy ? "Sending..." : "Send reset link"}</button>
+          </form>
+        )}
+        <div className="auth-switch">
+           <button onClick={() => { goSignIn(); }}>Back to sign in</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "signin") return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card" key="signin">
+        <AuthLogo/>
+        <div className="auth-title">Welcome back</div>
+        <div className="auth-sub">Sign in to manage your medications</div>
+        <div className="oauth-stack">
+          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}</button>
+        </div>
+        <div className="divider">or sign in with email</div>
+        {err && <div className="err-msg">{err}</div>}
+        <form onSubmit={handleSignIn}>
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
+            <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email"/>
+            <div className="pw-wrap" style={{display:"flex"}}>
+              <input className="auth-input" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"transparent"}} type={pwShow?"text":"password"} placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="current-password"/>
+              <button type="button" onClick={()=>setPwShow(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center"}}
+                onMouseEnter={e=>e.currentTarget.style.color="var(--t2)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t3)"}>
+                {pwShow ?
+                  <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> :
+                  <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+                }
+              </button>
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -8, marginBottom: 2 }}>
+            <button type="button" onClick={() => { setView("forgot"); setErr(""); setForgotDone(false); setObl(""); }}
+              style={{ background: "none", border: "none", padding: 0, color: "var(--t2)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Forgot password?
+            </button>
+          </div>
+          <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>{busy?"Signing in...":"Sign in"}</button>
+        </form>
+        <div className="auth-switch">
+          New to Adherly? <button onClick={()=>{goSignUp();setErr("");}}>Create account</button>
+          <span style={{margin:"0 8px",color:"var(--sep)"}}>·</span>
+          <button onClick={()=>goWelcome()} style={{color:"inherit"}}>Back</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="auth-screen"><style>{CSS}</style>
+      <div className="auth-card" key="signup">
+        <AuthLogo/>
+        <div className="auth-title">Create your account</div>
+        <div className="auth-sub">Free forever · Upgrade anytime</div>
+
+        <div className="oauth-stack">
+          <button className="oauth-btn" onClick={()=>oauth("google")} disabled={!!obl}>{obl==="google"?"Redirecting...":<><GIcon/> Continue with Google</>}</button>
+        </div>
+        <div className="divider">or sign up with email</div>
+
+        {err && <div className="err-msg">{err}</div>}
+
+        <form onSubmit={handleSignUp}>
+          <div aria-hidden="true" style={{position:"absolute",left:"-9999px",opacity:0,height:0,width:0,overflow:"hidden",pointerEvents:"none",tabIndex:-1}}>
+            <label htmlFor="hp-name">Name</label>
+            <input id="hp-name" type="text" name="name" autoComplete="name" tabIndex={-1} value={honeypot} onChange={e=>setHoneypot(e.target.value)} />
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
+            <input className="auth-input" type="text" placeholder="Full name" value={name} onChange={e=>setName(sanitizeHtml(e.target.value))} required autoComplete="name"/>
+            <input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value.trim())} required autoComplete="email"/>
+            <PwFields pw={pw} setPw={setPw} confirmPw={confirmPw} setConfirmPw={setConfirmPw} pwScore={pwScore} pwColors={pwColors} RE_HAS_LOWER={RE_HAS_LOWER} RE_HAS_UPPER={RE_HAS_UPPER} RE_HAS_DIGIT={RE_HAS_DIGIT} RE_HAS_SYMBOL={RE_HAS_SYMBOL}/>
+            <div style={{position:"relative"}}>
+              <div style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",zIndex:1,display:"inline-flex",color:"var(--t2)"}}><Globe size={18}/></div>
+              <CustomSelect className="auth-select" triggerStyle={{paddingLeft:40, backgroundImage:"none"}} value={country} onChange={v=>setCountry(v)} options={COUNTRIES.map(c=>({value:c.code,label:c.name}))}/>
+            </div>
+          </div>
+          <button className="auth-btn auth-btn-primary" type="submit" disabled={busy}>
+            {busy ? "Processing..." : "Create free account"}
+          </button>
+        </form>
+        <div style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:"var(--t2)",marginTop:14,lineHeight:1.5,textAlign:"left"}}>
+          <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
+            style={{marginTop:2,width:16,height:16,flexShrink:0,accentColor:"var(--teal)",cursor:"pointer"}} />
+          <span>I agree to the <a href="/privacy" target="_blank" style={{color:"var(--teal)",textDecoration:"underline"}}>Privacy Policy</a> and Terms of Service. I understand my health data is processed to deliver the service.</span>
+        </div>
+        <div className="auth-switch">
+          Already have an account? <button onClick={()=>{goSignIn();setErr("");}}>Sign in</button>
+          <span style={{margin:"0 8px",color:"var(--sep)"}}>·</span>
+          <button onClick={()=>goWelcome()} style={{color:"inherit"}}>Back</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PwFields({ pw, setPw, confirmPw, setConfirmPw, pwScore, pwColors, RE_HAS_LOWER, RE_HAS_UPPER, RE_HAS_DIGIT, RE_HAS_SYMBOL }) {
+  const [pwVis, setPwVis] = useState(false);
+  const [cfVis, setCfVis] = useState(false);
+  return (
+    <>
+      <div className="pw-wrap" style={{display:"flex"}}>
+        <input className="auth-input" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"transparent"}} type={pwVis?"text":"password"} placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
+        <button type="button" onClick={()=>setPwVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center"}}
+          onMouseEnter={e=>e.currentTarget.style.color="var(--t1)"} onMouseLeave={e=>e.currentTarget.style.color="var(--t3)"}>
+          {pwVis ?
+            <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            :
+            <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+          }
+        </button>
+      </div>
+      {pw.length > 0 && (
+        <div style={{marginTop:-4,marginBottom:4,fontSize:12}}>
+          <div className="auth-pw-bar">
+            {[0,1,2,3,4].map(i=>{
+              const score = pwScore(pw);
+              return <div key={i} className="auth-pw-segment" style={{background:i<score?pwColors[score]:"var(--sep)"}}/>;
+            })}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:"2px 12px"}}>
+            {[
+              { label:"8+ chars", ok:pw.length>=8 },
+              { label:"Upper & lower", ok:Boolean(RE_HAS_LOWER.test(pw) && RE_HAS_UPPER.test(pw)) },
+              { label:"Number", ok:Boolean(RE_HAS_DIGIT.test(pw)) },
+              { label:"Symbol", ok:Boolean(RE_HAS_SYMBOL.test(pw)) },
+            ].map(r=>(
+              <div key={r.label} className="auth-pw-check" style={{color:r.ok?"#248A3D":"var(--t3)"}}>
+                <span style={{fontWeight:700,display:"inline-flex"}}>{r.ok ? <Check size={12}/> : <Circle size={12}/>}</span>
+                <span>{r.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="pw-wrap" style={{display:"flex"}}>
+        <input className="auth-input" style={{flex:1,minWidth:0,border:"none",borderRadius:0,background:"transparent"}} type={cfVis?"text":"password"} placeholder="Confirm password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} minLength={8} required autoComplete="new-password"/>
+        <button type="button" onClick={()=>setCfVis(p=>!p)} style={{width:44,flexShrink:0,border:"none",borderRadius:0,background:"transparent",cursor:"pointer",color:confirmPw.length>0&&pw===confirmPw?"#34C759":"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center"}}
+          onMouseEnter={e=>e.currentTarget.style.color=confirmPw.length>0&&pw===confirmPw?"#248A3D":"var(--t1)"} onMouseLeave={e=>e.currentTarget.style.color=confirmPw.length>0&&pw===confirmPw?"#34C759":"var(--t3)"}>
+          {cfVis ?
+            <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            :
+            <svg viewBox="0 0 24 24" fill="currentColor" style={{width:18,height:18}}><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+          }
+        </button>
+      </div>
+    </>
+  );
+}
