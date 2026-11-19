@@ -73,7 +73,11 @@ function extractReference(data: unknown, eventId: string): string {
 }
 
 function getAdminClient() {
+<<<<<<< HEAD
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+=======
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co";
+>>>>>>> origin/main
   const key = SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   return createClient(url, key);

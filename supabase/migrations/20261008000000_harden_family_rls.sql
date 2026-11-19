@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 ﻿-- RLS hardening for family access (2026-10-08).
 --
 -- Apply via the Supabase dashboard SQL editor (Project > SQL Editor > New query)
 -- against the <PROJECT_REF> project.
+=======
+-- RLS hardening for family access (2026-10-08).
+--
+-- Apply via the Supabase dashboard SQL editor (Project > SQL Editor > New query)
+-- against the luxtopkzdyflbejwgniq project.
+>>>>>>> origin/main
 --
 -- Fixes found in the app audit:
 --
@@ -271,4 +278,8 @@ create policy "family_owner_update_member_visits"
         and fm.status = 'active'
         and 'fm_' || fm.id = visits.member_key
     )
+<<<<<<< HEAD
   );
+=======
+  );
+>>>>>>> origin/main

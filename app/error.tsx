@@ -5,10 +5,17 @@ import * as Sentry from "@sentry/nextjs";
 
 export default function Error({
   error,
+<<<<<<< HEAD
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
+=======
+  unstable_retry,
+}: {
+  error: Error & { digest?: string };
+  unstable_retry: () => void;
+>>>>>>> origin/main
 }) {
   useEffect(() => {
     Sentry.captureException(error);
@@ -21,9 +28,14 @@ export default function Error({
         We ran into an unexpected error. Please try again.
       </p>
       <button
+<<<<<<< HEAD
         type="button"
         className="btn btn-primary"
         onClick={() => reset()}
+=======
+        className="btn btn-primary"
+        onClick={() => unstable_retry()}
+>>>>>>> origin/main
         style={{ padding: "10px 20px", borderRadius: 10, border: "none", cursor: "pointer" }}
       >
         Try again

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 ﻿-- Tier protection migration.
+=======
+-- Tier protection migration.
+>>>>>>> origin/main
 --
 -- Context: paid tiers (pro/family/enterprise) were grantable directly from the
 -- client (signup metadata, onboarding, ProfileTab "upgrade", URL ?trxref= param).
@@ -12,7 +16,11 @@
 --
 -- NOTE: no `supabase` CLI is available in this repo's dev environment, so this
 -- file is NOT auto-applied. Apply it via the Supabase dashboard SQL editor
+<<<<<<< HEAD
 -- (Project > SQL Editor > New query) against the <PROJECT_REF> project,
+=======
+-- (Project > SQL Editor > New query) against the luxtopkzdyflbejwgniq project,
+>>>>>>> origin/main
 -- or run `supabase db push` once the CLI is set up.
 
 -- 1. Protect profiles.plan -----------------------------------------------
@@ -69,4 +77,7 @@ create policy "family_owner_manage_delete"
   on public.family_members
   for delete
   using (auth.uid() = owner_id);
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main

@@ -221,6 +221,7 @@ self.addEventListener("fetch", e => {
 
   const url = new URL(request.url);
 
+<<<<<<< HEAD
   // Cache selected unauthenticated GET responses for offline use (stale-while-revalidate).
   // Never cache authenticated requests or Supabase data responses to avoid persisting
   // user/health data on-device in browser caches.
@@ -232,6 +233,10 @@ self.addEventListener("fetch", e => {
       e.respondWith(fetch(request).catch(() => new Response(null, { status: 503 })));
       return;
     }
+=======
+  // Cache API responses for offline use (stale-while-revalidate)
+  if (url.pathname.startsWith("/api/") || url.hostname.endsWith(".supabase.co")) {
+>>>>>>> origin/main
     e.respondWith(
       caches.open(API_CACHE).then(cache =>
         fetch(request).then(res => {

@@ -13,6 +13,7 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
 
   useEffect(() => {
     if (!showDefault || !showMessages) return;
+<<<<<<< HEAD
     const timers = [];
     msgs.forEach((_, i) => {
       timers.push(setTimeout(() => {
@@ -23,15 +24,43 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
         }, 250));
       }, (i + 1) * 1600));
     });
+=======
+    const timers = msgs.map((_, i) =>
+      setTimeout(() => {
+        setFading(true);
+        setTimeout(() => {
+          setStep(i);
+          setFading(false);
+        }, 250);
+      }, (i + 1) * 1600)
+    );
+>>>>>>> origin/main
     return () => timers.forEach(clearTimeout);
   }, [showDefault, showMessages]);
 
   const titleLetters = "Adherly".split("");
 
   return (
+<<<<<<< HEAD
     <div className={`trans-screen${fadeOut ? " fade-out" : ""}`} role="status" aria-live="polite" aria-label="Loading Adherly">
       <style>{CSS}</style>
 
+=======
+    <div className={`trans-screen${fadeOut ? " fade-out" : ""}`}>
+      <style>{CSS}</style>
+
+      <div className="trans-aurora" style={{
+        top: "-24%", left: "50%", width: "76%", height: "74%", transform: "translateX(-50%)",
+        background: "radial-gradient(circle, rgba(0,122,255,.12) 0%, transparent 62%)",
+        animation: "aurora1 13s ease-in-out infinite",
+      }} />
+      <div className="trans-aurora" style={{
+        bottom: "-26%", right: "-16%", width: "68%", height: "64%",
+        background: "radial-gradient(circle, rgba(88,86,214,.10) 0%, transparent 58%)",
+        animation: "aurora2 15s ease-in-out infinite",
+      }} />
+
+>>>>>>> origin/main
       <div key={key} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 32px", zIndex: 1 }}>
         <div className="trans-logo-wrap">
           <div className="trans-logo-glow" />
@@ -43,7 +72,15 @@ export default function TransitionScreen({ icon, message, sub, showMessages = fa
         <div className="trans-content" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           {showDefault ? (
             <>
+<<<<<<< HEAD
               <div className="trans-title" aria-label="Adherly">{titleLetters.join("")}</div>
+=======
+              <div className="trans-title">
+                {titleLetters.map((letter, i) => (
+                  <span key={i} className="trans-title-letter">{letter}</span>
+                ))}
+              </div>
+>>>>>>> origin/main
               <div className="trans-underline" />
               <div className="trans-msg">Your Personal Treatment Companion</div>
               {showMessages ? (

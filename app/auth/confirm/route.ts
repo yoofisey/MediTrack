@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
 
   const safeNext = next.startsWith("/") && !next.includes("://") ? next : fallback;
 
+<<<<<<< HEAD
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
+=======
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1eHRvcGt6ZHlmbGJlandnbmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzY5NzAsImV4cCI6MjA5NzkxMjk3MH0.zcvzd5vOBxw6xE00EIrt7NBcEnFa95FxODsD2h1M-OU"
+  );
+>>>>>>> origin/main
 
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({
@@ -26,13 +33,19 @@ export async function GET(request: NextRequest) {
     if (!error) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = safeNext;
+<<<<<<< HEAD
       redirectUrl.search = "";
+=======
+>>>>>>> origin/main
       return NextResponse.redirect(redirectUrl);
     }
   }
 
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = fallback;
+<<<<<<< HEAD
   redirectUrl.search = "";
+=======
+>>>>>>> origin/main
   return NextResponse.redirect(redirectUrl);
 }
