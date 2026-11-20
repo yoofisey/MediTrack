@@ -1,12 +1,9 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-<<<<<<< HEAD
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 let supabaseHost = '';
 try { supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : ''; } catch {}
 
-=======
->>>>>>> origin/main
 const config: CapacitorConfig = {
   appId: 'com.useadhera.app',
   appName: 'Adherly',
@@ -16,11 +13,7 @@ const config: CapacitorConfig = {
     allowNavigation: [
       'useadhera.com',
       'www.useadhera.com',
-<<<<<<< HEAD
       ...(supabaseHost ? [supabaseHost] : []),
-=======
-      'luxtopkzdyflbejwgniq.supabase.co',
->>>>>>> origin/main
       'accounts.google.com',
       'checkout.paystack.com',
       'paystack.com',

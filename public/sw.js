@@ -9,8 +9,8 @@ let doseDB = {};
 // the browser killed this idle service worker every pending reminder was lost
 // with no recovery. The schedule now lives in a dedicated Cache entry and is
 // re-armed on every `activate`, so a dose that was scheduled is never silently
-// forgotten — at worst it fires slightly late after the worker restarts.
-// Absolute-path key — the Cache API requires a parseable URL, not a bare label.
+// forgotten â€” at worst it fires slightly late after the worker restarts.
+// Absolute-path key â€” the Cache API requires a parseable URL, not a bare label.
 const ALARM_KEY = "/__adhera-alarm-schedule";
 
 async function saveSchedule(items) {
@@ -61,8 +61,8 @@ function fireDose(item) {
 
 function fireLead(item) {
   const daysSince = Math.max(1, Math.floor((Date.now() - new Date(item.startDate).getTime()) / 86400000) + 1);
-  self.registration.showNotification(`⏰ Reminder: ${item.name}`, {
-    body: `${item.dosageAmount} ${item.dosageUnit} · Day ${daysSince}/${item.courseDays}`,
+  self.registration.showNotification(`â° Reminder: ${item.name}`, {
+    body: `${item.dosageAmount} ${item.dosageUnit} Â· Day ${daysSince}/${item.courseDays}`,
     icon: "/icon.svg",
     tag: `mt-rem-${item.medId}-${item.doseAt}`,
     data: { type: "reminder", medId: item.medId, doseAt: item.doseAt, isReminder: true },
@@ -221,7 +221,6 @@ self.addEventListener("fetch", e => {
 
   const url = new URL(request.url);
 
-<<<<<<< HEAD
   // Cache selected unauthenticated GET responses for offline use (stale-while-revalidate).
   // Never cache authenticated requests or Supabase data responses to avoid persisting
   // user/health data on-device in browser caches.
@@ -233,10 +232,6 @@ self.addEventListener("fetch", e => {
       e.respondWith(fetch(request).catch(() => new Response(null, { status: 503 })));
       return;
     }
-=======
-  // Cache API responses for offline use (stale-while-revalidate)
-  if (url.pathname.startsWith("/api/") || url.hostname.endsWith(".supabase.co")) {
->>>>>>> origin/main
     e.respondWith(
       caches.open(API_CACHE).then(cache =>
         fetch(request).then(res => {

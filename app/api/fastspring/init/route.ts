@@ -63,13 +63,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
   }
 
-<<<<<<< HEAD
   const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://www.useadhera.com";
   let origin = "https://www.useadhera.com";
   try { origin = new URL(configuredOrigin).origin; } catch {}
-=======
-  const origin = req.headers.get("origin") || "https://www.useadhera.com";
->>>>>>> origin/main
 
   try {
     const res = await fetch("https://api.fastspring.com/orders", {

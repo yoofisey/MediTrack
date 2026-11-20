@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-﻿import { NextResponse } from "next/server";
-=======
 import { NextResponse } from "next/server";
->>>>>>> origin/main
 import { getRecentRuns, getSb, verifyCronAuth } from "@/lib/cron";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,13 +7,8 @@ function tbl(sb: any, table: string): any {
 }
 
 /**
-<<<<<<< HEAD
- * GET /api/cron/manage – returns recent run history for all jobs.
- * POST /api/cron/manage – manually trigger a job (body: { job: "send-reminders" | "downgrade-expired" }).
-=======
- * GET /api/cron/manage — returns recent run history for all jobs.
- * POST /api/cron/manage — manually trigger a job (body: { job: "send-reminders" | "downgrade-expired" }).
->>>>>>> origin/main
+ * GET /api/cron/manage â€“ returns recent run history for all jobs.
+ * POST /api/cron/manage â€“ manually trigger a job (body: { job: "send-reminders" | "downgrade-expired" }).
  *
  * Requires CRON_SECRET as Bearer token.
  */
@@ -71,7 +62,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid job. Use 'send-reminders' or 'downgrade-expired'." }, { status: 400 });
   }
 
-<<<<<<< HEAD
   const configuredBase =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -82,11 +72,6 @@ export async function POST(req: Request) {
   } else {
     try { baseUrl = new URL(req.url).origin; } catch {}
   }
-=======
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(".supabase.co", ".vercel.app") || "http://localhost:3000";
->>>>>>> origin/main
 
   try {
     const res = await fetch(`${baseUrl}/api/cron/${job}`, {

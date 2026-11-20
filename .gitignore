@@ -64,9 +64,6 @@ keystore.properties
 keystore.jks
 
 .env*
-<<<<<<< HEAD
 
 supabase/.temp/
 
-=======
->>>>>>> origin/main

@@ -73,11 +73,7 @@ function extractReference(data: unknown, eventId: string): string {
 }
 
 function getAdminClient() {
-<<<<<<< HEAD
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-=======
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://luxtopkzdyflbejwgniq.supabase.co";
->>>>>>> origin/main
   const key = SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   return createClient(url, key);
@@ -94,7 +90,7 @@ export async function POST(req: Request) {
   const fs = getFastSpringConfig();
   // FastSpring sends `x-fs-signature` (docs: header name may arrive in any case,
   // which Request.headers.get handles). Do NOT also accept `x-fastspring-signature`
-  // — that was the wrong name and made verification untestable.
+  // â€” that was the wrong name and made verification untestable.
   const signature = req.headers.get("x-fs-signature") || "";
   if (!verifyFastSpringSignature(rawBody, signature, fs.webhookSecret)) {
     return NextResponse.json({ ok: false, error: "Invalid signature" }, { status: 401 });

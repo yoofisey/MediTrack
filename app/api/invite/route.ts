@@ -23,37 +23,25 @@ export async function POST(req: Request) {
   }
 
   const to = (body.to || "").toLowerCase().trim();
-<<<<<<< HEAD
   const rawName = String(body.senderName || "Adherly Team");
   const safeDisplayName = rawName.replace(/[\r\n<>"]/g, "").trim().slice(0, 80) || "Adherly Team";
   const senderName = safeDisplayName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || to.length > 254) {
-=======
-  const senderName = (body.senderName || "Adherly Team").trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const senderNameRaw = (body.senderName || "Adherly Team").trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
->>>>>>> origin/main
     return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
   }
 
-  // Family invitations are a Family-tier feature — require an authenticated
+  // Family invitations are a Family-tier feature â€” require an authenticated
   // sender whose profile is on the family plan.
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-<<<<<<< HEAD
   if (!token) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
   if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.json({ ok: false, error: "Server not configured" }, { status: 500 });
   }
-=======
-  if (!token || !supabaseAnonKey) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
->>>>>>> origin/main
   const sb = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
@@ -71,28 +59,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "RESEND_API_KEY not configured" }, { status: 500 });
   }
 
-<<<<<<< HEAD
   const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
   let origin = "https://www.useadhera.com";
   if (configuredOrigin) {
     try { origin = new URL(configuredOrigin).origin; } catch {}
   }
-=======
-  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
->>>>>>> origin/main
   const acceptUrl = `${origin}/?invite=1`;
 
   try {
     const { error } = await getResend().emails.send({
-<<<<<<< HEAD
       from: `Adherly <${FROM_EMAIL}>`,
       to: [to],
       subject: `${safeDisplayName} invited you to join a family group on Adherly`,
-=======
-      from: `${senderNameRaw} <${FROM_EMAIL}>`,
-      to: [to],
-      subject: `You've been invited to join ${senderNameRaw}'s family group on Adherly`,
->>>>>>> origin/main
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">You've been invited to join a family group</h2>
